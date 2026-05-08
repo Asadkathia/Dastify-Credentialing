@@ -51,6 +51,22 @@ const CATEGORY_LABELS: Record<DocCategory, string> = {
   other: "Other",
 };
 
+// Tailwind class clusters per category — used by the chip in the list row.
+// Borrowed from the Badge component variants for visual consistency.
+const CATEGORY_CHIP_CLASSES: Record<DocCategory, string> = {
+  license: "border-blue-300 bg-blue-100 text-blue-800",
+  dea: "border-purple-300 bg-purple-100 text-purple-800",
+  cv: "border-slate-300 bg-slate-100 text-slate-800",
+  malpractice: "border-rose-300 bg-rose-100 text-rose-800",
+  caqh: "border-indigo-300 bg-indigo-100 text-indigo-800",
+  payer_letter: "border-sky-300 bg-sky-100 text-sky-800",
+  contract: "border-emerald-300 bg-emerald-100 text-emerald-800",
+  denial: "border-red-300 bg-red-100 text-red-800",
+  info_request: "border-amber-300 bg-amber-100 text-amber-800",
+  internal_staging: "border-zinc-300 bg-zinc-100 text-zinc-700",
+  other: "border-neutral-300 bg-neutral-100 text-neutral-700",
+};
+
 const HAS_EXPIRATION: ReadonlySet<DocCategory> = new Set([
   "license",
   "dea",
@@ -245,7 +261,12 @@ function DocRowItem({ doc, canManage }: { doc: DocRow; canManage: boolean }) {
       }`}
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${CATEGORY_CHIP_CLASSES[doc.category]}`}
+          >
+            {CATEGORY_LABELS[doc.category]}
+          </span>
           <button
             type="button"
             onClick={handleDownload}
@@ -261,8 +282,7 @@ function DocRowItem({ doc, canManage }: { doc: DocRow; canManage: boolean }) {
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          {CATEGORY_LABELS[doc.category]} · {formatBytes(doc.size_bytes)} ·{" "}
-          {format(new Date(doc.created_at), "PP")}
+          {formatBytes(doc.size_bytes)} · {format(new Date(doc.created_at), "PP")}
           {doc.expiration_date && (
             <> · expires {format(new Date(doc.expiration_date), "PP")}</>
           )}
