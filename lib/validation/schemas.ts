@@ -89,3 +89,58 @@ export const postInternalNoteSchema = z.object({
   parentNoteId: z.string().uuid().optional(),
 });
 export type PostInternalNoteInput = z.infer<typeof postInternalNoteSchema>;
+
+const DOCUMENT_OWNER_TYPES = ["provider", "enrollment", "group_entity", "client"] as const;
+const DOCUMENT_CATEGORIES = [
+  "license",
+  "dea",
+  "cv",
+  "malpractice",
+  "caqh",
+  "payer_letter",
+  "contract",
+  "denial",
+  "info_request",
+  "internal_staging",
+  "other",
+] as const;
+
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "text/csv",
+] as const;
+export const ALLOWED_DOCUMENT_MIME_TYPES = ALLOWED_MIME_TYPES;
+export const MAX_DOCUMENT_BYTES = 50 * 1024 * 1024; // 50 MB
+
+export const uploadDocumentMetaSchema = z
+  .object({
+    clientId: z.string().uuid(),
+    ownerType: z.enum(DOCUMENT_OWNER_TYPES),
+    ownerId: z.string().uuid(),
+    category: z.enum(DOCUMENT_CATEGORIES),
+    fileName: z.string().min(1).max(255),
+    mimeType: z
+      .string()
+      .refine((v) => (ALLOWED_MIME_TYPES as readonly string[]).includes(v), {
+        message: "File type not allowed",
+      }),
+    sizeBytes: z.number().int().positive().max(MAX_DOCUMENT_BYTES),
+    expirationDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+      .optional()
+      .or(z.literal("")),
+    isInternal: z.boolean().default(false),
+    description: z.string().max(500).optional().or(z.literal("")),
+  })
+  .strict();
+export type UploadDocumentMetaInput = z.infer<typeof uploadDocumentMetaSchema>;
+
+export const documentIdSchema = z.object({ documentId: z.string().uuid() });

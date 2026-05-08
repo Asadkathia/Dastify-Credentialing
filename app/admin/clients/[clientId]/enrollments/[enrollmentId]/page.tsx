@@ -8,6 +8,7 @@ import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/enrollment/state-mach
 import { StatusTransitionForm } from "./_components/status-transition-form";
 import { CommentsThread } from "./_components/comments-thread";
 import { InternalNotesThread } from "./_components/internal-notes-thread";
+import { DocumentsPanel } from "@/components/documents-panel";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
 export default async function EnrollmentDetailPage({
@@ -46,28 +47,39 @@ export default async function EnrollmentDetailPage({
 
   const status = enrollment.status as EnrollmentStatus;
 
-  const [{ data: history }, { data: comments }, { data: notes }] = await Promise.all([
-    supabase
-      .from("status_history")
-      .select("id, from_status, to_status, from_sub_status, to_sub_status, reason, changed_by_user_id, changed_at")
-      .eq("enrollment_id", enrollmentId)
-      .order("changed_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("comments")
-      .select("id, body, author_user_id, parent_comment_id, created_at")
-      .eq("enrollment_id", enrollmentId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
-      .limit(200),
-    supabase
-      .from("internal_notes")
-      .select("id, body, author_user_id, parent_note_id, created_at")
-      .eq("enrollment_id", enrollmentId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true })
-      .limit(200),
-  ]);
+  const [{ data: history }, { data: comments }, { data: notes }, { data: documents }] =
+    await Promise.all([
+      supabase
+        .from("status_history")
+        .select("id, from_status, to_status, from_sub_status, to_sub_status, reason, changed_by_user_id, changed_at")
+        .eq("enrollment_id", enrollmentId)
+        .order("changed_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("comments")
+        .select("id, body, author_user_id, parent_comment_id, created_at")
+        .eq("enrollment_id", enrollmentId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true })
+        .limit(200),
+      supabase
+        .from("internal_notes")
+        .select("id, body, author_user_id, parent_note_id, created_at")
+        .eq("enrollment_id", enrollmentId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true })
+        .limit(200),
+      supabase
+        .from("documents")
+        .select(
+          "id, file_name, category, size_bytes, mime_type, expiration_date, is_internal, virus_scan_status, created_at",
+        )
+        .eq("owner_type", "enrollment")
+        .eq("owner_id", enrollmentId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -146,6 +158,22 @@ export default async function EnrollmentDetailPage({
             </CardHeader>
             <CardContent>
               <InternalNotesThread enrollmentId={enrollmentId} notes={notes ?? []} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Documents</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DocumentsPanel
+                clientId={clientId}
+                ownerType="enrollment"
+                ownerId={enrollmentId}
+                documents={documents ?? []}
+                canManage
+                defaultCategory="payer_letter"
+              />
             </CardContent>
           </Card>
         </div>

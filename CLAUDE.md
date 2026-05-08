@@ -215,4 +215,16 @@ Ask the user. Do not invent a product decision (status names, role permissions, 
 
 ---
 
+## 10. Pending manual configuration (Supabase dashboard)
+
+These are operational settings that can't be applied via SQL/MCP and must be flipped manually in the Supabase dashboard. Track them here so they don't get lost.
+
+- [ ] **Enable HaveIBeenPwned password check** — Auth → Providers → Email → "Check passwords against HaveIBeenPwned". Surfaced by the security advisor (`auth_leaked_password_protection`). Blocks compromised passwords during sign-up / change. Do this before onboarding any real client.
+- [ ] **Auth → URL Configuration** — once we have a production URL (Vercel), add `https://<prod-host>/auth/callback` to the Redirect URLs allow-list.
+- [ ] **Storage bucket retention policy** — once `documents` bucket is in use, decide retention (soft-delete via `deleted_at` vs hard-delete from Storage) and configure in Supabase.
+- [ ] **Email sender** — Supabase's default sender is rate-limited (~3/hr) and brands as "supabase.io". Before client-facing emails, configure custom SMTP (Resend) under Auth → SMTP Settings.
+- [ ] **HIPAA add-on** — when first client requires a BAA, upgrade Supabase to Pro + HIPAA, sign BAA. Architecture already supports this; no code changes.
+
+---
+
 **Last updated**: 2026-05-08 (initial design lock-in)

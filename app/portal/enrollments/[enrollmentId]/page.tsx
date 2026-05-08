@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/enrollment/state-machine";
 import { CommentsThread } from "@/app/admin/clients/[clientId]/enrollments/[enrollmentId]/_components/comments-thread";
+import { DocumentsPanel } from "@/components/documents-panel";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
 export default async function ClientEnrollmentDetailPage({
@@ -40,7 +41,7 @@ export default async function ClientEnrollmentDetailPage({
   const payer = Array.isArray(enrollment.payer) ? enrollment.payer[0] : enrollment.payer;
   const status = enrollment.status as EnrollmentStatus;
 
-  const [{ data: comments }, { data: history }] = await Promise.all([
+  const [{ data: comments }, { data: history }, { data: documents }] = await Promise.all([
     supabase
       .from("comments")
       .select("id, body, author_user_id, parent_comment_id, created_at")
@@ -53,6 +54,16 @@ export default async function ClientEnrollmentDetailPage({
       .eq("enrollment_id", enrollmentId)
       .order("changed_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("documents")
+      .select(
+        "id, file_name, category, size_bytes, mime_type, expiration_date, is_internal, virus_scan_status, created_at",
+      )
+      .eq("owner_type", "enrollment")
+      .eq("owner_id", enrollmentId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(50),
   ]);
 
   return (
@@ -106,6 +117,22 @@ export default async function ClientEnrollmentDetailPage({
                 enrollmentId={enrollmentId}
                 comments={comments ?? []}
                 allowPost
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Documents</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DocumentsPanel
+                clientId={enrollment.client_id}
+                ownerType="enrollment"
+                ownerId={enrollmentId}
+                documents={documents ?? []}
+                canManage={false}
+                defaultCategory="payer_letter"
               />
             </CardContent>
           </Card>
