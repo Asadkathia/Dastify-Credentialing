@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { createProviderAction } from "@/lib/actions/providers";
 
 export default async function NewProviderPage({
@@ -48,7 +48,7 @@ export default async function NewProviderPage({
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="submit">Create provider</Button>
+              <SubmitButton pendingLabel="Creating provider...">Create provider</SubmitButton>
             </div>
           </form>
         </CardContent>

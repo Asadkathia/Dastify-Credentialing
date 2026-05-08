@@ -68,14 +68,17 @@ export async function createClientAndRedirect(formData: FormData): Promise<void>
 
 export async function inviteClientUserAction(
   formData: FormData,
-): Promise<ActionResult<{ userId: string }>> {
+): Promise<ActionResult<{ userId: string; authMethod: "magic_link" | "password" }>> {
   const session = await requireAdmin();
 
+  const passwordRaw = formData.get("password");
   const parsed = inviteClientUserSchema.safeParse({
     clientId: formData.get("clientId"),
     email: formData.get("email"),
     fullName: formData.get("fullName"),
     role: formData.get("role") || "client_viewer",
+    authMethod: formData.get("authMethod") || "magic_link",
+    password: passwordRaw ? String(passwordRaw) : undefined,
   });
   if (!parsed.success) {
     return fail("Invalid input", parsed.error.flatten().fieldErrors);
@@ -83,7 +86,6 @@ export async function inviteClientUserAction(
 
   const supabase = await createSupabaseServerClient();
 
-  // Confirm the client exists (RLS will let admins see all clients).
   const { data: client } = await supabase
     .from("clients")
     .select("id, display_name")
@@ -91,33 +93,53 @@ export async function inviteClientUserAction(
     .maybeSingle();
   if (!client) return fail("Client not found");
 
-  // Use the service-role client to create the auth user + send invite email.
   const adminSupabase = createSupabaseAdminClient();
   const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`;
 
-  const { data: invited, error: inviteErr } = await adminSupabase.auth.admin.inviteUserByEmail(
-    parsed.data.email,
-    {
-      redirectTo,
-      data: { full_name: parsed.data.fullName, client_id: parsed.data.clientId },
-    },
-  );
-  if (inviteErr || !invited.user) {
-    return fail(`Invite failed: ${inviteErr?.message ?? "unknown"}`);
+  let userId: string;
+
+  if (parsed.data.authMethod === "password") {
+    // Admin-set password flow: create the user immediately with the chosen
+    // password and email pre-confirmed. Admin shares the password with the
+    // user out-of-band. No email is sent by Supabase.
+    const { data: created, error: createErr } = await adminSupabase.auth.admin.createUser({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      email_confirm: true,
+      user_metadata: { full_name: parsed.data.fullName, client_id: parsed.data.clientId },
+    });
+    if (createErr || !created.user) {
+      return fail(`Account creation failed: ${createErr?.message ?? "unknown"}`);
+    }
+    userId = created.user.id;
+  } else {
+    // Magic-link invite: Supabase sends the user a one-time sign-in link.
+    const { data: invited, error: inviteErr } = await adminSupabase.auth.admin.inviteUserByEmail(
+      parsed.data.email,
+      {
+        redirectTo,
+        data: { full_name: parsed.data.fullName, client_id: parsed.data.clientId },
+      },
+    );
+    if (inviteErr || !invited.user) {
+      return fail(`Invite failed: ${inviteErr?.message ?? "unknown"}`);
+    }
+    userId = invited.user.id;
   }
 
-  // Insert the corresponding client_users row (using admin client to bypass RLS
-  // on first insert, since the invited user hasn't logged in yet).
+  // Insert the client_users profile row (admin client bypasses RLS — fine since
+  // we already verified admin status above).
   const { error: insertErr } = await adminSupabase.from("client_users").insert({
-    id: invited.user.id,
+    id: userId,
     client_id: parsed.data.clientId,
     email: parsed.data.email,
     full_name: parsed.data.fullName,
     role: parsed.data.role,
     invited_by_user_id: session.userId,
+    accepted_at: parsed.data.authMethod === "password" ? new Date().toISOString() : null,
   });
   if (insertErr) {
-    return fail(`Invite created but profile insert failed: ${insertErr.message}`);
+    return fail(`Account created but profile insert failed: ${insertErr.message}`);
   }
 
   await supabase.from("activity_events").insert({
@@ -125,10 +147,12 @@ export async function inviteClientUserAction(
     actor_user_id: session.userId,
     action: "user_invite",
     target_table: "client_users",
-    target_id: invited.user.id,
-    summary: `Invited ${parsed.data.email} (${parsed.data.role}) to ${client.display_name}`,
+    target_id: userId,
+    summary: `${
+      parsed.data.authMethod === "password" ? "Created account for" : "Invited"
+    } ${parsed.data.email} (${parsed.data.role}) to ${client.display_name}`,
   });
 
   revalidatePath(`/admin/clients/${parsed.data.clientId}`);
-  return ok({ userId: invited.user.id });
+  return ok({ userId, authMethod: parsed.data.authMethod });
 }

@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { createEnrollmentAction } from "@/lib/actions/enrollments";
 
 export default async function NewEnrollmentPage({
@@ -122,7 +122,7 @@ export default async function NewEnrollmentPage({
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button type="submit">Create enrollment</Button>
+              <SubmitButton pendingLabel="Creating enrollment...">Create enrollment</SubmitButton>
             </div>
           </form>
         </CardContent>

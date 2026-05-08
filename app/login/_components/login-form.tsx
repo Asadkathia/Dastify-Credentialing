@@ -1,9 +1,15 @@
 "use client";
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+type Mode = "password" | "magic_link";
+
 export function LoginForm({ next, initialError }: { next?: string; initialError?: string }) {
+  const router = useRouter();
+  const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(initialError ? mapError(initialError) : null);
   const [pending, startTransition] = useTransition();
@@ -13,6 +19,19 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
     setError(null);
     startTransition(async () => {
       const supabase = createSupabaseBrowserClient();
+
+      if (mode === "password") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          setError(error.message);
+          return;
+        }
+        // Hard navigation so middleware re-runs with the freshly-set cookies and routes by role.
+        window.location.href = next ?? "/";
+        return;
+      }
+
+      // Magic link
       const redirectTo = `${window.location.origin}/auth/callback${
         next ? `?next=${encodeURIComponent(next)}` : ""
       }`;
@@ -36,12 +55,48 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
           We sent a sign-in link to <span className="font-mono">{email}</span>. The link is valid
           for one hour.
         </p>
+        <button
+          type="button"
+          onClick={() => {
+            setSent(false);
+            setMode("password");
+          }}
+          className="mt-4 text-xs text-primary hover:underline"
+        >
+          Sign in a different way
+        </button>
       </div>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Mode toggle */}
+      <div className="flex rounded-md border bg-muted/40 p-1">
+        <button
+          type="button"
+          onClick={() => setMode("password")}
+          className={`flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+            mode === "password"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Password
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("magic_link")}
+          className={`flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+            mode === "magic_link"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Magic link
+        </button>
+      </div>
+
       <div className="space-y-2">
         <label htmlFor="email" className="text-sm font-medium">
           Work email
@@ -58,16 +113,39 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
         />
       </div>
 
+      {mode === "password" && (
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-sm font-medium">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+      )}
+
       {error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
       <button
         type="submit"
-        disabled={pending || !email}
+        disabled={pending || !email || (mode === "password" && !password)}
         className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
-        {pending ? "Sending link..." : "Email me a sign-in link"}
+        {pending
+          ? mode === "password"
+            ? "Signing in..."
+            : "Sending link..."
+          : mode === "password"
+            ? "Sign in"
+            : "Email me a sign-in link"}
       </button>
 
       <p className="text-center text-xs text-muted-foreground">

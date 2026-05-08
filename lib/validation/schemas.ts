@@ -15,12 +15,23 @@ export const createClientSchema = z.object({
 });
 export type CreateClientInput = z.infer<typeof createClientSchema>;
 
-export const inviteClientUserSchema = z.object({
-  clientId: z.string().uuid(),
-  email: emailSchema,
-  fullName: z.string().min(2).max(120).trim(),
-  role: z.enum(["client_admin", "client_viewer"]).default("client_viewer"),
-});
+export const inviteClientUserSchema = z
+  .object({
+    clientId: z.string().uuid(),
+    email: emailSchema,
+    fullName: z.string().min(2).max(120).trim(),
+    role: z.enum(["client_admin", "client_viewer"]).default("client_viewer"),
+    authMethod: z.enum(["magic_link", "password"]).default("magic_link"),
+    password: z
+      .string()
+      .min(8, "At least 8 characters")
+      .max(72, "Max 72 characters (Supabase limit)")
+      .optional(),
+  })
+  .refine((v) => v.authMethod !== "password" || (v.password && v.password.length >= 8), {
+    message: "Password is required when auth method is 'password'",
+    path: ["password"],
+  });
 export type InviteClientUserInput = z.infer<typeof inviteClientUserSchema>;
 
 export const createProviderSchema = z.object({

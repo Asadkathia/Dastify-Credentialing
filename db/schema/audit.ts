@@ -4,16 +4,16 @@ import { enrollments } from "./enrollments";
 import { enrollmentStatusEnum, activityActionEnum } from "./enums";
 
 // Append-only log of every status transition on every enrollment.
+// FKs use SET NULL on parent delete so audit history outlives its subjects
+// (see migrations/0005_audit_fk_set_null.sql).
 export const statusHistory = pgTable(
   "status_history",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientId: uuid("client_id")
-      .notNull()
-      .references(() => clients.id, { onDelete: "cascade" }),
-    enrollmentId: uuid("enrollment_id")
-      .notNull()
-      .references(() => enrollments.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    enrollmentId: uuid("enrollment_id").references(() => enrollments.id, {
+      onDelete: "set null",
+    }),
     fromStatus: enrollmentStatusEnum("from_status"),
     toStatus: enrollmentStatusEnum("to_status").notNull(),
     fromSubStatus: text("from_sub_status"),
@@ -33,7 +33,7 @@ export const activityEvents = pgTable(
   "activity_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
     actorUserId: uuid("actor_user_id"),
     action: activityActionEnum("action").notNull(),
     targetTable: text("target_table").notNull(),

@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { createClientAndRedirect } from "@/lib/actions/clients";
 
 export default async function NewClientPage({
@@ -34,7 +34,7 @@ export default async function NewClientPage({
               </p>
             )}
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="submit">Create client</Button>
+              <SubmitButton pendingLabel="Creating client...">Create client</SubmitButton>
             </div>
           </form>
         </CardContent>
