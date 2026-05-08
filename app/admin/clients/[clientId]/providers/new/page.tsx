@@ -40,7 +40,10 @@ export default async function NewProviderPage({
               <Field id="suffix" label="Suffix" />
               <Field id="npi" label="NPI" />
             </div>
-            <Field id="primarySpecialty" label="Primary specialty" />
+            <div className="grid grid-cols-2 gap-4">
+              <Field id="primarySpecialty" label="Primary specialty" />
+              <Field id="secondarySpecialty" label="Secondary specialty" />
+            </div>
             <Field id="caqhId" label="CAQH ID" />
             <div className="grid grid-cols-2 gap-4">
               <Field id="email" label="Email" type="email" />

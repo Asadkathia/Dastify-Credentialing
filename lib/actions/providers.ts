@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createProviderSchema } from "@/lib/validation/schemas";
+import { createProviderSchema, updateProviderSchema } from "@/lib/validation/schemas";
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
 
 export async function createProviderAction(
@@ -18,6 +18,7 @@ export async function createProviderAction(
     suffix: formData.get("suffix") || "",
     npi: formData.get("npi") || "",
     primarySpecialty: formData.get("primarySpecialty") || "",
+    secondarySpecialty: formData.get("secondarySpecialty") || "",
     email: formData.get("email") || "",
     phone: formData.get("phone") || "",
     caqhId: formData.get("caqhId") || "",
@@ -38,6 +39,7 @@ export async function createProviderAction(
       suffix: parsed.data.suffix || null,
       npi: parsed.data.npi || null,
       primary_specialty: parsed.data.primarySpecialty || null,
+      secondary_specialty: parsed.data.secondarySpecialty || null,
       email: parsed.data.email || null,
       phone: parsed.data.phone || null,
       caqh_id: parsed.data.caqhId || null,
@@ -60,4 +62,68 @@ export async function createProviderAction(
 
   revalidatePath(`/admin/clients/${parsed.data.clientId}`);
   return ok({ id: provider.id });
+}
+
+export async function updateProviderAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const session = await requireAdmin();
+
+  const parsed = updateProviderSchema.safeParse({
+    providerId: formData.get("providerId"),
+    firstName: formData.get("firstName"),
+    middleName: formData.get("middleName") || "",
+    lastName: formData.get("lastName"),
+    suffix: formData.get("suffix") || "",
+    npi: formData.get("npi") || "",
+    primarySpecialty: formData.get("primarySpecialty") || "",
+    secondarySpecialty: formData.get("secondarySpecialty") || "",
+    email: formData.get("email") || "",
+    phone: formData.get("phone") || "",
+    caqhId: formData.get("caqhId") || "",
+  });
+  if (!parsed.success) {
+    return fail("Invalid input", parsed.error.flatten().fieldErrors);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from("providers")
+    .select("id, client_id")
+    .eq("id", parsed.data.providerId)
+    .maybeSingle();
+  if (fetchErr || !existing) return fail("Provider not found");
+
+  const { error: updateErr } = await supabase
+    .from("providers")
+    .update({
+      first_name: parsed.data.firstName,
+      middle_name: parsed.data.middleName || null,
+      last_name: parsed.data.lastName,
+      suffix: parsed.data.suffix || null,
+      npi: parsed.data.npi || null,
+      primary_specialty: parsed.data.primarySpecialty || null,
+      secondary_specialty: parsed.data.secondarySpecialty || null,
+      email: parsed.data.email || null,
+      phone: parsed.data.phone || null,
+      caqh_id: parsed.data.caqhId || null,
+    })
+    .eq("id", parsed.data.providerId);
+  if (updateErr) {
+    return fail(`Failed to update provider: ${updateErr.message}`);
+  }
+
+  await supabase.from("activity_events").insert({
+    client_id: existing.client_id,
+    actor_user_id: session.userId,
+    action: "update",
+    target_table: "providers",
+    target_id: parsed.data.providerId,
+    summary: `Updated provider ${parsed.data.firstName} ${parsed.data.lastName}`,
+  });
+
+  revalidatePath(`/admin/clients/${existing.client_id}/providers/${parsed.data.providerId}`);
+  revalidatePath(`/admin/clients/${existing.client_id}`);
+  return ok({ id: parsed.data.providerId });
 }

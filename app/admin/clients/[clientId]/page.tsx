@@ -141,12 +141,19 @@ export default async function ClientOverviewPage({
               )}
               {providers?.map((p) => (
                 <div key={p.id} className="flex justify-between text-sm">
-                  <span>
-                    {p.last_name}, {p.first_name}
-                    {p.primary_specialty && (
-                      <span className="ml-2 text-xs text-muted-foreground">{p.primary_specialty}</span>
-                    )}
-                  </span>
+                  <Link
+                    href={`/admin/clients/${clientId}/providers/${p.id}`}
+                    className="hover:underline"
+                  >
+                    <span>
+                      {p.last_name}, {p.first_name}
+                      {p.primary_specialty && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {p.primary_specialty}
+                        </span>
+                      )}
+                    </span>
+                  </Link>
                   {p.npi && <span className="font-mono text-xs text-muted-foreground">{p.npi}</span>}
                 </div>
               ))}

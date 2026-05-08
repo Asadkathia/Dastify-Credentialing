@@ -42,11 +42,27 @@ export const createProviderSchema = z.object({
   suffix: z.string().max(20).trim().optional().or(z.literal("")),
   npi: z.string().regex(/^\d{10}$/).optional().or(z.literal("")),
   primarySpecialty: z.string().max(120).trim().optional().or(z.literal("")),
+  secondarySpecialty: z.string().max(120).trim().optional().or(z.literal("")),
   email: emailSchema.optional().or(z.literal("")),
   phone: z.string().max(40).trim().optional().or(z.literal("")),
   caqhId: z.string().max(40).trim().optional().or(z.literal("")),
 });
 export type CreateProviderInput = z.infer<typeof createProviderSchema>;
+
+export const updateProviderSchema = z.object({
+  providerId: z.string().uuid(),
+  firstName: z.string().min(1).max(80).trim(),
+  middleName: z.string().max(80).trim().optional().or(z.literal("")),
+  lastName: z.string().min(1).max(80).trim(),
+  suffix: z.string().max(20).trim().optional().or(z.literal("")),
+  npi: z.string().regex(/^\d{10}$/).optional().or(z.literal("")),
+  primarySpecialty: z.string().max(120).trim().optional().or(z.literal("")),
+  secondarySpecialty: z.string().max(120).trim().optional().or(z.literal("")),
+  email: emailSchema.optional().or(z.literal("")),
+  phone: z.string().max(40).trim().optional().or(z.literal("")),
+  caqhId: z.string().max(40).trim().optional().or(z.literal("")),
+});
+export type UpdateProviderInput = z.infer<typeof updateProviderSchema>;
 
 export const createEnrollmentSchema = z
   .object({
