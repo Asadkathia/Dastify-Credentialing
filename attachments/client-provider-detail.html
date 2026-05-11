@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asad, Muhammad — Providers</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root{--navy:#0E143C;--navy-rgb:14,20,60;--teal:#16C1C2;--teal-rgb:22,193,194;--aqua:#4ECED1;--lightgrey:#F6F7FB;--grey:#C6CCD8;--grey-rgb:198,204,216;--white:#FFFFFF;--amber:#F4A300;--green:#2E7D32;--red:#B3261E;--blue:#1565C0;--font:'Poppins',-apple-system,sans-serif;--sidebar:200px;--topbar:52px;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:var(--font);background:var(--lightgrey);color:var(--navy);-webkit-font-smoothing:antialiased;}
+body{display:flex;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);min-width:var(--sidebar);height:100vh;background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;}
+.sidebar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:180px;background:linear-gradient(to top,rgba(22,193,194,0.07),transparent);pointer-events:none;}
+.client-badge{padding:14px 18px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.client-badge-label{font-size:8px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:5px;}
+.client-badge-name{font-size:13px;font-weight:600;color:var(--white);}
+.nav-list{list-style:none;padding:8px;}
+.nav-item a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);text-decoration:none;transition:all 0.2s;margin-bottom:2px;}
+.nav-item a .ti{font-size:17px;}
+.nav-item a:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);}
+.nav-item.active a{background:rgba(22,193,194,0.14);color:var(--teal);}
+.nav-item.active a .ti{color:var(--teal);}
+.sidebar-spacer{flex:1;}
+.sidebar-bottom{padding:8px 8px 20px;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:var(--sidebar);right:0;height:var(--topbar);background:var(--white);border-bottom:1px solid rgba(var(--grey-rgb),0.5);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:90;gap:16px;}
+.topbar-brand{display:flex;align-items:center;gap:10px;}
+.topbar-logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--aqua));display:flex;align-items:center;justify-content:center;}
+.topbar-logo .ti{font-size:15px;color:white;}
+.topbar-name{font-size:12px;font-weight:700;color:var(--navy);letter-spacing:1px;text-transform:uppercase;}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--lightgrey);border:1px solid rgba(var(--grey-rgb),0.5);border-radius:8px;padding:6px 13px;width:260px;transition:all 0.2s;}
+.search-box:focus-within{border-color:var(--teal);background:white;}
+.search-box input{background:none;border:none;outline:none;font-family:var(--font);font-size:12px;color:var(--navy);width:100%;}
+.search-box input::placeholder{color:rgba(var(--navy-rgb),0.3);}
+.search-kb{font-size:10px;color:rgba(var(--navy-rgb),0.25);background:rgba(var(--grey-rgb),0.4);padding:2px 6px;border-radius:4px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-icon-btn{width:32px;height:32px;border-radius:7px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(var(--navy-rgb),0.4);transition:all 0.2s;position:relative;}
+.topbar-icon-btn:hover{background:var(--lightgrey);}
+.notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--teal);border:1.5px solid white;}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 5px;border-radius:7px;border:1px solid rgba(var(--grey-rgb),0.4);cursor:pointer;transition:all 0.2s;}
+.user-chip:hover{background:var(--lightgrey);}
+.user-av{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--aqua));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;}
+.user-info{display:flex;flex-direction:column;line-height:1.2;}
+.user-n{font-size:12px;font-weight:600;color:var(--navy);}
+.user-r{font-size:9px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);}
+.sign-out-btn{display:flex;align-items:center;gap:6px;padding:6px 13px;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.5);background:none;border:1px solid rgba(var(--grey-rgb),0.5);border-radius:6px;cursor:pointer;transition:all 0.2s;}
+.sign-out-btn:hover{color:var(--red);border-color:rgba(179,38,30,0.3);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);padding-top:var(--topbar);flex:1;height:100vh;overflow-y:auto;background:var(--lightgrey);}
+.main::-webkit-scrollbar{width:5px;}
+.main::-webkit-scrollbar-thumb{background:rgba(var(--grey-rgb),0.6);border-radius:3px;}
+.page-content{padding:20px 24px 48px;}
+
+/* Breadcrumb */
+.breadcrumb{display:flex;align-items:center;gap:6px;margin-bottom:14px;}
+.breadcrumb a{font-size:12px;font-weight:500;color:rgba(var(--navy-rgb),0.4);text-decoration:none;transition:color 0.2s;}
+.breadcrumb a:hover{color:var(--teal);}
+.breadcrumb-sep{font-size:12px;color:rgba(var(--grey-rgb),0.9);}
+.breadcrumb-current{font-size:12px;font-weight:600;color:var(--navy);}
+
+/* Provider hero */
+.provider-hero{background:var(--white);border-radius:14px;border:1px solid rgba(var(--grey-rgb),0.35);padding:22px 26px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;overflow:hidden;}
+.provider-hero::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,var(--teal),var(--aqua),transparent);}
+.hero-left{display:flex;align-items:center;gap:18px;}
+.hero-avatar{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,rgba(22,193,194,0.14),rgba(78,206,209,0.24));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#0e8a8b;flex-shrink:0;border:1px solid rgba(22,193,194,0.2);}
+.hero-info{}
+.hero-name{font-size:20px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.hero-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.htag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;}
+.htag.type{background:rgba(14,20,60,0.07);color:rgba(14,20,60,0.5);}
+.htag.npi{background:rgba(var(--grey-rgb),0.3);color:rgba(14,20,60,0.35);font-style:italic;text-transform:none;font-weight:400;font-size:11px;letter-spacing:0;}
+.htag.active{background:rgba(46,125,50,0.1);color:var(--green);}
+.htag.active .pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:p 2s ease-in-out infinite;}
+@keyframes p{0%,100%{opacity:1}50%{opacity:0.4}}
+.hero-stats{display:flex;align-items:center;gap:0;}
+.hs{text-align:center;padding:0 20px;border-right:1px solid rgba(var(--grey-rgb),0.4);}
+.hs:last-child{border-right:none;padding-right:0;}
+.hs-val{font-size:20px;font-weight:700;color:var(--navy);line-height:1;}
+.hs-lbl{font-size:10px;font-weight:400;letter-spacing:1px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);margin-top:3px;}
+
+/* Two-column layout */
+.two-col{display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:start;}
+
+/* Generic card */
+.card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;margin-bottom:14px;}
+.card:last-child{margin-bottom:0;}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.2);}
+.card-title-wrap{display:flex;align-items:center;gap:8px;}
+.card-title{font-size:13px;font-weight:600;color:var(--navy);}
+.card-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(22,193,194,0.1);color:var(--teal);}
+.card-badge.zero{background:rgba(var(--grey-rgb),0.3);color:rgba(14,20,60,0.3);}
+.btn-card-action{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;font-family:var(--font);font-size:11px;font-weight:600;color:rgba(14,20,60,0.45);background:none;border:1px solid rgba(var(--grey-rgb),0.4);border-radius:6px;cursor:pointer;transition:all 0.2s;}
+.btn-card-action:hover{border-color:var(--teal);color:var(--teal);}
+.btn-card-action .ti{font-size:13px;}
+
+/* Provider details grid */
+.details-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.detail-cell{padding:14px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.12);}
+.detail-cell:nth-last-child(-n+2){border-bottom:none;}
+.detail-cell:nth-child(odd){border-right:1px solid rgba(var(--grey-rgb),0.12);}
+.detail-label{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);margin-bottom:6px;}
+.detail-value{font-size:14px;font-weight:500;color:var(--navy);}
+.detail-value.empty{font-size:13px;font-weight:300;color:rgba(var(--navy-rgb),0.3);font-style:italic;}
+.detail-value.npi-val{font-family:monospace;font-size:14px;font-weight:700;color:var(--teal);letter-spacing:1px;}
+
+/* Sensitive identifiers */
+.sensitive-banner{display:flex;align-items:center;gap:8px;padding:10px 18px;background:rgba(14,20,60,0.04);border-bottom:1px solid rgba(var(--grey-rgb),0.2);}
+.sensitive-banner .ti{font-size:14px;color:rgba(14,20,60,0.4);}
+.sensitive-banner p{font-size:11px;font-weight:500;color:rgba(14,20,60,0.45);letter-spacing:0.3px;}
+.sensitive-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.sensitive-cell{padding:14px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.12);}
+.sensitive-cell:nth-last-child(-n+2){border-bottom:none;}
+.sensitive-cell.full-width{grid-column:1/-1;border-bottom:none;}
+.sensitive-cell:nth-child(odd){border-right:1px solid rgba(var(--grey-rgb),0.12);}
+.locked-field{display:flex;align-items:center;justify-content:space-between;background:rgba(var(--grey-rgb),0.12);border:1px solid rgba(var(--grey-rgb),0.3);border-radius:7px;padding:9px 13px;margin-top:6px;}
+.locked-dots{font-size:13px;font-weight:300;color:rgba(14,20,60,0.3);letter-spacing:3px;}
+.locked-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(14,20,60,0.35);}
+.locked-tag .ti{font-size:12px;}
+
+/* Enrollments in card */
+.enroll-row{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.15);cursor:pointer;transition:background 0.15s;}
+.enroll-row:last-child{border-bottom:none;}
+.enroll-row:hover{background:rgba(22,193,194,0.03);}
+.enroll-row:hover .er-open{opacity:1;}
+.er-payer-mark{width:30px;height:30px;border-radius:7px;background:rgba(14,20,60,0.07);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--navy);flex-shrink:0;}
+.er-info{flex:1;}
+.er-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.er-payer{font-size:13px;font-weight:600;color:var(--navy);}
+.er-state{display:inline-flex;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(var(--grey-rgb),0.3);color:rgba(14,20,60,0.55);}
+.er-cycle{font-size:10px;font-weight:500;color:rgba(14,20,60,0.35);}
+/* Mini pipe */
+.er-pipe{display:flex;align-items:center;gap:0;position:relative;}
+.er-pipe::before{content:'';position:absolute;top:8px;left:8px;right:8px;height:1px;background:rgba(var(--grey-rgb),0.4);z-index:0;}
+.ep-s{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
+.ep-dot{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;}
+.ep-s.current .ep-dot{background:var(--teal);color:white;box-shadow:0 0 0 2px rgba(22,193,194,0.2);}
+.ep-s.future .ep-dot{background:rgba(var(--grey-rgb),0.35);color:rgba(14,20,60,0.3);}
+.ep-lbl{font-size:7px;font-weight:600;margin-top:3px;text-align:center;}
+.ep-s.current .ep-lbl{color:var(--teal);}
+.ep-s.future .ep-lbl{color:rgba(14,20,60,0.2);}
+.sbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.sbadge.prep{background:rgba(22,193,194,0.1);color:#0e8a8b;}
+.sbadge .sd{width:5px;height:5px;border-radius:50%;background:var(--teal);animation:sd 2s ease-in-out infinite;}
+@keyframes sd{0%,100%{opacity:1}50%{opacity:0.4}}
+.er-open{font-size:11px;font-weight:600;color:var(--teal);opacity:0;transition:opacity 0.15s;display:flex;align-items:center;gap:4px;flex-shrink:0;}
+
+/* Empty state */
+.empty-state{padding:28px;text-align:center;}
+.empty-state .ti{font-size:24px;color:rgba(var(--grey-rgb),0.7);display:block;margin-bottom:8px;}
+.empty-state p{font-size:12px;font-weight:300;color:rgba(14,20,60,0.35);}
+
+/* Right sidebar cards */
+.contact-row{display:flex;align-items:flex-start;gap:10px;padding:13px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.15);}
+.contact-row:last-child{border-bottom:none;}
+.cr-icon{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.cr-icon.teal{background:rgba(22,193,194,0.1);}  .cr-icon.teal .ti{color:var(--teal);}
+.cr-icon.navy{background:rgba(14,20,60,0.07);}   .cr-icon.navy .ti{color:var(--navy);}
+.cr-icon .ti{font-size:15px;}
+.cr-info{}
+.cr-label{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(14,20,60,0.35);margin-bottom:3px;}
+.cr-value{font-size:13px;font-weight:500;color:var(--navy);}
+.cr-value a{color:var(--teal);text-decoration:none;}
+
+/* License row */
+.license-row{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.15);}
+.license-row:last-child{border-bottom:none;}
+.lr-state{display:inline-flex;padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;background:rgba(var(--grey-rgb),0.35);color:rgba(14,20,60,0.6);}
+.lr-type{font-size:11px;font-weight:400;color:rgba(14,20,60,0.5);}
+.lr-exp{font-size:11px;font-weight:500;color:rgba(14,20,60,0.45);}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="client-badge">
+    <div class="client-badge-label">Logged in as</div>
+    <div class="client-badge-name">lumber 1 client</div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item"><a href="#"><i class="ti ti-layout-dashboard"></i> Dashboard</a></li>
+    <li class="nav-item active"><a href="#"><i class="ti ti-stethoscope"></i> Providers</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-file-invoice"></i> Enrollments</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-files"></i> Documents</a></li>
+  </ul>
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-bottom">
+    <ul class="nav-list"><li class="nav-item"><a href="#"><i class="ti ti-settings"></i> Settings</a></li></ul>
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo"><i class="ti ti-shield-check"></i></div>
+    <span class="topbar-name">Dastify</span>
+  </div>
+  <div class="search-box"><i class="ti ti-search"></i><input type="text" placeholder="Search clients, providers, payers…"><span class="search-kb">⌘K</span></div>
+  <div class="topbar-right">
+    <button class="topbar-icon-btn"><i class="ti ti-bell" style="font-size:17px;"></i><span class="notif-dot"></span></button>
+    <div class="user-chip">
+      <div class="user-av">MA</div>
+      <div class="user-info"><span class="user-n">Muhammad Asad</span><span class="user-r">Lumber 1 Client</span></div>
+      <i class="ti ti-chevron-down" style="font-size:12px;color:rgba(14,20,60,0.3);margin-left:4px;"></i>
+    </div>
+    <button class="sign-out-btn"><i class="ti ti-logout" style="font-size:13px;"></i> Sign Out</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-content">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="#">Providers</a>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">Asad, Muhammad</span>
+    </div>
+
+    <!-- Provider hero -->
+    <div class="provider-hero">
+      <div class="hero-left">
+        <div class="hero-avatar">MA</div>
+        <div class="hero-info">
+          <div class="hero-name">Asad, Muhammad</div>
+          <div class="hero-tags">
+            <span class="htag type"><i class="ti ti-stethoscope" style="font-size:10px;"></i> Provider</span>
+            <span class="htag npi">NPI not set</span>
+            <span class="htag active"><span class="pulse"></span> Active</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hs">
+          <div class="hs-val" style="color:var(--teal);">1</div>
+          <div class="hs-lbl">Enrollments</div>
+        </div>
+        <div class="hs">
+          <div class="hs-val" style="color:rgba(14,20,60,0.3);">0</div>
+          <div class="hs-lbl">State Licenses</div>
+        </div>
+        <div class="hs">
+          <div class="hs-val" style="color:rgba(14,20,60,0.3);">0</div>
+          <div class="hs-lbl">Approved</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two-column layout -->
+    <div class="two-col">
+
+      <!-- LEFT -->
+      <div>
+
+        <!-- Provider details -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-wrap">
+              <i class="ti ti-id-badge" style="font-size:16px;color:var(--teal);"></i>
+              <span class="card-title">Provider details</span>
+            </div>
+            <button class="btn-card-action"><i class="ti ti-pencil"></i> Edit</button>
+          </div>
+          <div class="details-grid">
+            <div class="detail-cell">
+              <div class="detail-label">First Name</div>
+              <div class="detail-value">Muhammad</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-label">Last Name</div>
+              <div class="detail-value">Asad</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-label">Middle Name</div>
+              <div class="detail-value empty">Not provided</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-label">Suffix</div>
+              <div class="detail-value empty">Not provided</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-label">NPI</div>
+              <div class="detail-value empty">Not set</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-label">CAQH ID</div>
+              <div class="detail-value empty">Not set</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-label">Primary Specialty</div>
+              <div class="detail-value empty">Not set</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-label">Secondary Specialty</div>
+              <div class="detail-value empty">Not set</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensitive identifiers -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-wrap">
+              <i class="ti ti-shield-lock" style="font-size:16px;color:rgba(14,20,60,0.4);"></i>
+              <span class="card-title">Sensitive identifiers</span>
+            </div>
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:0.5px;color:rgba(14,20,60,0.35);padding:4px 9px;background:rgba(14,20,60,0.05);border-radius:6px;">
+              <i class="ti ti-eye-off" style="font-size:11px;"></i> Client view locked
+            </span>
+          </div>
+          <div class="sensitive-banner">
+            <i class="ti ti-info-circle"></i>
+            <p>These fields are encrypted and visible only to Dastify staff. They are used for credentialing purposes only.</p>
+          </div>
+          <div class="sensitive-grid">
+            <div class="sensitive-cell">
+              <div class="detail-label" style="font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);margin-bottom:6px;">DEA Number</div>
+              <div class="locked-field">
+                <span class="locked-dots">• • • • • • • •</span>
+                <span class="locked-tag"><i class="ti ti-lock"></i> Locked</span>
+              </div>
+            </div>
+            <div class="sensitive-cell">
+              <div class="detail-label" style="font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);margin-bottom:6px;">SSN (Last 4)</div>
+              <div class="locked-field">
+                <span class="locked-dots">• • • •</span>
+                <span class="locked-tag"><i class="ti ti-lock"></i> Locked</span>
+              </div>
+            </div>
+            <div class="sensitive-cell full-width">
+              <div class="detail-label" style="font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);margin-bottom:6px;">Date of Birth</div>
+              <div class="locked-field" style="max-width:280px;">
+                <span class="locked-dots">• • • • – • • – • •</span>
+                <span class="locked-tag"><i class="ti ti-lock"></i> Locked</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enrollments -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-wrap">
+              <i class="ti ti-file-invoice" style="font-size:16px;color:var(--teal);"></i>
+              <span class="card-title">Enrollments</span>
+              <span class="card-badge">1</span>
+            </div>
+            <a href="#" style="font-size:11px;font-weight:600;color:var(--teal);text-decoration:none;display:flex;align-items:center;gap:4px;">View all <i class="ti ti-arrow-right" style="font-size:12px;"></i></a>
+          </div>
+          <div class="enroll-row">
+            <div class="er-payer-mark">AE</div>
+            <div class="er-info">
+              <div class="er-top">
+                <span class="er-payer">Aetna</span>
+                <span class="er-state">TX</span>
+                <span class="er-cycle">· Cycle 1</span>
+              </div>
+              <div class="er-pipe" style="width:180px;">
+                <div class="ep-s current">
+                  <div class="ep-dot"><i class="ti ti-pencil" style="font-size:7px;"></i></div>
+                  <div class="ep-lbl">Prep</div>
+                </div>
+                <div class="ep-s future"><div class="ep-dot">2</div><div class="ep-lbl">Submit</div></div>
+                <div class="ep-s future"><div class="ep-dot">3</div><div class="ep-lbl">Review</div></div>
+                <div class="ep-s future"><div class="ep-dot">4</div><div class="ep-lbl">Non par</div></div>
+                <div class="ep-s future"><div class="ep-dot">5</div><div class="ep-lbl">Approved</div></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+              <span class="sbadge prep"><span class="sd"></span> Prep</span>
+              <span style="font-size:10px;font-style:italic;color:rgba(14,20,60,0.35);">awaiting CV</span>
+            </div>
+            <span class="er-open"><i class="ti ti-arrow-right"></i></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT sidebar -->
+      <div>
+
+        <!-- Contact card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-wrap">
+              <i class="ti ti-address-book" style="font-size:16px;color:var(--teal);"></i>
+              <span class="card-title">Contact</span>
+            </div>
+            <button class="btn-card-action"><i class="ti ti-pencil"></i> Edit</button>
+          </div>
+          <div class="contact-row">
+            <div class="cr-icon teal"><i class="ti ti-mail"></i></div>
+            <div class="cr-info">
+              <div class="cr-label">Email</div>
+              <div class="cr-value"><a href="mailto:asadkathal0@gmail.com">asadkathal0@gmail.com</a></div>
+            </div>
+          </div>
+          <div class="contact-row">
+            <div class="cr-icon navy"><i class="ti ti-phone"></i></div>
+            <div class="cr-info">
+              <div class="cr-label">Phone</div>
+              <div class="cr-value">03176004600</div>
+            </div>
+          </div>
+          <div class="contact-row">
+            <div class="cr-icon" style="background:rgba(var(--grey-rgb),0.25);"><i class="ti ti-map-pin" style="color:rgba(14,20,60,0.3);font-size:15px;"></i></div>
+            <div class="cr-info">
+              <div class="cr-label">Address</div>
+              <div class="cr-value" style="font-size:12px;font-weight:300;color:rgba(14,20,60,0.4);font-style:italic;">Not provided</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- State licenses card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-wrap">
+              <i class="ti ti-certificate" style="font-size:16px;color:var(--teal);"></i>
+              <span class="card-title">State licenses</span>
+              <span class="card-badge zero">0</span>
+            </div>
+            <button class="btn-card-action"><i class="ti ti-plus"></i> Add</button>
+          </div>
+          <div class="empty-state">
+            <i class="ti ti-certificate-off"></i>
+            <p>No state licenses recorded yet.<br>Contact Dastify to add licenses.</p>
+          </div>
+        </div>
+
+        <!-- Provider completeness card -->
+        <div class="card" style="background:var(--navy);">
+          <div style="padding:16px 18px;">
+            <div style="font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ti ti-checklist" style="font-size:13px;color:var(--teal);"></i> Profile Completeness</div>
+            <!-- Progress bar -->
+            <div style="background:rgba(255,255,255,0.1);border-radius:4px;height:6px;margin-bottom:10px;overflow:hidden;">
+              <div style="width:30%;height:100%;background:var(--teal);border-radius:4px;"></div>
+            </div>
+            <div style="font-size:12px;font-weight:600;color:var(--teal);margin-bottom:12px;">30% complete</div>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,0.5);">
+                <i class="ti ti-circle-check" style="font-size:13px;color:var(--green);"></i> Name added
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,0.5);">
+                <i class="ti ti-circle-check" style="font-size:13px;color:var(--green);"></i> Contact info added
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,0.4);">
+                <i class="ti ti-circle-x" style="font-size:13px;color:var(--amber);"></i> NPI number missing
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,0.4);">
+                <i class="ti ti-circle-x" style="font-size:13px;color:var(--amber);"></i> Specialty not set
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,0.4);">
+                <i class="ti ti-circle-x" style="font-size:13px;color:var(--amber);"></i> State license needed
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

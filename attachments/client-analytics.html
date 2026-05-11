@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enrollment Analytics — lumber 1 client</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--navy:#0E143C;--navy-rgb:14,20,60;--teal:#16C1C2;--teal-rgb:22,193,194;--aqua:#4ECED1;--lightgrey:#F6F7FB;--grey:#C6CCD8;--grey-rgb:198,204,216;--white:#FFFFFF;--amber:#F4A300;--green:#2E7D32;--red:#B3261E;--blue:#1565C0;--font:'Poppins',-apple-system,sans-serif;--sidebar:200px;--topbar:52px;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:var(--font);background:var(--lightgrey);color:var(--navy);-webkit-font-smoothing:antialiased;}
+body{display:flex;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);min-width:var(--sidebar);height:100vh;background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;}
+.sidebar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:180px;background:linear-gradient(to top,rgba(22,193,194,0.07),transparent);pointer-events:none;}
+.client-badge{padding:14px 18px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.client-badge-label{font-size:8px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:5px;}
+.client-badge-name{font-size:13px;font-weight:600;color:var(--white);}
+.nav-list{list-style:none;padding:8px;}
+.nav-item a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);text-decoration:none;transition:all 0.2s;margin-bottom:2px;}
+.nav-item a .ti{font-size:17px;}
+.nav-item a:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);}
+.nav-item.active a{background:rgba(22,193,194,0.14);color:var(--teal);}
+.nav-item.active a .ti{color:var(--teal);}
+.sidebar-spacer{flex:1;}
+.sidebar-bottom{padding:8px 8px 20px;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:var(--sidebar);right:0;height:var(--topbar);background:var(--white);border-bottom:1px solid rgba(var(--grey-rgb),0.5);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:90;gap:16px;}
+.topbar-brand{display:flex;align-items:center;gap:10px;}
+.topbar-logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--aqua));display:flex;align-items:center;justify-content:center;}
+.topbar-logo .ti{font-size:15px;color:white;}
+.topbar-name{font-size:12px;font-weight:700;color:var(--navy);letter-spacing:1px;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-icon-btn{width:32px;height:32px;border-radius:7px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(var(--navy-rgb),0.4);transition:all 0.2s;position:relative;}
+.topbar-icon-btn:hover{background:var(--lightgrey);}
+.notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--teal);border:1.5px solid white;}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 5px;border-radius:7px;border:1px solid rgba(var(--grey-rgb),0.4);cursor:pointer;transition:all 0.2s;}
+.user-chip:hover{background:var(--lightgrey);}
+.user-av{width:26px;height:26px;border-radius:6px;background:rgba(22,193,194,0.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--teal);}
+.user-n{font-size:12px;font-weight:600;color:var(--navy);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);padding-top:var(--topbar);flex:1;height:100vh;overflow-y:auto;background:var(--lightgrey);}
+.main::-webkit-scrollbar{width:5px;}
+.main::-webkit-scrollbar-thumb{background:rgba(var(--grey-rgb),0.6);border-radius:3px;}
+.page-content{padding:20px 24px 48px;}
+
+/* Info banner */
+.info-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(244,163,0,0.08);border:1px solid rgba(244,163,0,0.22);border-radius:10px;padding:11px 16px;margin-bottom:20px;}
+.info-banner .ti{font-size:15px;color:var(--amber);flex-shrink:0;margin-top:1px;}
+.info-banner p{font-size:12px;font-weight:400;color:rgba(var(--navy-rgb),0.6);line-height:1.5;}
+.info-banner strong{color:var(--navy);font-weight:600;}
+
+/* Page header */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;}
+.page-header-left{}
+.page-header-left h1{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+.page-header-left p{font-size:12px;font-weight:300;color:rgba(var(--navy-rgb),0.45);}
+.header-actions{display:flex;gap:8px;align-items:center;}
+.btn-export{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.55);background:var(--white);border:1px solid rgba(var(--grey-rgb),0.4);border-radius:7px;cursor:pointer;transition:all 0.2s;}
+.btn-export:hover{border-color:var(--teal);color:var(--teal);}
+.btn-export .ti{font-size:13px;}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.kpi-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);padding:18px 20px;position:relative;overflow:hidden;transition:all 0.2s;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(var(--navy-rgb),0.06);}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;}
+.kpi-card.c-teal::before{background:var(--teal);}
+.kpi-card.c-amber::before{background:var(--amber);}
+.kpi-card.c-blue::before{background:var(--blue);}
+.kpi-card.c-green::before{background:var(--green);}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.4);}
+.kpi-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;}
+.kpi-icon.teal{background:rgba(22,193,194,0.1);}  .kpi-icon.teal .ti{color:var(--teal);font-size:14px;}
+.kpi-icon.amber{background:rgba(244,163,0,0.1);} .kpi-icon.amber .ti{color:var(--amber);font-size:14px;}
+.kpi-icon.blue{background:rgba(21,101,192,0.1);}  .kpi-icon.blue .ti{color:var(--blue);font-size:14px;}
+.kpi-icon.green{background:rgba(46,125,50,0.1);} .kpi-icon.green .ti{color:var(--green);font-size:14px;}
+.kpi-value{font-size:30px;font-weight:700;color:var(--navy);line-height:1;margin-bottom:4px;}
+.kpi-hint{font-size:11px;font-weight:300;color:rgba(var(--navy-rgb),0.35);}
+
+/* ════ MASTER STATUS CARD ════ */
+.master-card{background:var(--white);border-radius:14px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;margin-bottom:16px;}
+.master-header{background:var(--navy);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+.master-header::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(22,193,194,0.08);}
+.master-header::after{content:'';position:absolute;bottom:-20px;left:30%;width:80px;height:80px;border-radius:50%;background:rgba(22,193,194,0.05);}
+.master-header-left{}
+.master-title{font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px;position:relative;z-index:1;}
+.master-sub{font-size:12px;font-weight:300;color:rgba(255,255,255,0.45);position:relative;z-index:1;}
+.master-header-stats{display:flex;gap:20px;position:relative;z-index:1;}
+.mh-stat{text-align:center;}
+.mh-val{font-size:20px;font-weight:700;color:var(--teal);line-height:1;}
+.mh-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-top:3px;}
+
+/* ── FULL PIPELINE VISUAL ── */
+.pipeline-visual{padding:24px 24px 20px;border-bottom:1px solid rgba(var(--grey-rgb),0.25);}
+.pipeline-row{display:flex;align-items:stretch;gap:0;position:relative;}
+
+/* connecting track */
+.pipeline-row::before{
+  content:'';position:absolute;
+  top:22px;left:36px;right:36px;height:2px;
+  background:rgba(var(--grey-rgb),0.4);
+  z-index:0;
+}
+.pipeline-track-fill{
+  position:absolute;
+  top:22px;left:36px;height:2px;
+  background:linear-gradient(90deg,var(--teal),rgba(22,193,194,0.3));
+  z-index:1;
+  transition:width 0.8s ease;
+}
+
+.pipeline-stage{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:0 8px;position:relative;z-index:2;
+}
+.ps-circle{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:12px;transition:all 0.3s;
+  flex-shrink:0;
+}
+.ps-circle.done{background:var(--green);border:2px solid var(--green);}
+.ps-circle.done .ti{font-size:18px;color:white;}
+.ps-circle.current{
+  background:var(--teal);border:2px solid var(--teal);
+  box-shadow:0 0 0 6px rgba(22,193,194,0.15);
+  animation:stagePulse 2.5s ease-in-out infinite;
+}
+.ps-circle.current .ti{font-size:18px;color:white;}
+.ps-circle.future{background:var(--white);border:2px solid rgba(var(--grey-rgb),0.5);}
+.ps-circle.future .ti{font-size:18px;color:rgba(var(--grey-rgb),0.8);}
+@keyframes stagePulse{0%,100%{box-shadow:0 0 0 5px rgba(22,193,194,0.15)}50%{box-shadow:0 0 0 10px rgba(22,193,194,0.07)}}
+
+.ps-name{font-size:11px;font-weight:700;letter-spacing:0.5px;text-align:center;margin-bottom:4px;}
+.ps-circle.done ~ .ps-name{color:var(--green);}
+.ps-circle.current ~ .ps-name{color:var(--teal);}
+.ps-circle.future ~ .ps-name{color:rgba(var(--navy-rgb),0.35);}
+/* Fix: use wrapper */
+.ps-info{display:flex;flex-direction:column;align-items:center;}
+.ps-name.done{color:var(--green);}
+.ps-name.current{color:var(--teal);}
+.ps-name.future{color:rgba(var(--navy-rgb),0.35);}
+
+.ps-desc{font-size:10px;font-weight:300;color:rgba(var(--navy-rgb),0.4);text-align:center;line-height:1.4;max-width:100px;margin-bottom:8px;}
+.ps-count{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;border-radius:12px;font-size:11px;font-weight:700;}
+.ps-count.active-count{background:rgba(22,193,194,0.15);color:var(--teal);}
+.ps-count.zero-count{background:rgba(var(--grey-rgb),0.25);color:rgba(var(--navy-rgb),0.3);}
+.ps-count.done-count{background:rgba(46,125,50,0.12);color:var(--green);}
+
+/* ── ENROLLMENT TABLE INSIDE MASTER CARD ── */
+.enroll-section{padding:0;}
+.enroll-table-header{display:grid;grid-template-columns:26px 1fr 100px 100px 1fr 80px;gap:12px;align-items:center;padding:10px 24px;background:var(--lightgrey);border-bottom:1px solid rgba(var(--grey-rgb),0.3);}
+.eth{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);}
+
+.enroll-row{display:grid;grid-template-columns:26px 1fr 100px 100px 1fr 80px;gap:12px;align-items:center;padding:16px 24px;border-bottom:1px solid rgba(var(--grey-rgb),0.15);cursor:pointer;transition:background 0.15s;}
+.enroll-row:last-child{border-bottom:none;}
+.enroll-row:hover{background:rgba(22,193,194,0.03);}
+.enroll-row:hover .row-open{opacity:1;}
+
+.row-num{font-size:12px;font-weight:600;color:rgba(var(--navy-rgb),0.3);}
+.row-provider{display:flex;align-items:center;gap:10px;}
+.row-av{width:34px;height:34px;border-radius:9px;background:rgba(22,193,194,0.1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#0e8a8b;flex-shrink:0;}
+.row-pname{font-size:13px;font-weight:600;color:var(--navy);}
+.row-pmeta{font-size:11px;font-weight:300;color:rgba(var(--navy-rgb),0.4);margin-top:1px;}
+
+.row-payer{font-size:13px;font-weight:500;color:rgba(var(--navy-rgb),0.65);}
+.state-tag{display:inline-flex;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:700;background:rgba(var(--grey-rgb),0.35);color:rgba(14,20,60,0.6);}
+
+/* Mini pipeline tracker */
+.mini-pipeline{display:flex;align-items:center;gap:0;width:100%;}
+.mp-step{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;}
+.mp-step:not(:last-child)::after{content:'';position:absolute;top:9px;left:calc(50% + 9px);right:calc(-50% + 9px);height:1.5px;background:rgba(var(--grey-rgb),0.4);z-index:0;}
+.mp-step.done:not(:last-child)::after{background:var(--green);}
+.mp-step.current:not(:last-child)::after{background:linear-gradient(90deg,var(--teal),rgba(var(--grey-rgb),0.4));}
+.mp-dot{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;position:relative;z-index:1;transition:all 0.2s;flex-shrink:0;}
+.mp-step.done .mp-dot{background:var(--green);color:white;}
+.mp-step.current .mp-dot{background:var(--teal);color:white;box-shadow:0 0 0 3px rgba(22,193,194,0.2);}
+.mp-step.future .mp-dot{background:rgba(var(--grey-rgb),0.3);color:rgba(var(--navy-rgb),0.3);}
+.mp-label{font-size:8px;font-weight:600;letter-spacing:0.5px;margin-top:4px;text-align:center;white-space:nowrap;}
+.mp-step.done .mp-label{color:var(--green);}
+.mp-step.current .mp-label{color:var(--teal);}
+.mp-step.future .mp-label{color:rgba(var(--navy-rgb),0.25);}
+
+.row-open{font-size:11px;font-weight:600;color:var(--teal);opacity:0;transition:opacity 0.15s;display:flex;align-items:center;gap:4px;justify-content:flex-end;}
+.row-open .ti{font-size:12px;}
+
+/* Status badge */
+.sbadge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.sbadge.prep{background:rgba(22,193,194,0.1);color:#0e8a8b;}
+.sbadge.prep .sd{width:5px;height:5px;border-radius:50%;background:var(--teal);animation:p 2s ease-in-out infinite;}
+@keyframes p{0%,100%{opacity:1}50%{opacity:0.4}}
+.sbadge.submitted{background:rgba(14,20,60,0.08);color:var(--navy);}
+.sbadge.review{background:rgba(21,101,192,0.1);color:var(--blue);}
+.sbadge.nonpar{background:rgba(244,163,0,0.1);color:#7a4d00;}
+.sbadge.approved{background:rgba(46,125,50,0.1);color:var(--green);}
+.sbadge.denied{background:rgba(179,38,30,0.1);color:var(--red);}
+
+/* ── BOTTOM ROW ── */
+.bottom-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+
+/* Donut card */
+.donut-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;}
+.card-header{padding:15px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.2);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:13px;font-weight:600;color:var(--navy);}
+.card-sub{font-size:11px;font-weight:300;color:rgba(var(--navy-rgb),0.4);margin-top:2px;}
+.donut-inner{display:flex;align-items:center;gap:16px;padding:18px;}
+.donut-canvas-wrap{position:relative;width:110px;height:110px;flex-shrink:0;}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+.donut-center-val{font-size:20px;font-weight:700;color:var(--navy);line-height:1;}
+.donut-center-lbl{font-size:8px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);margin-top:2px;}
+.dl-list{flex:1;display:flex;flex-direction:column;gap:0;}
+.dl-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(var(--grey-rgb),0.1);}
+.dl-row:last-child{border-bottom:none;}
+.dl-left{display:flex;align-items:center;gap:7px;}
+.dl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dl-name{font-size:11px;color:rgba(var(--navy-rgb),0.6);}
+.dl-right{display:flex;gap:8px;}
+.dl-count{font-size:11px;font-weight:600;color:var(--navy);min-width:14px;text-align:right;}
+.dl-pct{font-size:10px;color:rgba(var(--navy-rgb),0.35);min-width:28px;text-align:right;}
+.dl-row.active .dl-name{font-weight:600;color:var(--navy);}
+.dl-row.active .dl-pct{color:var(--teal);font-weight:600;}
+
+/* Action card */
+.action-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;}
+.action-item{display:flex;gap:12px;padding:14px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.15);cursor:pointer;transition:background 0.15s;}
+.action-item:last-child{border-bottom:none;}
+.action-item:hover{background:rgba(22,193,194,0.03);}
+.ai-icon{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.ai-icon.amber{background:rgba(244,163,0,0.1);}  .ai-icon.amber .ti{color:var(--amber);font-size:15px;}
+.ai-icon.teal{background:rgba(22,193,194,0.1);}   .ai-icon.teal .ti{color:var(--teal);font-size:15px;}
+.ai-icon.green{background:rgba(46,125,50,0.1);}  .ai-icon.green .ti{color:var(--green);font-size:15px;}
+.ai-title{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:2px;}
+.ai-desc{font-size:11px;font-weight:300;color:rgba(var(--navy-rgb),0.45);line-height:1.4;}
+
+/* Guide card */
+.guide-card{background:var(--navy);border-radius:12px;overflow:hidden;padding:18px;}
+.guide-title{font-size:12px;font-weight:600;color:var(--white);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.guide-title .ti{color:var(--teal);font-size:14px;}
+.g-step{display:flex;gap:10px;margin-bottom:11px;}
+.g-step:last-child{margin-bottom:0;}
+.g-num{width:20px;height:20px;border-radius:50%;background:rgba(22,193,194,0.15);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--teal);flex-shrink:0;margin-top:1px;}
+.g-text{font-size:11px;font-weight:300;color:rgba(255,255,255,0.5);line-height:1.5;}
+.g-text strong{color:var(--teal);}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="client-badge">
+    <div class="client-badge-label">Logged in as</div>
+    <div class="client-badge-name">lumber 1 client</div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item active"><a href="#"><i class="ti ti-layout-dashboard"></i> Dashboard</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-stethoscope"></i> Providers</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-file-invoice"></i> Enrollments</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-files"></i> Documents</a></li>
+  </ul>
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-bottom">
+    <ul class="nav-list"><li class="nav-item"><a href="#"><i class="ti ti-settings"></i> Settings</a></li></ul>
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo"><i class="ti ti-shield-check"></i></div>
+    <span class="topbar-name">Dastify</span>
+  </div>
+  <div class="topbar-right">
+    <button class="topbar-icon-btn"><i class="ti ti-bell" style="font-size:17px;"></i><span class="notif-dot"></span></button>
+    <button class="topbar-icon-btn"><i class="ti ti-help-circle" style="font-size:17px;"></i></button>
+    <div class="user-chip">
+      <div class="user-av">MA</div>
+      <span class="user-n">Muhammad Asad</span>
+      <i class="ti ti-chevron-down" style="font-size:12px;color:rgba(14,20,60,0.3);margin-left:4px;"></i>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-content">
+
+    <!-- Info banner -->
+    <div class="info-banner">
+      <i class="ti ti-clock"></i>
+      <p><strong>Processing time:</strong> Insurance credentialing takes 90–120 business days. You'll receive notifications at every stage change.</p>
+    </div>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Enrollment Analytics</h1>
+        <p>All enrollments, statuses and progress — at a glance. Updated <strong>May 11, 2026</strong></p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-export"><i class="ti ti-download"></i> Export</button>
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="kpi-grid">
+      <div class="kpi-card c-teal">
+        <div class="kpi-top"><span class="kpi-label">Active Enrollments</span><div class="kpi-icon teal"><i class="ti ti-file-invoice"></i></div></div>
+        <div class="kpi-value">1</div>
+        <div class="kpi-hint">Currently in progress</div>
+      </div>
+      <div class="kpi-card c-amber">
+        <div class="kpi-top"><span class="kpi-label">Recreds Due 90D</span><div class="kpi-icon amber"><i class="ti ti-clock-exclamation"></i></div></div>
+        <div class="kpi-value">0</div>
+        <div class="kpi-hint">Nothing due soon</div>
+      </div>
+      <div class="kpi-card c-blue">
+        <div class="kpi-top"><span class="kpi-label">Open Info Requests</span><div class="kpi-icon blue"><i class="ti ti-mail-question"></i></div></div>
+        <div class="kpi-value">0</div>
+        <div class="kpi-hint">No pending requests</div>
+      </div>
+      <div class="kpi-card c-green">
+        <div class="kpi-top"><span class="kpi-label">New Comments (7D)</span><div class="kpi-icon green"><i class="ti ti-message"></i></div></div>
+        <div class="kpi-value">1</div>
+        <div class="kpi-hint">1 unread comment</div>
+      </div>
+    </div>
+
+    <!-- ════ MASTER STATUS CARD ════ -->
+    <div class="master-card">
+
+      <!-- Header -->
+      <div class="master-header">
+        <div class="master-header-left">
+          <div class="master-title">All Enrollment Statuses — Complete View</div>
+          <div class="master-sub">Every enrollment with live stage, payer, and pipeline progress</div>
+        </div>
+        <div class="master-header-stats">
+          <div class="mh-stat"><div class="mh-val">1</div><div class="mh-lbl">Total</div></div>
+          <div class="mh-stat"><div class="mh-val">1</div><div class="mh-lbl">In Prep</div></div>
+          <div class="mh-stat"><div class="mh-val">0</div><div class="mh-lbl">Approved</div></div>
+          <div class="mh-stat"><div class="mh-val">20%</div><div class="mh-lbl">Avg Progress</div></div>
+        </div>
+      </div>
+
+      <!-- Pipeline visual (overall count per stage) -->
+      <div class="pipeline-visual">
+        <div style="font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(14,20,60,0.35);margin-bottom:16px;">Pipeline overview — total across all enrollments</div>
+        <div class="pipeline-row" style="position:relative;">
+          <div class="pipeline-track-fill" style="width:10%;"></div>
+
+          <!-- Prep — ACTIVE -->
+          <div class="pipeline-stage">
+            <div class="ps-circle current"><i class="ti ti-pencil"></i></div>
+            <div class="ps-info">
+              <div class="ps-name current">Prep</div>
+              <div class="ps-desc">Collecting provider credentials & documents</div>
+              <div class="ps-count active-count">1</div>
+            </div>
+          </div>
+
+          <!-- Submitted -->
+          <div class="pipeline-stage">
+            <div class="ps-circle future"><i class="ti ti-send"></i></div>
+            <div class="ps-info">
+              <div class="ps-name future">Submitted</div>
+              <div class="ps-desc">Application sent to the insurer</div>
+              <div class="ps-count zero-count">0</div>
+            </div>
+          </div>
+
+          <!-- In Review -->
+          <div class="pipeline-stage">
+            <div class="ps-circle future"><i class="ti ti-eye"></i></div>
+            <div class="ps-info">
+              <div class="ps-name future">In Review</div>
+              <div class="ps-desc">Payer is verifying credentials</div>
+              <div class="ps-count zero-count">0</div>
+            </div>
+          </div>
+
+          <!-- Non par -->
+          <div class="pipeline-stage">
+            <div class="ps-circle future"><i class="ti ti-clock"></i></div>
+            <div class="ps-info">
+              <div class="ps-name future">Non par</div>
+              <div class="ps-desc">Awaiting network participation</div>
+              <div class="ps-count zero-count">0</div>
+            </div>
+          </div>
+
+          <!-- Approved -->
+          <div class="pipeline-stage">
+            <div class="ps-circle future"><i class="ti ti-circle-check"></i></div>
+            <div class="ps-info">
+              <div class="ps-name future">Approved</div>
+              <div class="ps-desc">Provider is active in-network</div>
+              <div class="ps-count zero-count">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enrollment rows with mini pipeline -->
+      <div class="enroll-section">
+        <div class="enroll-table-header">
+          <span class="eth">#</span>
+          <span class="eth">Provider</span>
+          <span class="eth">Payer</span>
+          <span class="eth">State</span>
+          <span class="eth">Pipeline progress</span>
+          <span class="eth" style="text-align:right;">Status</span>
+        </div>
+
+        <!-- ROW 1 -->
+        <div class="enroll-row">
+          <span class="row-num">1</span>
+          <div class="row-provider">
+            <div class="row-av">MA</div>
+            <div>
+              <div class="row-pname">Asad, Muhammad</div>
+              <div class="row-pmeta">Cycle 1 · Created May 8, 2026</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;">
+            <div style="width:24px;height:24px;border-radius:6px;background:rgba(14,20,60,0.07);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:var(--navy);flex-shrink:0;">AE</div>
+            <span class="row-payer">Aetna</span>
+          </div>
+          <span class="state-tag">TX</span>
+          <!-- Mini pipeline -->
+          <div class="mini-pipeline">
+            <div class="mp-step current">
+              <div class="mp-dot"><i class="ti ti-pencil" style="font-size:9px;"></i></div>
+              <div class="mp-label">Prep</div>
+            </div>
+            <div class="mp-step future">
+              <div class="mp-dot">2</div>
+              <div class="mp-label">Submit</div>
+            </div>
+            <div class="mp-step future">
+              <div class="mp-dot">3</div>
+              <div class="mp-label">Review</div>
+            </div>
+            <div class="mp-step future">
+              <div class="mp-dot">4</div>
+              <div class="mp-label">Non par</div>
+            </div>
+            <div class="mp-step future">
+              <div class="mp-dot">5</div>
+              <div class="mp-label">Approved</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;">
+            <span class="sbadge prep"><span class="sd"></span> Prep</span>
+            <span class="row-open"><i class="ti ti-arrow-right"></i></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Bottom row: Donut + Actions + Guide -->
+    <div class="bottom-row">
+
+      <!-- Donut breakdown -->
+      <div class="donut-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Status breakdown</div>
+            <div class="card-sub">All enrollments snapshot</div>
+          </div>
+        </div>
+        <div class="donut-inner">
+          <div class="donut-canvas-wrap">
+            <canvas id="donut"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val">1</div>
+              <div class="donut-center-lbl">Active</div>
+            </div>
+          </div>
+          <div class="dl-list">
+            <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#C6CCD8;"></span><span class="dl-name">Prep</span></div><div class="dl-right"><span class="dl-count active" style="color:var(--teal);">1</span><span class="dl-pct" style="color:var(--teal);font-weight:600;">100%</span></div></div>
+            <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#0E143C;"></span><span class="dl-name">Submitted</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+            <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#1565C0;"></span><span class="dl-name">In Review</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+            <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#F4A300;"></span><span class="dl-name">Non par</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+            <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#2E7D32;"></span><span class="dl-name">Approved</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action items -->
+      <div class="action-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Action items</div>
+            <div class="card-sub">What needs your attention</div>
+          </div>
+        </div>
+        <div class="action-item">
+          <div class="ai-icon amber"><i class="ti ti-upload"></i></div>
+          <div>
+            <div class="ai-title">Upload CV — Asad, Muhammad</div>
+            <div class="ai-desc">Enrollment is waiting on the provider CV document to advance from Prep to Submitted.</div>
+          </div>
+        </div>
+        <div class="action-item">
+          <div class="ai-icon teal"><i class="ti ti-message"></i></div>
+          <div>
+            <div class="ai-title">1 unread comment</div>
+            <div class="ai-desc">A new comment was added to your enrollment in the last 7 days.</div>
+          </div>
+        </div>
+        <div class="action-item">
+          <div class="ai-icon green"><i class="ti ti-circle-check"></i></div>
+          <div>
+            <div class="ai-title">No info requests pending</div>
+            <div class="ai-desc">Your inbox is clear — nothing is awaiting a response from you.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guide card -->
+      <div class="guide-card">
+        <div class="guide-title"><i class="ti ti-route"></i> Your credentialing roadmap</div>
+        <div class="g-step"><div class="g-num">1</div><div class="g-text"><strong>Prep</strong> — Upload provider CV & documents. You are here.</div></div>
+        <div class="g-step"><div class="g-num">2</div><div class="g-text"><strong>Submitted</strong> — Dastify sends your application to Aetna.</div></div>
+        <div class="g-step"><div class="g-num">3</div><div class="g-text"><strong>In Review</strong> — The insurer verifies credentials. Avg 60–90 days.</div></div>
+        <div class="g-step"><div class="g-num">4</div><div class="g-text"><strong>Non par</strong> — Awaiting network participation confirmation.</div></div>
+        <div class="g-step"><div class="g-num">5</div><div class="g-text"><strong>Approved</strong> — Your provider is credentialed and active in-network.</div></div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+var dCtx = document.getElementById('donut').getContext('2d');
+new Chart(dCtx, {
+  type:'doughnut',
+  data:{
+    labels:['Prep','Rest'],
+    datasets:[{data:[1,0.001],backgroundColor:['#16C1C2','#F6F7FB'],borderWidth:0}]
+  },
+  options:{cutout:'70%',responsive:true,plugins:{legend:{display:false},tooltip:{enabled:false}}}
+});
+</script>
+</body>
+</html>

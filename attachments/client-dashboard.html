@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — lumber 1 client</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--navy:#0E143C;--navy-rgb:14,20,60;--teal:#16C1C2;--teal-rgb:22,193,194;--aqua:#4ECED1;--lightgrey:#F6F7FB;--grey:#C6CCD8;--grey-rgb:198,204,216;--white:#FFFFFF;--amber:#F4A300;--green:#2E7D32;--red:#B3261E;--blue:#1565C0;--font:'Poppins',-apple-system,sans-serif;--sidebar:200px;--topbar:52px;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:var(--font);background:var(--lightgrey);color:var(--navy);-webkit-font-smoothing:antialiased;}
+body{display:flex;overflow:hidden;}
+
+/* CLIENT SIDEBAR — lighter feel than admin */
+.sidebar{width:var(--sidebar);min-width:var(--sidebar);height:100vh;background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;}
+.sidebar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:180px;background:linear-gradient(to top,rgba(22,193,194,0.07),transparent);pointer-events:none;}
+.client-badge{padding:14px 18px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.client-badge-label{font-size:8px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:5px;}
+.client-badge-name{font-size:13px;font-weight:600;color:var(--white);letter-spacing:0.3px;}
+.nav-list{list-style:none;padding:8px;}
+.nav-item a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);text-decoration:none;transition:all 0.2s;margin-bottom:2px;}
+.nav-item a .ti{font-size:17px;}
+.nav-item a:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);}
+.nav-item.active a{background:rgba(22,193,194,0.14);color:var(--teal);}
+.nav-item.active a .ti{color:var(--teal);}
+.sidebar-spacer{flex:1;}
+.sidebar-bottom{padding:8px 8px 20px;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:var(--sidebar);right:0;height:var(--topbar);background:var(--white);border-bottom:1px solid rgba(var(--grey-rgb),0.5);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:90;gap:16px;}
+.topbar-brand{display:flex;align-items:center;gap:10px;}
+.topbar-logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--aqua));display:flex;align-items:center;justify-content:center;}
+.topbar-logo .ti{font-size:15px;color:white;}
+.topbar-name{font-size:12px;font-weight:700;color:var(--navy);letter-spacing:1px;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-icon-btn{width:32px;height:32px;border-radius:7px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(var(--navy-rgb),0.4);transition:all 0.2s;position:relative;}
+.topbar-icon-btn:hover{background:var(--lightgrey);}
+.notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--teal);border:1.5px solid white;}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 5px;border-radius:7px;border:1px solid rgba(var(--grey-rgb),0.4);cursor:pointer;transition:all 0.2s;}
+.user-chip:hover{background:var(--lightgrey);}
+.user-av{width:26px;height:26px;border-radius:6px;background:rgba(22,193,194,0.12);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--teal);}
+.user-n{font-size:12px;font-weight:600;color:var(--navy);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);padding-top:var(--topbar);flex:1;height:100vh;overflow-y:auto;background:var(--lightgrey);}
+.main::-webkit-scrollbar{width:5px;}
+.main::-webkit-scrollbar-thumb{background:rgba(var(--grey-rgb),0.6);border-radius:3px;}
+.page-content{padding:20px 24px 48px;}
+
+/* Info banner */
+.info-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(244,163,0,0.08);border:1px solid rgba(244,163,0,0.25);border-radius:10px;padding:12px 16px;margin-bottom:20px;}
+.info-banner .ti{font-size:16px;color:var(--amber);flex-shrink:0;margin-top:1px;}
+.info-banner p{font-size:13px;font-weight:400;color:rgba(var(--navy-rgb),0.65);line-height:1.5;}
+.info-banner strong{color:var(--navy);font-weight:600;}
+
+/* Page header */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+.page-header-left h1{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+.page-header-left p{font-size:12px;font-weight:300;color:rgba(var(--navy-rgb),0.45);}
+.btn-export{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.6);background:var(--white);border:1px solid rgba(var(--grey-rgb),0.4);border-radius:7px;cursor:pointer;transition:all 0.2s;}
+.btn-export:hover{border-color:var(--teal);color:var(--teal);}
+.btn-export .ti{font-size:14px;}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.kpi-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);padding:20px 22px;position:relative;overflow:hidden;transition:all 0.2s;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(var(--navy-rgb),0.06);}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;}
+.kpi-card.c-teal::before{background:var(--teal);}
+.kpi-card.c-amber::before{background:var(--amber);}
+.kpi-card.c-blue::before{background:var(--blue);}
+.kpi-card.c-green::before{background:var(--green);}
+.kpi-label{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.4);margin-bottom:12px;}
+.kpi-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;}
+.kpi-icon.teal{background:rgba(22,193,194,0.1);}  .kpi-icon.teal .ti{color:var(--teal);}
+.kpi-icon.amber{background:rgba(244,163,0,0.1);} .kpi-icon.amber .ti{color:var(--amber);}
+.kpi-icon.blue{background:rgba(21,101,192,0.1);}  .kpi-icon.blue .ti{color:var(--blue);}
+.kpi-icon.green{background:rgba(46,125,50,0.1);} .kpi-icon.green .ti{color:var(--green);}
+.kpi-icon .ti{font-size:14px;}
+.kpi-value{font-size:32px;font-weight:700;color:var(--navy);line-height:1;margin-bottom:5px;}
+.kpi-hint{font-size:11px;font-weight:300;color:rgba(var(--navy-rgb),0.35);}
+
+/* SECTION LABEL */
+.section-label{font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.3);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.section-label::after{content:'';flex:1;height:1px;background:rgba(var(--grey-rgb),0.5);}
+
+/* ════ ENROLLMENT STATUS — CLIENT FRIENDLY ════ */
+.status-section{display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:20px;}
+
+/* Pipeline visual card */
+.pipeline-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;}
+.pipeline-card-header{padding:18px 22px 0;}
+.pipeline-card-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:4px;}
+.pipeline-card-sub{font-size:12px;font-weight:300;color:rgba(var(--navy-rgb),0.45);margin-bottom:20px;}
+
+/* Stage columns */
+.stage-columns{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:1px solid rgba(var(--grey-rgb),0.2);padding:0;}
+.stage-col{padding:16px 12px;border-right:1px solid rgba(var(--grey-rgb),0.15);position:relative;cursor:pointer;transition:background 0.2s;}
+.stage-col:last-child{border-right:none;}
+.stage-col:hover{background:rgba(var(--grey-rgb),0.07);}
+.stage-col.active-stage{background:rgba(22,193,194,0.04);}
+.stage-col.active-stage::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--teal);border-radius:0;}
+.stage-num{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:11px;font-weight:700;margin-bottom:10px;}
+.stage-col.active-stage .stage-num{background:var(--teal);color:white;}
+.stage-col:not(.active-stage) .stage-num{background:rgba(var(--grey-rgb),0.3);color:rgba(var(--navy-rgb),0.4);}
+.stage-name{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:3px;}
+.stage-col:not(.active-stage) .stage-name{color:rgba(var(--navy-rgb),0.4);}
+.stage-desc{font-size:10px;font-weight:300;color:rgba(var(--navy-rgb),0.4);line-height:1.4;margin-bottom:10px;}
+.stage-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:11px;font-size:12px;font-weight:700;}
+.stage-col.active-stage .stage-count{background:rgba(22,193,194,0.15);color:var(--teal);}
+.stage-col:not(.active-stage) .stage-count{background:rgba(var(--grey-rgb),0.25);color:rgba(var(--navy-rgb),0.3);}
+
+/* Enrollment list card (replaces left chart) */
+.enroll-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;margin-bottom:16px;}
+.enroll-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(var(--grey-rgb),0.2);}
+.enroll-card-title{font-size:14px;font-weight:600;color:var(--navy);}
+.enroll-count-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:11px;font-size:11px;font-weight:700;background:rgba(22,193,194,0.1);color:var(--teal);}
+.btn-small{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:0.5px;color:rgba(var(--navy-rgb),0.5);background:none;border:1px solid rgba(var(--grey-rgb),0.4);border-radius:6px;cursor:pointer;transition:all 0.2s;}
+.btn-small:hover{border-color:var(--teal);color:var(--teal);}
+.enroll-row{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(var(--grey-rgb),0.15);cursor:pointer;transition:background 0.15s;}
+.enroll-row:last-child{border-bottom:none;}
+.enroll-row:hover{background:rgba(22,193,194,0.03);}
+.enroll-av{width:38px;height:38px;border-radius:9px;background:rgba(22,193,194,0.1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#0e8a8b;flex-shrink:0;}
+.enroll-info{flex:1;}
+.enroll-name{font-size:13px;font-weight:600;color:var(--navy);}
+.enroll-meta{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;}
+.enroll-payer{font-size:11px;font-weight:500;color:rgba(var(--navy-rgb),0.5);}
+.enroll-state{display:inline-flex;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(var(--grey-rgb),0.3);color:rgba(14,20,60,0.55);}
+.enroll-status{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+.enroll-status.prep{background:rgba(22,193,194,0.1);color:#0e8a8b;}
+.enroll-status.prep .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.85)}}
+.enroll-cycle{font-size:11px;font-weight:500;color:rgba(var(--navy-rgb),0.35);}
+.enroll-action{font-size:12px;color:rgba(var(--grey-rgb),0.9);flex-shrink:0;transition:color 0.2s;}
+.enroll-row:hover .enroll-action{color:var(--teal);}
+
+/* RIGHT SIDEBAR */
+/* Donut summary card — simplified */
+.donut-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;margin-bottom:14px;}
+.donut-card-header{padding:16px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.2);}
+.donut-card-title{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:2px;}
+.donut-card-sub{font-size:11px;font-weight:300;color:rgba(var(--navy-rgb),0.4);}
+.donut-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 18px 10px;}
+.donut-canvas-wrap{position:relative;width:140px;height:140px;margin-bottom:16px;}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+.donut-center-val{font-size:24px;font-weight:700;color:var(--navy);}
+.donut-center-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);margin-top:2px;}
+.donut-legend{width:100%;padding:0 0 10px;}
+.dl-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(var(--grey-rgb),0.12);}
+.dl-row:last-child{border-bottom:none;}
+.dl-left{display:flex;align-items:center;gap:8px;}
+.dl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dl-name{font-size:12px;font-weight:400;color:rgba(var(--navy-rgb),0.65);}
+.dl-right{display:flex;gap:12px;align-items:center;}
+.dl-count{font-size:12px;font-weight:600;color:var(--navy);min-width:16px;text-align:right;}
+.dl-pct{font-size:11px;color:rgba(var(--navy-rgb),0.35);min-width:32px;text-align:right;}
+.dl-row.has-value .dl-name{color:var(--navy);font-weight:500;}
+.dl-row.has-value .dl-pct{color:var(--teal);font-weight:600;}
+
+/* Info guide card */
+.guide-card{background:var(--navy);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.guide-card::before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(22,193,194,0.1);}
+.guide-title{font-size:12px;font-weight:600;color:var(--white);margin-bottom:14px;position:relative;z-index:1;display:flex;align-items:center;gap:7px;}
+.guide-title .ti{font-size:15px;color:var(--teal);}
+.guide-step{display:flex;gap:10px;margin-bottom:12px;position:relative;z-index:1;}
+.guide-step:last-child{margin-bottom:0;}
+.gs-num{width:20px;height:20px;border-radius:50%;background:rgba(22,193,194,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--teal);flex-shrink:0;margin-top:1px;}
+.gs-text{font-size:11px;font-weight:400;color:rgba(255,255,255,0.55);line-height:1.5;}
+.gs-text strong{color:var(--teal);font-weight:600;}
+
+/* Action needed card */
+.action-card{background:rgba(244,163,0,0.07);border:1px solid rgba(244,163,0,0.2);border-radius:12px;padding:16px 18px;margin-bottom:14px;}
+.action-card-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.action-card-icon{width:30px;height:30px;border-radius:8px;background:rgba(244,163,0,0.15);display:flex;align-items:center;justify-content:center;}
+.action-card-icon .ti{font-size:15px;color:var(--amber);}
+.action-card-title{font-size:13px;font-weight:600;color:var(--navy);}
+.action-card-desc{font-size:12px;font-weight:300;color:rgba(var(--navy-rgb),0.55);line-height:1.55;margin-bottom:12px;}
+.btn-action{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--white);background:var(--amber);border:none;border-radius:7px;cursor:pointer;transition:all 0.2s;}
+.btn-action:hover{background:#d4900e;}
+.btn-action .ti{font-size:13px;}
+</style>
+</head>
+<body>
+
+<!-- CLIENT SIDEBAR -->
+<aside class="sidebar">
+  <div class="client-badge">
+    <div class="client-badge-label">Logged in as</div>
+    <div class="client-badge-name">lumber 1 client</div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item active"><a href="#"><i class="ti ti-layout-dashboard"></i> Dashboard</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-stethoscope"></i> Providers</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-file-invoice"></i> Enrollments</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-files"></i> Documents</a></li>
+  </ul>
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-bottom">
+    <ul class="nav-list"><li class="nav-item"><a href="#"><i class="ti ti-settings"></i> Settings</a></li></ul>
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo"><i class="ti ti-shield-check"></i></div>
+    <span class="topbar-name">Dastify</span>
+  </div>
+  <div class="topbar-right">
+    <button class="topbar-icon-btn"><i class="ti ti-bell" style="font-size:17px;"></i><span class="notif-dot"></span></button>
+    <button class="topbar-icon-btn"><i class="ti ti-help-circle" style="font-size:17px;"></i></button>
+    <div class="user-chip">
+      <div class="user-av">MA</div>
+      <span class="user-n">Muhammad Asad</span>
+      <i class="ti ti-chevron-down" style="font-size:12px;color:rgba(14,20,60,0.3);margin-left:4px;"></i>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-content">
+
+    <!-- Info banner -->
+    <div class="info-banner">
+      <i class="ti ti-info-circle"></i>
+      <p><strong>Processing time:</strong> All insurance credentialing applications take up to 90–120 business days for processing. We'll notify you at every stage change.</p>
+    </div>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Dashboard</h1>
+        <p>Credentialing status across all your providers, payers, and states. Updated <strong>May 11, 2026</strong></p>
+      </div>
+      <button class="btn-export"><i class="ti ti-download"></i> Export to Excel</button>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card c-teal">
+        <div class="kpi-label">Active Enrollments <div class="kpi-icon teal"><i class="ti ti-file-invoice"></i></div></div>
+        <div class="kpi-value">1</div>
+        <div class="kpi-hint">Currently in progress</div>
+      </div>
+      <div class="kpi-card c-amber">
+        <div class="kpi-label">Recreds Due 90D <div class="kpi-icon amber"><i class="ti ti-clock-exclamation"></i></div></div>
+        <div class="kpi-value">0</div>
+        <div class="kpi-hint">Nothing due soon</div>
+      </div>
+      <div class="kpi-card c-blue">
+        <div class="kpi-label">Open Info Requests <div class="kpi-icon blue"><i class="ti ti-mail-question"></i></div></div>
+        <div class="kpi-value">0</div>
+        <div class="kpi-hint">No pending requests</div>
+      </div>
+      <div class="kpi-card c-green">
+        <div class="kpi-label">New Comments (7D) <div class="kpi-icon green"><i class="ti ti-message"></i></div></div>
+        <div class="kpi-value">1</div>
+        <div class="kpi-hint">Unread in last 7 days</div>
+      </div>
+    </div>
+
+    <!-- Enrollment Status Section -->
+    <div class="section-label">Enrollment Status</div>
+
+    <!-- Stage pipeline (full width) -->
+    <div class="pipeline-card" style="margin-bottom:16px;">
+      <div class="pipeline-card-header">
+        <div class="pipeline-card-title">Where are your enrollments right now?</div>
+        <div class="pipeline-card-sub">Each enrollment moves through 5 stages before being approved by the insurance company.</div>
+      </div>
+      <div class="stage-columns">
+        <!-- Stage 1: Prep (ACTIVE) -->
+        <div class="stage-col active-stage">
+          <div class="stage-num">1</div>
+          <div class="stage-name">Prep</div>
+          <div class="stage-desc">Gathering provider documents & verifying credentials</div>
+          <div class="stage-count">1</div>
+        </div>
+        <!-- Stage 2: Submitted -->
+        <div class="stage-col">
+          <div class="stage-num">2</div>
+          <div class="stage-name">Submitted</div>
+          <div class="stage-desc">Application sent to the insurance company</div>
+          <div class="stage-count">0</div>
+        </div>
+        <!-- Stage 3: In Review -->
+        <div class="stage-col">
+          <div class="stage-num">3</div>
+          <div class="stage-name">In Review</div>
+          <div class="stage-desc">Payer is reviewing & verifying credentials</div>
+          <div class="stage-count">0</div>
+        </div>
+        <!-- Stage 4: Non par -->
+        <div class="stage-col">
+          <div class="stage-num">4</div>
+          <div class="stage-name">Non par</div>
+          <div class="stage-desc">Awaiting network participation confirmation</div>
+          <div class="stage-count">0</div>
+        </div>
+        <!-- Stage 5: Approved -->
+        <div class="stage-col">
+          <div class="stage-num">5</div>
+          <div class="stage-name">Approved</div>
+          <div class="stage-desc">Credentialing complete — provider is active</div>
+          <div class="stage-count">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two-column: Enrollment list + Sidebar -->
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+
+      <!-- Enrollment list -->
+      <div class="enroll-card">
+        <div class="enroll-card-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="enroll-card-title">Your Enrollments</span>
+            <span class="enroll-count-badge">1</span>
+          </div>
+          <button class="btn-small"><i class="ti ti-external-link" style="font-size:13px;"></i> View all</button>
+        </div>
+
+        <!-- Enrollment row -->
+        <div class="enroll-row">
+          <div class="enroll-av">MA</div>
+          <div class="enroll-info">
+            <div class="enroll-name">Asad, Muhammad</div>
+            <div class="enroll-meta">
+              <span class="enroll-payer"><i class="ti ti-building" style="font-size:11px;margin-right:3px;"></i>Aetna</span>
+              <span class="enroll-state">TX</span>
+              <span class="enroll-status prep"><span class="dot"></span> Prep</span>
+              <span class="enroll-cycle">· Cycle 1</span>
+            </div>
+          </div>
+          <i class="ti ti-chevron-right enroll-action" style="font-size:15px;"></i>
+        </div>
+
+        <!-- Empty state hint row -->
+        <div style="padding:12px 20px;background:rgba(22,193,194,0.03);border-top:1px solid rgba(198,204,216,0.2);">
+          <p style="font-size:11px;font-weight:300;color:rgba(14,20,60,0.4);display:flex;align-items:center;gap:6px;">
+            <i class="ti ti-info-circle" style="font-size:12px;color:var(--teal);"></i>
+            Your enrollment is in <strong style="color:var(--teal);">Prep</strong> — we are collecting your provider's credentials. Average time at this stage: 5–10 business days.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right column -->
+      <div>
+        <!-- Action needed -->
+        <div class="action-card">
+          <div class="action-card-top">
+            <div class="action-card-icon"><i class="ti ti-alert-triangle"></i></div>
+            <span class="action-card-title">Action needed</span>
+          </div>
+          <div class="action-card-desc">Your enrollment for <strong>Asad, Muhammad / Aetna</strong> is awaiting a <strong>CV document</strong> to move to the next stage.</div>
+          <button class="btn-action"><i class="ti ti-upload"></i> Upload CV Document</button>
+        </div>
+
+        <!-- Donut -->
+        <div class="donut-card">
+          <div class="donut-card-header">
+            <div class="donut-card-title">Active enrollments by status</div>
+            <div class="donut-card-sub">Snapshot — current</div>
+          </div>
+          <div class="donut-wrap">
+            <div class="donut-canvas-wrap">
+              <canvas id="statusDonut"></canvas>
+              <div class="donut-center">
+                <div class="donut-center-val">1</div>
+                <div class="donut-center-lbl">Active</div>
+              </div>
+            </div>
+            <div class="donut-legend" style="width:100%;">
+              <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#C6CCD8;"></span><span class="dl-name">Intake</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+              <div class="dl-row has-value"><div class="dl-left"><span class="dl-dot" style="background:#16C1C2;"></span><span class="dl-name">Prep</span></div><div class="dl-right"><span class="dl-count">1</span><span class="dl-pct">100%</span></div></div>
+              <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#0E143C;"></span><span class="dl-name">Submitted</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+              <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#1565C0;"></span><span class="dl-name">In Review</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+              <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#F4A300;"></span><span class="dl-name">Non par</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+              <div class="dl-row"><div class="dl-left"><span class="dl-dot" style="background:#2E7D32;"></span><span class="dl-name">Approved</span></div><div class="dl-right"><span class="dl-count">0</span><span class="dl-pct">0%</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guide -->
+        <div class="guide-card">
+          <div class="guide-title"><i class="ti ti-route"></i> What happens next?</div>
+          <div class="guide-step"><div class="gs-num">1</div><div class="gs-text">Upload your provider's <strong>CV & documents</strong> to complete Prep stage.</div></div>
+          <div class="guide-step"><div class="gs-num">2</div><div class="gs-text">Dastify submits your application to <strong>Aetna</strong> once documents are verified.</div></div>
+          <div class="guide-step"><div class="gs-num">3</div><div class="gs-text">The insurer reviews credentials — takes <strong>60–90 business days</strong>.</div></div>
+          <div class="guide-step"><div class="gs-num">4</div><div class="gs-text">Once approved, your provider is <strong>active in-network</strong> with Aetna.</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+var dCtx = document.getElementById('statusDonut').getContext('2d');
+new Chart(dCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Prep','Remaining'],
+    datasets:[{data:[1,0.001],backgroundColor:['#16C1C2','#F6F7FB'],borderWidth:0,hoverOffset:4}]
+  },
+  options:{cutout:'72%',responsive:true,plugins:{legend:{display:false},tooltip:{bodyFont:{family:'Poppins'},titleFont:{family:'Poppins'}}}}
+});
+</script>
+</body>
+</html>

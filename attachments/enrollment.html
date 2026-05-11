@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enrollment — Aetna · TX · Cycle 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root{--navy:#0E143C;--navy-rgb:14,20,60;--teal:#16C1C2;--teal-rgb:22,193,194;--aqua:#4ECED1;--lightgrey:#F6F7FB;--grey:#C6CCD8;--grey-rgb:198,204,216;--white:#FFFFFF;--amber:#F4A300;--green:#2E7D32;--red:#B3261E;--blue:#1565C0;--font:'Poppins',-apple-system,sans-serif;--sidebar:220px;--topbar:58px;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:var(--font);background:var(--lightgrey);color:var(--navy);-webkit-font-smoothing:antialiased;}
+body{display:flex;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);min-width:var(--sidebar);height:100vh;background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;}
+.sidebar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:200px;background:linear-gradient(to top,rgba(22,193,194,0.06),transparent);pointer-events:none;}
+.sidebar-brand{padding:18px 20px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.brand-mark{width:34px;height:34px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,var(--teal),var(--aqua));display:flex;align-items:center;justify-content:center;}
+.brand-mark .ti{font-size:17px;color:white;}
+.brand-text{display:flex;flex-direction:column;line-height:1.2;}
+.brand-name{font-size:12px;font-weight:700;color:white;letter-spacing:1.5px;text-transform:uppercase;}
+.brand-sub{font-size:8px;color:rgba(255,255,255,0.35);letter-spacing:2px;text-transform:uppercase;}
+.sidebar-section{padding:20px 14px 6px;font-size:9px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.2);}
+.nav-list{list-style:none;padding:0 8px;}
+.nav-item a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);text-decoration:none;transition:all 0.2s;margin-bottom:2px;}
+.nav-item a .ti{font-size:17px;}
+.nav-item a:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);}
+.nav-item.active a{background:rgba(22,193,194,0.14);color:var(--teal);}
+.nav-item.active a .ti{color:var(--teal);}
+.sidebar-spacer{flex:1;}
+.sidebar-bottom{padding:8px 8px 20px;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:var(--sidebar);right:0;height:var(--topbar);background:var(--white);border-bottom:1px solid rgba(var(--grey-rgb),0.5);display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:90;gap:16px;}
+.topbar-title{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.3);}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--lightgrey);border:1px solid rgba(var(--grey-rgb),0.5);border-radius:8px;padding:7px 14px;width:280px;transition:all 0.2s;}
+.search-box:focus-within{border-color:var(--teal);background:white;box-shadow:0 0 0 3px rgba(22,193,194,0.08);}
+.search-box input{background:none;border:none;outline:none;font-family:var(--font);font-size:13px;color:var(--navy);width:100%;}
+.search-box input::placeholder{color:rgba(var(--navy-rgb),0.3);}
+.search-kb{font-size:10px;color:rgba(var(--navy-rgb),0.25);background:rgba(var(--grey-rgb),0.4);padding:2px 6px;border-radius:4px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.topbar-icon-btn{width:34px;height:34px;border-radius:8px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(var(--navy-rgb),0.4);transition:all 0.2s;position:relative;}
+.topbar-icon-btn:hover{background:var(--lightgrey);}
+.notif-dot{position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--teal);border:1.5px solid white;}
+.user-chip{display:flex;align-items:center;gap:9px;padding:5px 12px 5px 5px;border-radius:8px;border:1px solid rgba(var(--grey-rgb),0.4);cursor:pointer;transition:all 0.2s;}
+.user-chip:hover{background:var(--lightgrey);}
+.user-avatar{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--navy),#2a3470);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--teal);}
+.user-info{display:flex;flex-direction:column;line-height:1.25;}
+.user-name{font-size:12px;font-weight:600;color:var(--navy);}
+.user-role{font-size:10px;color:rgba(var(--navy-rgb),0.4);}
+.sign-out-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.5);background:none;border:1px solid rgba(var(--grey-rgb),0.5);border-radius:6px;cursor:pointer;transition:all 0.2s;}
+.sign-out-btn:hover{color:var(--red);border-color:rgba(179,38,30,0.3);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);padding-top:var(--topbar);flex:1;height:100vh;overflow-y:auto;background:var(--lightgrey);}
+.main::-webkit-scrollbar{width:5px;}
+.main::-webkit-scrollbar-thumb{background:rgba(var(--grey-rgb),0.6);border-radius:3px;}
+.page-content{padding:24px 28px 48px;}
+
+/* Breadcrumb */
+.breadcrumb{display:flex;align-items:center;gap:6px;margin-bottom:14px;}
+.breadcrumb a{font-size:12px;font-weight:500;color:rgba(var(--navy-rgb),0.4);text-decoration:none;transition:color 0.2s;}
+.breadcrumb a:hover{color:var(--teal);}
+.breadcrumb-sep{font-size:12px;color:rgba(var(--grey-rgb),0.9);}
+.breadcrumb-current{font-size:12px;font-weight:600;color:var(--teal);}
+
+/* Page header row */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;}
+.header-left{display:flex;align-items:center;gap:16px;}
+.enrollment-avatar{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,rgba(14,20,60,0.08),rgba(42,52,112,0.12));display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(var(--grey-rgb),0.3);}
+.enrollment-avatar .ti{font-size:24px;color:var(--navy);}
+.header-text{}
+.header-title{font-size:22px;font-weight:700;color:var(--navy);line-height:1.1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.header-sep{color:rgba(var(--grey-rgb),0.9);font-weight:300;}
+.header-subtitle{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;}
+.provider-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:rgba(var(--navy-rgb),0.55);}
+.provider-chip .ti{font-size:13px;color:var(--teal);}
+.cycle-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(14,20,60,0.07);color:rgba(14,20,60,0.5);}
+.status-now{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;background:rgba(22,193,194,0.1);color:#0e8a8b;border:1px solid rgba(22,193,194,0.2);}
+.status-now .sd{width:6px;height:6px;border-radius:50%;background:var(--teal);}
+.sub-hint{font-size:11px;font-style:italic;color:rgba(var(--navy-rgb),0.35);}
+.header-right{display:flex;gap:10px;flex-shrink:0;align-items:flex-start;}
+.btn-transition{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;font-family:var(--font);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--white);background:var(--navy);border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+.btn-transition::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(22,193,194,0.2),transparent);transform:translateX(-100%);transition:transform 0.5s ease;}
+.btn-transition:hover{background:#1a2260;transform:translateY(-1px);box-shadow:0 6px 20px rgba(14,20,60,0.2);}
+.btn-transition:hover::before{transform:translateX(100%);}
+.btn-transition .ti{font-size:15px;}
+.btn-more{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;font-family:var(--font);color:rgba(var(--navy-rgb),0.5);background:var(--white);border:1px solid rgba(var(--grey-rgb),0.4);border-radius:8px;cursor:pointer;transition:all 0.2s;}
+.btn-more:hover{border-color:var(--navy);color:var(--navy);}
+
+/* ════ PIPELINE ════ */
+.pipeline-card{background:var(--white);border-radius:14px;border:1px solid rgba(var(--grey-rgb),0.35);padding:28px 32px;margin-bottom:20px;position:relative;overflow:hidden;}
+.pipeline-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,var(--teal) 20%,rgba(var(--grey-rgb),0.4) 20%);}
+.pipeline-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+.pipeline-status-group{display:flex;align-items:center;gap:10px;}
+.pipeline-label{font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.3);}
+.pipeline-hint{font-size:12px;font-weight:300;font-style:italic;color:rgba(var(--navy-rgb),0.4);}
+.pipeline-pct{font-size:11px;font-weight:600;color:rgba(var(--navy-rgb),0.3);}
+
+/* Steps */
+.steps-wrap{display:flex;align-items:flex-start;position:relative;}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;}
+/* connector line */
+.step:not(:last-child)::after{
+  content:'';
+  position:absolute;
+  top:18px;
+  left:calc(50% + 18px);
+  right:calc(-50% + 18px);
+  height:2px;
+  background:rgba(var(--grey-rgb),0.5);
+  z-index:0;
+}
+.step.done:not(:last-child)::after{background:var(--green);}
+.step.current:not(:last-child)::after{background:linear-gradient(90deg,var(--teal) 0%,rgba(var(--grey-rgb),0.4) 100%);}
+
+/* Step circle */
+.step-circle{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;
+  position:relative;z-index:1;
+  transition:all 0.3s;
+  flex-shrink:0;
+}
+.step.future .step-circle{
+  background:var(--white);
+  border:2px solid rgba(var(--grey-rgb),0.5);
+  color:rgba(var(--navy-rgb),0.3);
+}
+.step.done .step-circle{
+  background:var(--green);
+  border:2px solid var(--green);
+  color:white;
+}
+.step.current .step-circle{
+  background:var(--teal);
+  border:2px solid var(--teal);
+  color:white;
+  box-shadow:0 0 0 5px rgba(22,193,194,0.15);
+  animation:ringPulse 2.5s ease-in-out infinite;
+}
+@keyframes ringPulse{0%,100%{box-shadow:0 0 0 4px rgba(22,193,194,0.15)}50%{box-shadow:0 0 0 8px rgba(22,193,194,0.08)}}
+
+.step-label{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-top:10px;text-align:center;line-height:1.3;}
+.step.future .step-label{color:rgba(var(--navy-rgb),0.3);}
+.step.done .step-label{color:var(--green);}
+.step.current .step-label{color:var(--teal);}
+
+.step-sub{font-size:10px;font-weight:300;font-style:italic;color:rgba(var(--navy-rgb),0.35);margin-top:3px;text-align:center;}
+
+/* ════ TABS ════ */
+.tabs-bar{display:flex;align-items:center;gap:0;border-bottom:2px solid rgba(var(--grey-rgb),0.3);margin-bottom:20px;}
+.tab-btn{display:flex;align-items:center;gap:6px;padding:11px 18px;font-family:var(--font);font-size:13px;font-weight:500;color:rgba(var(--navy-rgb),0.45);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.tab-btn.active{color:var(--navy);border-bottom-color:var(--teal);font-weight:600;}
+.tab-btn:hover:not(.active){color:var(--navy);}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;font-size:10px;font-weight:700;background:rgba(var(--grey-rgb),0.4);color:rgba(var(--navy-rgb),0.5);}
+.tab-btn.active .tab-badge{background:rgba(22,193,194,0.15);color:var(--teal);}
+
+/* ════ TAB CONTENT ════ */
+.tab-content{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* Activity feed */
+.feed-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;}
+.feed-card-header{padding:16px 20px;border-bottom:1px solid rgba(var(--grey-rgb),0.2);display:flex;align-items:center;justify-content:space-between;}
+.feed-card-title{font-size:14px;font-weight:600;color:var(--navy);}
+.feed-item{display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid rgba(var(--grey-rgb),0.15);transition:background 0.15s;}
+.feed-item:last-child{border-bottom:none;}
+.feed-item:hover{background:rgba(var(--grey-rgb),0.07);}
+.feed-icon{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+.feed-icon.status{background:rgba(22,193,194,0.1);}
+.feed-icon.status .ti{font-size:15px;color:var(--teal);}
+.feed-icon.create{background:rgba(46,125,50,0.1);}
+.feed-icon.create .ti{font-size:15px;color:var(--green);}
+.feed-icon.comment{background:rgba(21,101,192,0.1);}
+.feed-icon.comment .ti{font-size:15px;color:var(--blue);}
+.feed-icon.document{background:rgba(244,163,0,0.1);}
+.feed-icon.document .ti{font-size:15px;color:var(--amber);}
+.feed-body{flex:1;}
+.feed-type{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.feed-type.status{color:var(--teal);}
+.feed-type.create{color:var(--green);}
+.feed-type.comment{color:var(--blue);}
+.feed-type.document{color:var(--amber);}
+.feed-text{font-size:13px;font-weight:400;color:var(--navy);line-height:1.5;}
+.feed-text .arrow{color:var(--teal);font-weight:600;margin:0 4px;}
+.feed-text .highlight{font-weight:600;color:var(--navy);}
+.feed-meta{font-size:11px;font-weight:300;color:rgba(var(--navy-rgb),0.35);margin-top:4px;}
+.feed-time{font-size:11px;font-weight:400;color:rgba(var(--navy-rgb),0.35);white-space:nowrap;flex-shrink:0;align-self:flex-start;padding-top:1px;}
+
+/* Right sidebar */
+.sidebar-right{display:flex;flex-direction:column;gap:14px;}
+
+/* Cycle info card */
+.info-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;}
+.info-card-header{padding:14px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.2);display:flex;align-items:center;justify-content:space-between;}
+.info-card-title{font-size:13px;font-weight:600;color:var(--navy);}
+.info-card-body{padding:4px 0;}
+.info-row{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.12);}
+.info-row:last-child{border-bottom:none;}
+.info-key{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);}
+.info-val{font-size:13px;font-weight:500;color:var(--navy);}
+.info-val.mono{font-family:monospace;font-size:14px;font-weight:700;color:var(--teal);}
+.info-val.muted{color:rgba(var(--navy-rgb),0.5);font-weight:400;}
+
+/* Quick action card */
+.action-card{background:var(--navy);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.action-card::before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(22,193,194,0.1);}
+.action-card::after{content:'';position:absolute;bottom:-15px;left:-15px;width:60px;height:60px;border-radius:50%;background:rgba(22,193,194,0.06);}
+.action-card-label{font-size:9px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:8px;}
+.action-card-text{font-size:13px;font-weight:500;color:rgba(255,255,255,0.75);line-height:1.55;margin-bottom:16px;position:relative;z-index:1;}
+.action-card-text strong{color:var(--teal);}
+.btn-transition-sm{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);background:var(--teal);border:none;border-radius:7px;cursor:pointer;transition:all 0.2s;position:relative;z-index:1;}
+.btn-transition-sm:hover{background:var(--aqua);}
+.btn-transition-sm .ti{font-size:14px;}
+
+/* Status History tab content */
+.history-table{width:100%;border-collapse:collapse;}
+.history-table th{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);padding:10px 18px;text-align:left;background:var(--lightgrey);}
+.history-table td{font-size:13px;padding:13px 18px;border-bottom:1px solid rgba(var(--grey-rgb),0.2);color:var(--navy);}
+.history-table tr:last-child td{border-bottom:none;}
+.from-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600;background:rgba(198,204,216,0.35);color:rgba(14,20,60,0.5);}
+.to-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600;background:rgba(22,193,194,0.1);color:#0e8a8b;}
+.arrow-cell{color:rgba(var(--grey-rgb),0.8);font-size:16px;padding:13px 6px !important;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark"><i class="ti ti-shield-check"></i></div>
+    <div class="brand-text"><span class="brand-name">Dastify</span><span class="brand-sub">Credentialing</span></div>
+  </div>
+  <div class="sidebar-section">Workspace</div>
+  <ul class="nav-list">
+    <li class="nav-item"><a href="#"><i class="ti ti-layout-dashboard"></i> Dashboard</a></li>
+    <li class="nav-item active"><a href="#"><i class="ti ti-building-hospital"></i> Clients</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-stethoscope"></i> Providers</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-file-invoice"></i> Enrollments</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-refresh"></i> Recreds</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-credit-card"></i> Payers</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-files"></i> Documents</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-clipboard-list"></i> Audit Log</a></li>
+  </ul>
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-bottom">
+    <ul class="nav-list"><li class="nav-item"><a href="#"><i class="ti ti-settings"></i> Settings</a></li></ul>
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-title">Credentialing</div>
+  <div class="search-box"><i class="ti ti-search"></i><input type="text" placeholder="Search clients, providers, payers…"><span class="search-kb">⌘K</span></div>
+  <div class="topbar-right">
+    <button class="topbar-icon-btn"><i class="ti ti-bell" style="font-size:18px;"></i><span class="notif-dot"></span></button>
+    <button class="topbar-icon-btn"><i class="ti ti-help-circle" style="font-size:18px;"></i></button>
+    <div class="user-chip">
+      <div class="user-avatar">DA</div>
+      <div class="user-info"><span class="user-name">Dastify Admin</span><span class="user-role">DASTIFY · ADMIN</span></div>
+      <i class="ti ti-chevron-down" style="font-size:13px;color:rgba(14,20,60,0.35);margin-left:2px;"></i>
+    </div>
+    <button class="sign-out-btn"><i class="ti ti-logout" style="font-size:14px;"></i> Sign Out</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-content">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="#">Clients</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="#">lumber 1 client</a>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">Enrollment</span>
+    </div>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="enrollment-avatar"><i class="ti ti-file-invoice"></i></div>
+        <div class="header-text">
+          <div class="header-title">
+            Aetna
+            <span class="header-sep">·</span>
+            <span style="color:rgba(14,20,60,0.6);">TX</span>
+            <span class="header-sep">·</span>
+            <span style="color:rgba(14,20,60,0.6);">Cycle 1</span>
+          </div>
+          <div class="header-subtitle">
+            <span class="provider-chip"><i class="ti ti-stethoscope"></i> Asad, Muhammad</span>
+            <span style="width:3px;height:3px;border-radius:50%;background:rgba(198,204,216,0.8);"></span>
+            <span class="cycle-chip"># Cycle 1</span>
+            <span style="width:3px;height:3px;border-radius:50%;background:rgba(198,204,216,0.8);"></span>
+            <span class="status-now"><span class="sd"></span> Prep</span>
+            <span class="sub-hint">awaiting CV</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn-more"><i class="ti ti-dots-vertical" style="font-size:16px;"></i></button>
+        <button class="btn-transition"><i class="ti ti-arrow-right"></i> Transition Status</button>
+      </div>
+    </div>
+
+    <!-- Pipeline card -->
+    <div class="pipeline-card">
+      <div class="pipeline-top">
+        <div class="pipeline-status-group">
+          <span class="status-now"><span class="sd"></span> Prep</span>
+          <span class="pipeline-hint">— awaiting CV document</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span class="pipeline-label">Pipeline</span>
+          <span class="pipeline-pct">Step 1 of 5</span>
+        </div>
+      </div>
+
+      <!-- 5-step pipeline: Prep > Submitted > In Review > Non par > Approved -->
+      <div class="steps-wrap">
+
+        <!-- Step 1: Prep (CURRENT) -->
+        <div class="step current">
+          <div class="step-circle"><i class="ti ti-pencil" style="font-size:15px;"></i></div>
+          <div class="step-label">Prep</div>
+          <div class="step-sub">awaiting CV</div>
+        </div>
+
+        <!-- Step 2: Submitted -->
+        <div class="step future">
+          <div class="step-circle">2</div>
+          <div class="step-label">Submitted</div>
+          <div class="step-sub">&nbsp;</div>
+        </div>
+
+        <!-- Step 3: In Review -->
+        <div class="step future">
+          <div class="step-circle">3</div>
+          <div class="step-label">In Review</div>
+          <div class="step-sub">&nbsp;</div>
+        </div>
+
+        <!-- Step 4: Non par -->
+        <div class="step future">
+          <div class="step-circle">4</div>
+          <div class="step-label">Non par</div>
+          <div class="step-sub">&nbsp;</div>
+        </div>
+
+        <!-- Step 5: Approved -->
+        <div class="step future">
+          <div class="step-circle">5</div>
+          <div class="step-label">Approved</div>
+          <div class="step-sub">&nbsp;</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab(this,'overview')">Overview</button>
+      <button class="tab-btn" onclick="switchTab(this,'history')">Status History <span class="tab-badge">2</span></button>
+      <button class="tab-btn" onclick="switchTab(this,'documents')">Documents <span class="tab-badge">4</span></button>
+      <button class="tab-btn" onclick="switchTab(this,'comments')">Comments <span class="tab-badge">1</span></button>
+      <button class="tab-btn" onclick="switchTab(this,'notes')">Internal Notes <span class="tab-badge">0</span></button>
+      <button class="tab-btn" onclick="switchTab(this,'activity')">Activity</button>
+    </div>
+
+    <!-- Tab panels -->
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview" class="tab-content tab-panel active">
+      <div>
+        <!-- Latest activity feed -->
+        <div class="feed-card">
+          <div class="feed-card-header">
+            <span class="feed-card-title">Latest activity</span>
+            <span style="font-size:11px;font-weight:500;color:rgba(14,20,60,0.35);">Showing most recent</span>
+          </div>
+
+          <div style="display:flex;gap:12px;padding:16px 20px;border-bottom:1px solid rgba(198,204,216,0.15);">
+            <div class="feed-icon status"><i class="ti ti-arrows-exchange"></i></div>
+            <div class="feed-body" style="flex:1;">
+              <div class="feed-type status">Status Change</div>
+              <div class="feed-text">
+                <span class="from-badge">Intake</span>
+                <span class="arrow"> → </span>
+                <span class="to-badge">Prep</span>
+              </div>
+              <div class="feed-meta">By Dastify Admin</div>
+            </div>
+            <div class="feed-time">3 days ago</div>
+          </div>
+
+          <div style="display:flex;gap:12px;padding:16px 20px;">
+            <div class="feed-icon create"><i class="ti ti-file-plus"></i></div>
+            <div class="feed-body" style="flex:1;">
+              <div class="feed-type create">Created</div>
+              <div class="feed-text">Enrollment created in <span class="highlight">TX</span> (Cycle 1) — Aetna</div>
+              <div class="feed-meta">By Dastify Admin</div>
+            </div>
+            <div class="feed-time">3 days ago</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar right -->
+      <div class="sidebar-right">
+
+        <!-- Cycle info -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <span class="info-card-title">Cycle info</span>
+            <i class="ti ti-info-circle" style="font-size:15px;color:rgba(14,20,60,0.3);"></i>
+          </div>
+          <div class="info-card-body">
+            <div class="info-row"><span class="info-key">Cycle</span><span class="info-val mono">#1</span></div>
+            <div class="info-row"><span class="info-key">Payer</span><span class="info-val">Aetna</span></div>
+            <div class="info-row"><span class="info-key">State</span><span class="info-val"><span style="display:inline-flex;padding:2px 9px;border-radius:5px;background:rgba(198,204,216,0.35);font-size:11px;font-weight:700;color:rgba(14,20,60,0.6);">TX</span></span></div>
+            <div class="info-row"><span class="info-key">Provider</span><span class="info-val">Asad, Muhammad</span></div>
+            <div class="info-row"><span class="info-key">Created</span><span class="info-val muted">May 8, 2026</span></div>
+            <div class="info-row"><span class="info-key">Updated</span><span class="info-val muted">3 days ago</span></div>
+          </div>
+        </div>
+
+        <!-- Transition CTA card -->
+        <div class="action-card">
+          <div class="action-card-label">Next action</div>
+          <div class="action-card-text">
+            Currently in <strong>Prep</strong> stage. Upload the provider CV to advance to <strong>Submitted</strong>.
+          </div>
+          <button class="btn-transition-sm"><i class="ti ti-arrow-right"></i> Transition to Submitted</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STATUS HISTORY -->
+    <div id="tab-history" class="tab-content tab-panel" style="display:none;">
+      <div>
+        <div class="feed-card">
+          <div class="feed-card-header"><span class="feed-card-title">Status history</span></div>
+          <table class="history-table" style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th>From</th>
+                <th style="width:30px;"></th>
+                <th>To</th>
+                <th>Changed by</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="from-badge">Intake</span></td>
+                <td class="arrow-cell">→</td>
+                <td><span class="to-badge">Prep</span></td>
+                <td style="color:rgba(14,20,60,0.6);">Dastify Admin</td>
+                <td style="color:rgba(14,20,60,0.4);font-size:12px;">May 8, 2026 · 3 days ago</td>
+              </tr>
+              <tr>
+                <td><span style="font-size:11px;font-weight:400;color:rgba(14,20,60,0.35);font-style:italic;">— created</span></td>
+                <td class="arrow-cell">→</td>
+                <td><span class="from-badge">Intake</span></td>
+                <td style="color:rgba(14,20,60,0.6);">Dastify Admin</td>
+                <td style="color:rgba(14,20,60,0.4);font-size:12px;">May 8, 2026 · 3 days ago</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sidebar-right">
+        <div class="info-card">
+          <div class="info-card-header"><span class="info-card-title">Cycle info</span></div>
+          <div class="info-card-body">
+            <div class="info-row"><span class="info-key">Cycle</span><span class="info-val mono">#1</span></div>
+            <div class="info-row"><span class="info-key">Created</span><span class="info-val muted">May 8, 2026</span></div>
+            <div class="info-row"><span class="info-key">Updated</span><span class="info-val muted">3 days ago</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOCUMENTS placeholder -->
+    <div id="tab-documents" class="tab-content tab-panel" style="display:none;">
+      <div>
+        <div class="feed-card" style="padding:40px;text-align:center;">
+          <i class="ti ti-files" style="font-size:32px;color:rgba(198,204,216,0.8);display:block;margin-bottom:12px;"></i>
+          <p style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:6px;">4 documents attached</p>
+          <p style="font-size:13px;color:rgba(14,20,60,0.4);">Document list will appear here.</p>
+        </div>
+      </div>
+      <div class="sidebar-right">
+        <div class="info-card">
+          <div class="info-card-header"><span class="info-card-title">Cycle info</span></div>
+          <div class="info-card-body">
+            <div class="info-row"><span class="info-key">Cycle</span><span class="info-val mono">#1</span></div>
+            <div class="info-row"><span class="info-key">Created</span><span class="info-val muted">May 8, 2026</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.style.display='none'; p.classList.remove('active'); });
+  var panel = document.getElementById('tab-' + id);
+  if(panel){ panel.style.display='grid'; panel.classList.add('active'); }
+}
+</script>
+</body>
+</html>

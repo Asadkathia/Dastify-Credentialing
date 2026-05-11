@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clients — Dastify Credentialing</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root {
+  --navy:#0E143C; --navy-rgb:14,20,60;
+  --teal:#16C1C2; --teal-rgb:22,193,194;
+  --aqua:#4ECED1;
+  --lightgrey:#F6F7FB; --grey:#C6CCD8; --grey-rgb:198,204,216;
+  --white:#FFFFFF;
+  --amber:#F4A300; --green:#2E7D32; --red:#B3261E; --blue:#1565C0;
+  --font:'Poppins',-apple-system,sans-serif;
+  --sidebar:220px; --topbar:58px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:var(--font);background:var(--lightgrey);color:var(--navy);-webkit-font-smoothing:antialiased;}
+body{display:flex;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);min-width:var(--sidebar);height:100vh;background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow:hidden;}
+.sidebar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:200px;background:linear-gradient(to top,rgba(22,193,194,0.06),transparent);pointer-events:none;}
+.sidebar-brand{padding:18px 20px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.brand-mark{width:34px;height:34px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,var(--teal),var(--aqua));display:flex;align-items:center;justify-content:center;}
+.brand-mark .ti{font-size:17px;color:white;}
+.brand-text{display:flex;flex-direction:column;line-height:1.2;}
+.brand-name{font-size:12px;font-weight:700;color:white;letter-spacing:1.5px;text-transform:uppercase;}
+.brand-sub{font-size:8px;font-weight:400;color:rgba(255,255,255,0.35);letter-spacing:2px;text-transform:uppercase;}
+.sidebar-section{padding:20px 14px 6px;font-size:9px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.2);}
+.nav-list{list-style:none;padding:0 8px;}
+.nav-item a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.5);text-decoration:none;transition:all 0.2s;margin-bottom:2px;}
+.nav-item a .ti{font-size:17px;flex-shrink:0;}
+.nav-item a:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);}
+.nav-item.active a{background:rgba(22,193,194,0.14);color:var(--teal);}
+.nav-item.active a .ti{color:var(--teal);}
+.sidebar-spacer{flex:1;}
+.sidebar-bottom{padding:8px 8px 20px;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:var(--sidebar);right:0;height:var(--topbar);background:var(--white);border-bottom:1px solid rgba(var(--grey-rgb),0.5);display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:90;gap:16px;}
+.topbar-left{display:flex;align-items:center;gap:8px;}
+.topbar-title{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.3);}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--lightgrey);border:1px solid rgba(var(--grey-rgb),0.5);border-radius:8px;padding:7px 14px;width:280px;transition:all 0.2s;}
+.search-box:focus-within{border-color:var(--teal);background:white;box-shadow:0 0 0 3px rgba(22,193,194,0.08);}
+.search-box input{background:none;border:none;outline:none;font-family:var(--font);font-size:13px;color:var(--navy);width:100%;}
+.search-box input::placeholder{color:rgba(var(--navy-rgb),0.3);}
+.search-box .ti{font-size:15px;color:rgba(var(--navy-rgb),0.3);}
+.search-kb{font-size:10px;font-weight:500;color:rgba(var(--navy-rgb),0.25);background:rgba(var(--grey-rgb),0.4);padding:2px 6px;border-radius:4px;white-space:nowrap;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.topbar-icon-btn{width:34px;height:34px;border-radius:8px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(var(--navy-rgb),0.4);transition:all 0.2s;position:relative;}
+.topbar-icon-btn:hover{background:var(--lightgrey);color:var(--navy);}
+.notif-dot{position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--teal);border:1.5px solid white;}
+.user-chip{display:flex;align-items:center;gap:9px;padding:5px 12px 5px 5px;border-radius:8px;border:1px solid rgba(var(--grey-rgb),0.4);cursor:pointer;transition:all 0.2s;}
+.user-chip:hover{background:var(--lightgrey);}
+.user-avatar{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--navy),#2a3470);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--teal);}
+.user-info{display:flex;flex-direction:column;line-height:1.25;}
+.user-name{font-size:12px;font-weight:600;color:var(--navy);}
+.user-role{font-size:10px;font-weight:400;color:rgba(var(--navy-rgb),0.4);letter-spacing:0.5px;}
+.sign-out-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.5);background:none;border:1px solid rgba(var(--grey-rgb),0.5);border-radius:6px;cursor:pointer;transition:all 0.2s;}
+.sign-out-btn:hover{color:var(--red);border-color:rgba(179,38,30,0.3);background:rgba(179,38,30,0.04);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);padding-top:var(--topbar);flex:1;height:100vh;overflow-y:auto;background:var(--lightgrey);}
+.main::-webkit-scrollbar{width:5px;}
+.main::-webkit-scrollbar-track{background:transparent;}
+.main::-webkit-scrollbar-thumb{background:rgba(var(--grey-rgb),0.6);border-radius:3px;}
+.page-content{padding:28px 28px 48px;}
+
+/* Page header */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;}
+.page-header-left h1{font-size:24px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.page-header-left p{font-size:13px;font-weight:300;color:rgba(var(--navy-rgb),0.45);}
+.btn-primary{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;font-family:var(--font);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--white);background:var(--navy);border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.btn-primary:hover{background:#192059;transform:translateY(-1px);box-shadow:0 6px 20px rgba(14,20,60,0.18);}
+.btn-primary .ti{font-size:15px;}
+
+/* Stats strip */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--white);border-radius:10px;border:1px solid rgba(var(--grey-rgb),0.35);padding:18px 20px;display:flex;align-items:center;gap:14px;transition:all 0.2s;}
+.stat-card:hover{box-shadow:0 4px 16px rgba(var(--navy-rgb),0.06);}
+.stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.stat-icon.teal{background:rgba(22,193,194,0.1);}
+.stat-icon.teal .ti{color:var(--teal);}
+.stat-icon.green{background:rgba(46,125,50,0.1);}
+.stat-icon.green .ti{color:var(--green);}
+.stat-icon.amber{background:rgba(244,163,0,0.1);}
+.stat-icon.amber .ti{color:var(--amber);}
+.stat-icon.navy{background:rgba(14,20,60,0.07);}
+.stat-icon.navy .ti{color:var(--navy);}
+.stat-icon .ti{font-size:20px;}
+.stat-content{}
+.stat-value{font-size:22px;font-weight:700;color:var(--navy);line-height:1;}
+.stat-label{font-size:11px;font-weight:400;color:rgba(var(--navy-rgb),0.4);margin-top:3px;}
+
+/* Filter + Search bar */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+.filter-tabs{display:flex;background:var(--white);border:1px solid rgba(var(--grey-rgb),0.4);border-radius:8px;padding:3px;gap:2px;}
+.filter-tab{padding:6px 16px;font-family:var(--font);font-size:12px;font-weight:500;color:rgba(var(--navy-rgb),0.45);background:none;border:none;border-radius:6px;cursor:pointer;transition:all 0.2s;}
+.filter-tab.active{background:var(--navy);color:var(--white);}
+.filter-tab:not(.active):hover{background:var(--lightgrey);color:var(--navy);}
+.filter-tab .count{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;font-size:10px;font-weight:600;margin-left:6px;background:rgba(22,193,194,0.15);color:var(--teal);}
+.filter-tab.active .count{background:rgba(255,255,255,0.15);color:white;}
+
+.toolbar-right{display:flex;align-items:center;gap:8px;}
+.toolbar-search{display:flex;align-items:center;gap:7px;background:var(--white);border:1px solid rgba(var(--grey-rgb),0.4);border-radius:8px;padding:7px 13px;width:220px;transition:all 0.2s;}
+.toolbar-search:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(22,193,194,0.08);}
+.toolbar-search input{background:none;border:none;outline:none;font-family:var(--font);font-size:13px;color:var(--navy);width:100%;}
+.toolbar-search input::placeholder{color:rgba(var(--navy-rgb),0.3);}
+.toolbar-search .ti{font-size:14px;color:rgba(var(--navy-rgb),0.3);}
+.btn-secondary{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-family:var(--font);font-size:12px;font-weight:500;color:rgba(var(--navy-rgb),0.6);background:var(--white);border:1px solid rgba(var(--grey-rgb),0.4);border-radius:8px;cursor:pointer;transition:all 0.2s;}
+.btn-secondary:hover{border-color:var(--teal);color:var(--teal);background:rgba(22,193,194,0.04);}
+.btn-secondary .ti{font-size:14px;}
+
+/* Client table card */
+.table-card{background:var(--white);border-radius:12px;border:1px solid rgba(var(--grey-rgb),0.35);overflow:hidden;}
+
+/* Table */
+.clients-table{width:100%;border-collapse:collapse;}
+.clients-table thead th{
+  font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(var(--navy-rgb),0.35);
+  padding:13px 20px;text-align:left;
+  background:var(--lightgrey);
+  border-bottom:1px solid rgba(var(--grey-rgb),0.35);
+}
+.clients-table tbody tr{
+  border-bottom:1px solid rgba(var(--grey-rgb),0.25);
+  transition:background 0.15s;cursor:pointer;
+}
+.clients-table tbody tr:last-child{border-bottom:none;}
+.clients-table tbody tr:hover{background:rgba(22,193,194,0.03);}
+.clients-table tbody tr:hover .open-btn{opacity:1;transform:translateX(0);}
+.clients-table tbody td{padding:16px 20px;vertical-align:middle;}
+
+/* Client name cell */
+.client-name-cell{display:flex;align-items:center;gap:14px;}
+.client-avatar{
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;
+  letter-spacing:0.5px;
+}
+.client-avatar.av1{background:rgba(22,193,194,0.12);color:#0e8a8b;}
+.client-avatar.av2{background:rgba(14,20,60,0.08);color:var(--navy);}
+.client-avatar.av3{background:rgba(244,163,0,0.1);color:#b36e00;}
+.client-name-info{}
+.client-display-name{font-size:14px;font-weight:600;color:var(--navy);}
+.client-id{font-size:11px;font-weight:400;color:rgba(var(--navy-rgb),0.35);margin-top:2px;}
+
+/* Legal name */
+.legal-name{font-size:13px;font-weight:400;color:rgba(var(--navy-rgb),0.6);}
+
+/* Contact cell */
+.contact-cell{}
+.contact-name{font-size:13px;font-weight:500;color:var(--navy);}
+.contact-email{font-size:12px;font-weight:300;color:rgba(var(--navy-rgb),0.45);margin-top:2px;display:flex;align-items:center;gap:5px;}
+.contact-email .ti{font-size:11px;}
+
+/* Enrollment count */
+.enroll-cell{display:flex;align-items:center;gap:8px;}
+.enroll-count{font-size:20px;font-weight:700;color:var(--navy);}
+.enroll-label{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:rgba(var(--navy-rgb),0.35);}
+
+/* Status badge */
+.status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.status-badge.active{background:rgba(46,125,50,0.1);color:var(--green);}
+.status-badge.active .badge-pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite;}
+.status-badge.inactive{background:rgba(198,204,216,0.5);color:rgba(14,20,60,0.45);}
+.status-badge.inactive .badge-pulse{width:7px;height:7px;border-radius:50%;background:var(--grey);}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.85)}}
+
+/* Open button */
+.open-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;
+  font-family:var(--font);font-size:11px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--teal);
+  background:rgba(22,193,194,0.08);
+  border:1px solid rgba(22,193,194,0.2);
+  border-radius:6px;cursor:pointer;
+  transition:all 0.2s;
+  opacity:0.6;
+  transform:translateX(-4px);
+}
+.open-btn:hover{background:var(--teal);color:var(--white);border-color:var(--teal);}
+.open-btn .ti{font-size:13px;}
+
+/* Empty state */
+.empty-state{padding:60px 20px;text-align:center;}
+.empty-icon{width:56px;height:56px;border-radius:14px;background:rgba(22,193,194,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+.empty-icon .ti{font-size:26px;color:var(--teal);}
+.empty-title{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:6px;}
+.empty-desc{font-size:13px;font-weight:300;color:rgba(var(--navy-rgb),0.45);line-height:1.6;max-width:320px;margin:0 auto 20px;}
+
+/* Table footer */
+.table-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;
+  border-top:1px solid rgba(var(--grey-rgb),0.3);
+  background:var(--lightgrey);
+}
+.table-footer-info{font-size:12px;font-weight:400;color:rgba(var(--navy-rgb),0.4);}
+.pagination{display:flex;align-items:center;gap:4px;}
+.page-btn{width:30px;height:30px;border-radius:6px;border:1px solid rgba(var(--grey-rgb),0.4);background:var(--white);font-family:var(--font);font-size:12px;font-weight:500;color:rgba(var(--navy-rgb),0.5);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.page-btn.active{background:var(--navy);color:var(--white);border-color:var(--navy);}
+.page-btn:hover:not(.active){border-color:var(--teal);color:var(--teal);}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark"><i class="ti ti-shield-check"></i></div>
+    <div class="brand-text">
+      <span class="brand-name">Dastify</span>
+      <span class="brand-sub">Credentialing</span>
+    </div>
+  </div>
+  <div class="sidebar-section">Workspace</div>
+  <ul class="nav-list">
+    <li class="nav-item"><a href="#"><i class="ti ti-layout-dashboard"></i> Dashboard</a></li>
+    <li class="nav-item active"><a href="#"><i class="ti ti-building-hospital"></i> Clients</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-stethoscope"></i> Providers</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-file-invoice"></i> Enrollments</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-refresh"></i> Recreds</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-credit-card"></i> Payers</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-files"></i> Documents</a></li>
+    <li class="nav-item"><a href="#"><i class="ti ti-clipboard-list"></i> Audit Log</a></li>
+  </ul>
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-bottom">
+    <ul class="nav-list">
+      <li class="nav-item"><a href="#"><i class="ti ti-settings"></i> Settings</a></li>
+    </ul>
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <span class="topbar-title">Credentialing</span>
+  </div>
+  <div class="search-box">
+    <i class="ti ti-search"></i>
+    <input type="text" placeholder="Search clients, providers, payers…">
+    <span class="search-kb">⌘K</span>
+  </div>
+  <div class="topbar-right">
+    <button class="topbar-icon-btn"><i class="ti ti-bell" style="font-size:18px;"></i><span class="notif-dot"></span></button>
+    <button class="topbar-icon-btn"><i class="ti ti-help-circle" style="font-size:18px;"></i></button>
+    <div class="user-chip">
+      <div class="user-avatar">DA</div>
+      <div class="user-info">
+        <span class="user-name">Dastify Admin</span>
+        <span class="user-role">DASTIFY · ADMIN</span>
+      </div>
+      <i class="ti ti-chevron-down" style="font-size:13px;color:rgba(14,20,60,0.35);margin-left:2px;"></i>
+    </div>
+    <button class="sign-out-btn"><i class="ti ti-logout" style="font-size:14px;"></i> Sign Out</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-content">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Clients</h1>
+        <p>2 practices Dastify provides credentialing services to.</p>
+      </div>
+      <button class="btn-primary"><i class="ti ti-plus"></i> New Client</button>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip">
+      <div class="stat-card">
+        <div class="stat-icon teal"><i class="ti ti-building-hospital"></i></div>
+        <div class="stat-content">
+          <div class="stat-value">2</div>
+          <div class="stat-label">Total Clients</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="ti ti-circle-check"></i></div>
+        <div class="stat-content">
+          <div class="stat-value">2</div>
+          <div class="stat-label">Active</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon amber"><i class="ti ti-file-invoice"></i></div>
+        <div class="stat-content">
+          <div class="stat-value">1</div>
+          <div class="stat-label">Total Enrollments</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon navy"><i class="ti ti-stethoscope"></i></div>
+        <div class="stat-content">
+          <div class="stat-value">2</div>
+          <div class="stat-label">Providers Linked</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="filter-tabs">
+        <button class="filter-tab active">All <span class="count">2</span></button>
+        <button class="filter-tab">Active <span class="count">2</span></button>
+        <button class="filter-tab">Inactive <span class="count">0</span></button>
+      </div>
+      <div class="toolbar-right">
+        <div class="toolbar-search">
+          <i class="ti ti-search"></i>
+          <input type="text" placeholder="Search clients…">
+        </div>
+        <button class="btn-secondary"><i class="ti ti-adjustments-horizontal"></i> Filter</button>
+        <button class="btn-secondary"><i class="ti ti-download"></i> Export</button>
+      </div>
+    </div>
+
+    <!-- Client table -->
+    <div class="table-card">
+      <table class="clients-table">
+        <thead>
+          <tr>
+            <th style="width:28%;">Display Name</th>
+            <th style="width:18%;">Legal Name</th>
+            <th style="width:26%;">Primary Contact</th>
+            <th style="width:10%;">Enrollments</th>
+            <th style="width:10%;">Status</th>
+            <th style="width:8%;"></th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- Row 1 -->
+          <tr>
+            <td>
+              <div class="client-name-cell">
+                <div class="client-avatar av1">LC</div>
+                <div class="client-name-info">
+                  <div class="client-display-name">lumber 1 client</div>
+                  <div class="client-id"># CLT-0001</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="legal-name">Testing 1st Client</span></td>
+            <td>
+              <div class="contact-cell">
+                <div class="contact-name">Muhammad Asad</div>
+                <div class="contact-email"><i class="ti ti-mail"></i> asadkathal0@gmail.com</div>
+              </div>
+            </td>
+            <td>
+              <div class="enroll-cell">
+                <span class="enroll-count">1</span>
+                <span class="enroll-label">Active</span>
+              </div>
+            </td>
+            <td>
+              <span class="status-badge active"><span class="badge-pulse"></span>Active</span>
+            </td>
+            <td>
+              <button class="open-btn"><i class="ti ti-arrow-right"></i> Open</button>
+            </td>
+          </tr>
+
+          <!-- Row 2 -->
+          <tr>
+            <td>
+              <div class="client-name-cell">
+                <div class="client-avatar av2">TS</div>
+                <div class="client-name-info">
+                  <div class="client-display-name">Thomas S</div>
+                  <div class="client-id"># CLT-0002</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="legal-name">Thomas</span></td>
+            <td>
+              <div class="contact-cell">
+                <div class="contact-name">Thomas</div>
+                <div class="contact-email"><i class="ti ti-mail"></i> thomas@gmail.com</div>
+              </div>
+            </td>
+            <td>
+              <div class="enroll-cell">
+                <span class="enroll-count" style="color:rgba(14,20,60,0.3);">0</span>
+                <span class="enroll-label">Active</span>
+              </div>
+            </td>
+            <td>
+              <span class="status-badge active"><span class="badge-pulse"></span>Active</span>
+            </td>
+            <td>
+              <button class="open-btn"><i class="ti ti-arrow-right"></i> Open</button>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+
+      <!-- Table footer -->
+      <div class="table-footer">
+        <span class="table-footer-info">Showing 2 of 2 clients</span>
+        <div class="pagination">
+          <button class="page-btn"><i class="ti ti-chevron-left" style="font-size:13px;"></i></button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn"><i class="ti ti-chevron-right" style="font-size:13px;"></i></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+document.querySelectorAll('.filter-tab').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.filter-tab').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

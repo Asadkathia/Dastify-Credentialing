@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Dastify Credentialing Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root {
+  --navy: #0E143C;
+  --navy-rgb: 14,20,60;
+  --teal: #16C1C2;
+  --teal-rgb: 22,193,194;
+  --aqua: #4ECED1;
+  --lightgrey: #F6F7FB;
+  --grey: #C6CCD8;
+  --grey-rgb: 198,204,216;
+  --white: #FFFFFF;
+  --font: 'Poppins', -apple-system, sans-serif;
+  --ease: cubic-bezier(0.4,0,0.2,1);
+}
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; font-family:var(--font); -webkit-font-smoothing:antialiased; }
+body { display:flex; min-height:100vh; overflow:hidden; }
+
+/* LEFT PANEL */
+.panel-left {
+  position:relative; width:52%; min-height:100vh;
+  background:var(--navy);
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding:40px 56px; overflow:hidden;
+}
+.panel-left::before {
+  content:''; position:absolute; top:-10%; left:-10%;
+  width:70%; height:70%;
+  background:radial-gradient(ellipse, rgba(22,193,194,0.12) 0%, transparent 70%);
+  pointer-events:none;
+}
+.panel-left::after {
+  content:''; position:absolute; bottom:5%; right:-5%;
+  width:50%; height:50%;
+  background:radial-gradient(ellipse, rgba(22,193,194,0.07) 0%, transparent 70%);
+  pointer-events:none;
+}
+.dot-grid {
+  position:absolute; inset:0;
+  background-image:radial-gradient(circle, rgba(22,193,194,0.07) 1px, transparent 1px);
+  background-size:32px 32px; z-index:0;
+}
+.bg-shapes { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+.bg-shape { position:absolute; opacity:0.04; }
+@keyframes floatA { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-14px) rotate(1.5deg)} }
+@keyframes floatB { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-10px) rotate(-1deg)} }
+
+.ecg-container { position:absolute; bottom:28%; left:0; right:0; height:80px; opacity:0.08; z-index:0; }
+.ecg-path {
+  stroke-dasharray:900; stroke-dashoffset:900;
+  animation:ecgDraw 4s var(--ease) forwards 0.8s;
+}
+@keyframes ecgDraw { to { stroke-dashoffset:0; } }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+.left-logo {
+  position:relative; z-index:2;
+  display:flex; align-items:center; gap:12px;
+  opacity:0; animation:fadeUp 0.7s var(--ease) forwards 0.2s;
+}
+.logo-mark {
+  width:42px; height:42px; border-radius:10px;
+  background:linear-gradient(135deg, var(--teal), var(--aqua));
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.logo-text-wrap { display:flex; flex-direction:column; line-height:1.15; }
+.logo-name { font-size:14px; font-weight:700; color:var(--white); letter-spacing:1.5px; text-transform:uppercase; }
+.logo-sub { font-size:9px; font-weight:400; color:rgba(255,255,255,0.4); letter-spacing:2.5px; text-transform:uppercase; }
+
+.left-hero {
+  position:relative; z-index:2; flex:1;
+  display:flex; flex-direction:column; justify-content:center;
+  padding:60px 0 40px;
+}
+.hero-badge {
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:10px; font-weight:600; letter-spacing:4px; text-transform:uppercase;
+  color:var(--teal); margin-bottom:28px;
+  opacity:0; animation:fadeUp 0.7s var(--ease) forwards 0.45s;
+}
+.hero-badge-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); flex-shrink:0; }
+.hero-title {
+  font-size:clamp(34px,3.2vw,50px); font-weight:700;
+  color:var(--white); line-height:1.1; margin-bottom:22px;
+  opacity:0; animation:fadeUp 0.7s var(--ease) forwards 0.6s;
+}
+.hero-title em { font-style:italic; color:var(--teal); }
+.hero-divider {
+  width:48px; height:2px; background:var(--teal); margin-bottom:24px;
+  opacity:0; animation:fadeUp 0.6s var(--ease) forwards 0.75s;
+}
+.hero-desc {
+  font-size:15px; font-weight:300; color:rgba(255,255,255,0.48);
+  line-height:1.75; max-width:380px;
+  opacity:0; animation:fadeUp 0.7s var(--ease) forwards 0.9s;
+}
+
+.stats-strip {
+  position:relative; z-index:2;
+  display:flex; border-top:1px solid rgba(255,255,255,0.08);
+  padding-top:28px; margin-bottom:32px;
+  opacity:0; animation:fadeUp 0.7s var(--ease) forwards 1.05s;
+}
+.stat-item { flex:1; }
+.stat-item:not(:last-child) { padding-right:24px; border-right:1px solid rgba(255,255,255,0.08); }
+.stat-item:not(:first-child) { padding-left:24px; }
+.stat-val { font-size:22px; font-weight:700; color:var(--teal); line-height:1; }
+.stat-label { font-size:10px; font-weight:400; letter-spacing:1.5px; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-top:5px; }
+
+.left-footer {
+  position:relative; z-index:2;
+  display:flex; align-items:center; gap:20px;
+  opacity:0; animation:fadeUp 0.6s var(--ease) forwards 1.25s;
+}
+.left-footer-copy { font-size:11px; color:rgba(255,255,255,0.2); }
+.left-footer-links { display:flex; gap:16px; }
+.left-footer-links a { font-size:11px; font-weight:500; color:rgba(255,255,255,0.3); text-decoration:none; transition:color 0.2s; }
+.left-footer-links a:hover { color:var(--teal); }
+
+/* RIGHT PANEL */
+.panel-right {
+  width:48%; min-height:100vh; background:var(--white);
+  display:flex; align-items:center; justify-content:center;
+  padding:60px 56px; position:relative;
+}
+.panel-right::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:1px;
+  background:linear-gradient(to bottom, transparent, rgba(198,204,216,0.5) 20%, rgba(198,204,216,0.5) 80%, transparent);
+}
+
+.form-wrap {
+  width:100%; max-width:400px;
+  opacity:0; animation:fadeUp 0.8s var(--ease) forwards 0.35s;
+}
+
+.form-header { margin-bottom:32px; }
+.form-title { font-size:26px; font-weight:700; color:var(--navy); line-height:1.2; margin-bottom:8px; }
+.form-subtitle { font-size:13px; font-weight:300; color:rgba(14,20,60,0.45); line-height:1.6; }
+
+.tab-switch {
+  display:flex; background:var(--lightgrey);
+  border-radius:8px; padding:4px; margin-bottom:28px;
+}
+.tab-btn {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:10px 14px; font-family:var(--font);
+  font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase;
+  color:rgba(14,20,60,0.38); background:transparent; border:none; cursor:pointer;
+  border-radius:6px; transition:all 0.25s var(--ease);
+}
+.tab-btn.active {
+  background:var(--white); color:var(--navy);
+  box-shadow:0 1px 6px rgba(14,20,60,0.08);
+}
+.tab-btn.active .ti { color:var(--teal); }
+.tab-btn .ti { font-size:15px; transition:color 0.25s; }
+
+.field-group { margin-bottom:18px; }
+.field-label {
+  display:block; font-size:10px; font-weight:600;
+  letter-spacing:2px; text-transform:uppercase;
+  color:rgba(14,20,60,0.45); margin-bottom:8px;
+}
+.field-input-wrap { position:relative; }
+.field-input {
+  width:100%; height:48px; padding:0 46px 0 16px;
+  font-family:var(--font); font-size:14px; font-weight:400; color:var(--navy);
+  background:var(--lightgrey); border:1.5px solid transparent;
+  border-radius:8px; outline:none; transition:all 0.2s var(--ease);
+  -webkit-appearance:none;
+}
+.field-input::placeholder { color:rgba(14,20,60,0.3); }
+.field-input:hover { background:rgba(198,204,216,0.3); }
+.field-input:focus {
+  background:var(--white); border-color:var(--teal);
+  box-shadow:0 0 0 3px rgba(22,193,194,0.1);
+}
+.field-icon {
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  color:rgba(14,20,60,0.25); pointer-events:none; display:flex;
+  font-size:16px;
+}
+.field-toggle {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  background:none; border:none; cursor:pointer; padding:4px;
+  color:rgba(14,20,60,0.3); display:flex; transition:color 0.2s; font-size:16px;
+}
+.field-toggle:hover { color:var(--navy); }
+
+.forgot-row { display:flex; justify-content:flex-end; margin-top:-6px; margin-bottom:18px; }
+.forgot-link { font-size:12px; font-weight:500; color:var(--teal); text-decoration:none; transition:opacity 0.2s; }
+.forgot-link:hover { opacity:0.7; }
+
+.btn-submit {
+  width:100%; height:50px;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-family:var(--font); font-size:12px; font-weight:600;
+  letter-spacing:2px; text-transform:uppercase;
+  color:var(--white); background:var(--navy);
+  border:none; border-radius:8px; cursor:pointer;
+  transition:all 0.25s var(--ease);
+  position:relative; overflow:hidden; margin-top:6px;
+}
+.btn-submit::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent, rgba(22,193,194,0.18), transparent);
+  transform:translateX(-100%); transition:transform 0.5s ease;
+}
+.btn-submit:hover { background:#192059; transform:translateY(-1px); box-shadow:0 8px 24px rgba(14,20,60,0.22); }
+.btn-submit:hover::before { transform:translateX(100%); }
+.btn-submit:active { transform:translateY(0); box-shadow:none; }
+
+.magic-panel { display:none; }
+.magic-desc { font-size:13px; font-weight:300; color:rgba(14,20,60,0.5); line-height:1.65; margin-bottom:20px; }
+
+.form-footer {
+  margin-top:24px; padding-top:20px;
+  border-top:1px solid rgba(198,204,216,0.4); text-align:center;
+}
+.form-footer-text {
+  font-size:11px; font-weight:400; color:rgba(14,20,60,0.35);
+  display:flex; align-items:center; justify-content:center; gap:6px; line-height:1.5;
+}
+.trust-row {
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  margin-top:14px; flex-wrap:wrap;
+}
+.trust-item {
+  display:flex; align-items:center; gap:5px;
+  font-size:10px; font-weight:500; letter-spacing:0.5px;
+  color:rgba(14,20,60,0.25);
+}
+.trust-dot { width:3px; height:3px; border-radius:50%; background:rgba(198,204,216,0.9); }
+
+@media (max-width:900px) {
+  body { flex-direction:column; overflow:auto; }
+  .panel-left { width:100%; min-height:auto; padding:32px 28px 40px; }
+  .panel-right { width:100%; padding:48px 28px; }
+  .panel-right::before { display:none; }
+  .left-hero { padding:36px 0 28px; }
+  .stats-strip { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div class="panel-left">
+  <div class="dot-grid"></div>
+  <div class="bg-shapes">
+    <svg class="bg-shape" style="top:11%;right:9%;width:110px;height:110px;animation:floatA 22s ease-in-out infinite;" viewBox="0 0 110 110" fill="none">
+      <rect x="38" y="8" width="34" height="94" rx="6" fill="white"/>
+      <rect x="8" y="38" width="94" height="34" rx="6" fill="white"/>
+    </svg>
+    <svg class="bg-shape" style="bottom:22%;left:7%;width:78px;height:94px;animation:floatB 18s ease-in-out infinite 4s;" viewBox="0 0 78 94" fill="none">
+      <path d="M39 5 L69 17 L69 44 C69 64 55 80 39 88 C23 80 9 64 9 44 L9 17 Z" stroke="white" stroke-width="1.2" fill="none"/>
+      <path d="M25 46 L34 55 L54 35" stroke="#16C1C2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <svg class="bg-shape" style="top:42%;right:5%;width:68px;height:68px;opacity:0.05;animation:floatA 26s ease-in-out infinite 8s;" viewBox="0 0 68 68" fill="none">
+      <circle cx="34" cy="34" r="30" stroke="white" stroke-width="1" stroke-dasharray="4 5"/>
+      <circle cx="34" cy="34" r="17" stroke="#16C1C2" stroke-width="0.8"/>
+      <circle cx="34" cy="34" r="5" fill="#16C1C2"/>
+    </svg>
+    <svg class="bg-shape" style="top:62%;right:14%;width:58px;height:74px;animation:floatB 20s ease-in-out infinite 2s;" viewBox="0 0 58 74" fill="none">
+      <rect x="3" y="3" width="52" height="68" rx="5" stroke="white" stroke-width="1"/>
+      <line x1="13" y1="22" x2="45" y2="22" stroke="#16C1C2" stroke-width="1"/>
+      <line x1="13" y1="32" x2="45" y2="32" stroke="white" stroke-width="0.8"/>
+      <line x1="13" y1="42" x2="37" y2="42" stroke="white" stroke-width="0.8"/>
+    </svg>
+    <svg class="bg-shape" style="top:28%;left:3%;width:50px;height:50px;opacity:0.03;animation:floatA 30s ease-in-out infinite 12s;" viewBox="0 0 50 50" fill="none">
+      <rect x="3" y="3" width="44" height="44" rx="4" stroke="white" stroke-width="0.8" stroke-dasharray="3 4"/>
+    </svg>
+  </div>
+
+  <div class="ecg-container">
+    <svg viewBox="0 0 1000 80" preserveAspectRatio="none" style="width:100%;height:100%;">
+      <path class="ecg-path"
+        d="M0,40 L80,40 L110,40 L120,12 L130,68 L140,40 L160,40 L240,40 L270,40 L280,12 L290,68 L300,40 L320,40 L400,40 L430,40 L440,12 L450,68 L460,40 L480,40 L560,40 L590,40 L600,12 L610,68 L620,40 L640,40 L720,40 L750,40 L760,12 L770,68 L780,40 L800,40 L1000,40"
+        stroke="#16C1C2" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <div class="left-logo">
+    <div class="logo-mark">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M11 2 L19 6 L19 13 C19 17.5 15.5 20.5 11 22 C6.5 20.5 3 17.5 3 13 L3 6 Z" stroke="white" stroke-width="1.5" fill="none"/>
+        <path d="M7 11 L9.5 13.5 L15 8" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="logo-text-wrap">
+      <span class="logo-name">Dastify</span>
+      <span class="logo-sub">Solutions</span>
+    </div>
+  </div>
+
+  <div class="left-hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Credentialing Portal
+    </div>
+    <h1 class="hero-title">
+      Every payer.<br>
+      <em>Every state.</em><br>
+      Every cycle.
+    </h1>
+    <div class="hero-divider"></div>
+    <p class="hero-desc">The operational core for Dastify's payer-enrollment service — multi-tenant, multi-state, and accountable from intake to effective.</p>
+  </div>
+
+  <div class="stats-strip">
+    <div class="stat-item">
+      <div class="stat-val">97.4%</div>
+      <div class="stat-label">First-Pass Rate</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">500+</div>
+      <div class="stat-label">Payers Covered</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">50</div>
+      <div class="stat-label">States Active</div>
+    </div>
+  </div>
+
+  <div class="left-footer">
+    <span class="left-footer-copy">© 2025 Dastify Solutions</span>
+    <div class="left-footer-links">
+      <a href="#">Compliance</a>
+      <a href="#">Support</a>
+      <a href="#">Privacy</a>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="panel-right">
+  <div class="form-wrap">
+
+    <div class="form-header">
+      <h2 class="form-title">Sign in to Dastify</h2>
+      <p class="form-subtitle">Choose your sign-in method. Self sign-up is disabled.</p>
+    </div>
+
+    <div class="tab-switch">
+      <button class="tab-btn active" id="tab-password" onclick="switchTab('password')">
+        <i class="ti ti-lock"></i> Password
+      </button>
+      <button class="tab-btn" id="tab-magic" onclick="switchTab('magic')">
+        <i class="ti ti-sparkles"></i> Magic Link
+      </button>
+    </div>
+
+    <div id="panel-password">
+      <div class="field-group">
+        <label class="field-label" for="email">Work Email</label>
+        <div class="field-input-wrap">
+          <input class="field-input" id="email" type="email" placeholder="you@practice.com" autocomplete="email">
+          <span class="field-icon"><i class="ti ti-mail"></i></span>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="password">Password</label>
+        <div class="field-input-wrap">
+          <input class="field-input" id="password" type="password" placeholder="Enter your password" style="padding-right:46px;">
+          <button class="field-toggle" onclick="togglePassword()" type="button" aria-label="Toggle password visibility">
+            <i class="ti ti-eye" id="eye-icon"></i>
+          </button>
+        </div>
+      </div>
+      <div class="forgot-row">
+        <a href="#" class="forgot-link">Forgot password?</a>
+      </div>
+      <button class="btn-submit" type="button">
+        Sign In <i class="ti ti-arrow-right" style="font-size:15px;"></i>
+      </button>
+    </div>
+
+    <div id="panel-magic" class="magic-panel">
+      <p class="magic-desc">Enter your work email and we'll send a secure, one-time sign-in link. No password required.</p>
+      <div class="field-group">
+        <label class="field-label" for="magic-email">Work Email</label>
+        <div class="field-input-wrap">
+          <input class="field-input" id="magic-email" type="email" placeholder="you@practice.com">
+          <span class="field-icon"><i class="ti ti-mail"></i></span>
+        </div>
+      </div>
+      <button class="btn-submit" type="button">
+        Send Magic Link <i class="ti ti-send" style="font-size:15px;"></i>
+      </button>
+    </div>
+
+    <div class="form-footer">
+      <p class="form-footer-text">
+        <i class="ti ti-lock" style="font-size:13px;"></i>
+        New users must be invited by an administrator.
+      </p>
+      <div class="trust-row">
+        <span class="trust-item"><i class="ti ti-shield-check" style="font-size:11px;"></i> HIPAA</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item"><i class="ti ti-certificate" style="font-size:11px;"></i> SOC 2 Type II</span>
+        <span class="trust-dot"></span>
+        <span class="trust-item"><i class="ti ti-lock" style="font-size:11px;"></i> 256-bit SSL</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  var pp = document.getElementById('panel-password');
+  var mp = document.getElementById('panel-magic');
+  var tb = document.getElementById('tab-password');
+  var tm = document.getElementById('tab-magic');
+  if (tab === 'password') {
+    pp.style.display = 'block';
+    mp.style.display = 'none';
+    tb.classList.add('active');
+    tm.classList.remove('active');
+  } else {
+    pp.style.display = 'none';
+    mp.style.display = 'block';
+    tb.classList.remove('active');
+    tm.classList.add('active');
+  }
+}
+function togglePassword() {
+  var input = document.getElementById('password');
+  var icon = document.getElementById('eye-icon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'ti ti-eye-off';
+  } else {
+    input.type = 'password';
+    icon.className = 'ti ti-eye';
+  }
+}
+</script>
+</body>
+</html>
