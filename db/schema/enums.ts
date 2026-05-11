@@ -31,6 +31,10 @@ export const payerTypeEnum = pgEnum("payer_type", [
   "other",
 ]);
 
+// NOTE: this enum is deprecated and retained only because the old `legacy_category`
+// column on `documents` still has the type. The runtime category lookup now goes
+// through the `document_categories` table (see migration 0008). New code should
+// not import this enum.
 export const documentCategoryEnum = pgEnum("document_category", [
   "license",
   "dea",

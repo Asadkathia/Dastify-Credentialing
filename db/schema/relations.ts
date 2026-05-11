@@ -6,6 +6,7 @@ import { payers } from "./payers";
 import { enrollments } from "./enrollments";
 import { comments, internalNotes } from "./comments";
 import { documents } from "./documents";
+import { documentCategories } from "./document_categories";
 import { statusHistory, activityEvents } from "./audit";
 
 export const clientsRelations = relations(clients, ({ many, one }) => ({
@@ -74,6 +75,14 @@ export const internalNotesRelations = relations(internalNotes, ({ one }) => ({
 
 export const documentsRelations = relations(documents, ({ one }) => ({
   client: one(clients, { fields: [documents.clientId], references: [clients.id] }),
+  category: one(documentCategories, {
+    fields: [documents.categoryId],
+    references: [documentCategories.id],
+  }),
+}));
+
+export const documentCategoriesRelations = relations(documentCategories, ({ many }) => ({
+  documents: many(documents),
 }));
 
 export const statusHistoryRelations = relations(statusHistory, ({ one }) => ({

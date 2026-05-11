@@ -15,6 +15,14 @@ export const createClientSchema = z.object({
 });
 export type CreateClientInput = z.infer<typeof createClientSchema>;
 
+export const createPayerSchema = z.object({
+  name: z.string().min(2).max(120).trim(),
+  payerType: z.enum(["commercial", "medicare", "medicaid", "tricare", "other"]).default("commercial"),
+  statesActive: z.array(z.string().regex(US_STATE_REGEX)).default([]),
+  recredCycleMonths: z.number().int().positive().max(120).default(24),
+});
+export type CreatePayerInput = z.infer<typeof createPayerSchema>;
+
 export const inviteClientUserSchema = z
   .object({
     clientId: z.string().uuid(),
@@ -107,19 +115,6 @@ export const postInternalNoteSchema = z.object({
 export type PostInternalNoteInput = z.infer<typeof postInternalNoteSchema>;
 
 const DOCUMENT_OWNER_TYPES = ["provider", "enrollment", "group_entity", "client"] as const;
-const DOCUMENT_CATEGORIES = [
-  "license",
-  "dea",
-  "cv",
-  "malpractice",
-  "caqh",
-  "payer_letter",
-  "contract",
-  "denial",
-  "info_request",
-  "internal_staging",
-  "other",
-] as const;
 
 const ALLOWED_MIME_TYPES = [
   "application/pdf",
@@ -140,7 +135,7 @@ export const uploadDocumentMetaSchema = z
     clientId: z.string().uuid(),
     ownerType: z.enum(DOCUMENT_OWNER_TYPES),
     ownerId: z.string().uuid(),
-    category: z.enum(DOCUMENT_CATEGORIES),
+    categoryId: z.string().uuid(),
     fileName: z.string().min(1).max(255),
     mimeType: z
       .string()
@@ -160,3 +155,9 @@ export const uploadDocumentMetaSchema = z
 export type UploadDocumentMetaInput = z.infer<typeof uploadDocumentMetaSchema>;
 
 export const documentIdSchema = z.object({ documentId: z.string().uuid() });
+
+export const createDocumentCategorySchema = z.object({
+  // Display label — what users see in dropdowns and chips.
+  label: z.string().min(2).max(60).trim(),
+});
+export type CreateDocumentCategoryInput = z.infer<typeof createDocumentCategorySchema>;

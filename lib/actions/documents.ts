@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   uploadDocumentMetaSchema,
   documentIdSchema,
+  createDocumentCategorySchema,
   ALLOWED_DOCUMENT_MIME_TYPES,
   MAX_DOCUMENT_BYTES,
 } from "@/lib/validation/schemas";
@@ -43,7 +44,7 @@ export async function uploadDocumentAction(
     clientId: formData.get("clientId"),
     ownerType: formData.get("ownerType"),
     ownerId: formData.get("ownerId"),
-    category: formData.get("category"),
+    categoryId: formData.get("categoryId"),
     fileName: file.name,
     mimeType: file.type,
     sizeBytes: file.size,
@@ -84,7 +85,7 @@ export async function uploadDocumentAction(
       client_id: parsed.data.clientId,
       owner_type: parsed.data.ownerType,
       owner_id: parsed.data.ownerId,
-      category: parsed.data.category,
+      category_id: parsed.data.categoryId,
       file_name: parsed.data.fileName,
       storage_path: storagePath,
       mime_type: parsed.data.mimeType,
@@ -109,7 +110,7 @@ export async function uploadDocumentAction(
     action: "document_upload",
     target_table: "documents",
     target_id: doc.id,
-    summary: `Uploaded ${parsed.data.fileName} (${parsed.data.category}${parsed.data.isInternal ? ", internal" : ""})`,
+    summary: `Uploaded ${parsed.data.fileName}${parsed.data.isInternal ? " (internal)" : ""}`,
   });
 
   revalidatePathsForOwner(parsed.data.clientId, parsed.data.ownerType, parsed.data.ownerId);
@@ -190,6 +191,72 @@ export async function deleteDocumentAction(
 
   revalidatePathsForOwner(doc.client_id, doc.owner_type, doc.owner_id);
   return ok({ documentId: doc.id });
+}
+
+/**
+ * Admin-only: append a new category to the document_categories table.
+ * The `name` (machine identifier) is derived from the label by lower-casing
+ * and replacing whitespace/punctuation with `_`. If a category with the same
+ * name already exists, return that one (idempotent).
+ */
+export async function createDocumentCategoryAction(
+  input: unknown,
+): Promise<ActionResult<{ id: string; name: string; label: string; isExisting: boolean }>> {
+  const session = await requireAdmin();
+
+  const parsed = createDocumentCategorySchema.safeParse(input);
+  if (!parsed.success) {
+    return fail("Invalid category input", parsed.error.flatten().fieldErrors);
+  }
+
+  const machineName = parsed.data.label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+  if (!machineName) return fail("Label must contain alphanumeric characters");
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: existing } = await supabase
+    .from("document_categories")
+    .select("id, name, label")
+    .eq("name", machineName)
+    .maybeSingle();
+
+  if (existing) {
+    return ok({ id: existing.id, name: existing.name, label: existing.label, isExisting: true });
+  }
+
+  // Place new categories above "Other" but below the last default.
+  const { data: highestDefault } = await supabase
+    .from("document_categories")
+    .select("sort_order")
+    .eq("is_default", true)
+    .neq("name", "other")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const sortOrder = (highestDefault?.sort_order ?? 100) + 10;
+
+  const { data: created, error } = await supabase
+    .from("document_categories")
+    .insert({
+      name: machineName,
+      label: parsed.data.label,
+      sort_order: sortOrder,
+      is_default: false,
+      created_by_user_id: session.userId,
+    })
+    .select("id, name, label")
+    .single();
+
+  if (error || !created) {
+    return fail(`Failed to add category: ${error?.message ?? "unknown"}`);
+  }
+
+  return ok({ id: created.id, name: created.name, label: created.label, isExisting: false });
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ export * from "./providers";
 export * from "./payers";
 export * from "./enrollments";
 export * from "./comments";
+export * from "./document_categories";
 export * from "./documents";
 export * from "./audit";
 export * from "./relations";
