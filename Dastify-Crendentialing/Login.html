@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Dastify — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:#0E143C; --teal:#16C1C2; --aqua:#4ECED1;
+  --charcoal:#222; --white:#fff;
+  --lightgrey:#F6F7FB; --grey:#C6CCD8;
+  --border:rgba(198,204,216,0.55);
+  --red:#B3261E;
+}
+*,*::before,*::after { box-sizing:border-box; }
+html, body { margin:0; padding:0; min-height:100vh; }
+body {
+  font-family:'Poppins',-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased; color:var(--charcoal);
+  background:var(--lightgrey); font-size:14px;
+}
+
+.split { min-height:100vh; display:grid; grid-template-columns:1fr 1fr; }
+@media (max-width: 880px) { .split { grid-template-columns:1fr; } .left { display:none; } }
+
+/* Left brand panel */
+.left {
+  background:var(--navy); color:white;
+  padding:48px 56px; display:flex; flex-direction:column;
+  position:relative; overflow:hidden;
+}
+.left::before {
+  content:""; position:absolute; right:-100px; top:-100px;
+  width:520px; height:520px; border-radius:50%;
+  background:radial-gradient(circle, rgba(22,193,194,0.18) 0%, rgba(22,193,194,0) 70%);
+}
+.left::after {
+  content:""; position:absolute; left:-180px; bottom:-180px;
+  width:480px; height:480px; border-radius:50%;
+  background:radial-gradient(circle, rgba(78,206,209,0.14) 0%, rgba(78,206,209,0) 70%);
+}
+.brand {
+  display:flex; align-items:center; gap:12px; position:relative; z-index:1;
+}
+.brand-mark {
+  width:36px; height:36px; border-radius:8px; background:var(--teal);
+  color:var(--navy); font-weight:700; font-size:16px;
+  display:flex; align-items:center; justify-content:center;
+}
+.brand-name { font-size:18px; font-weight:600; letter-spacing:-0.005em; }
+
+.left-mid { flex:1; display:flex; flex-direction:column; justify-content:center; max-width:460px; position:relative; z-index:1; }
+.eyebrow {
+  font-size:11px; font-weight:600; letter-spacing:0.18em;
+  text-transform:uppercase; color:var(--teal); margin-bottom:14px;
+}
+.tagline {
+  font-size:38px; line-height:1.1; font-weight:600;
+  letter-spacing:-0.018em; margin:0 0 16px; color:white;
+}
+.tagline em {
+  font-style:normal; color:var(--teal);
+  background:linear-gradient(90deg, var(--teal) 0%, var(--aqua) 100%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.lede { font-size:15px; line-height:1.55; color:rgba(255,255,255,0.7); }
+
+/* live ticker */
+.ticker {
+  margin-top:36px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-radius:10px; padding:18px 20px;
+}
+.ticker-h {
+  font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase;
+  color:rgba(255,255,255,0.55); margin-bottom:12px;
+  display:flex; align-items:center; gap:6px;
+}
+.ticker-h::before {
+  content:""; width:6px; height:6px; border-radius:50%; background:var(--teal);
+  animation:pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+.ticker-row {
+  display:grid; grid-template-columns:60px 1fr auto; gap:12px;
+  padding:6px 0; font-size:13px;
+  border-top:1px dashed rgba(255,255,255,0.06);
+}
+.ticker-row:first-of-type { border-top:none; }
+.ticker-row .t { font-family:'JetBrains Mono',monospace; color:rgba(255,255,255,0.45); font-size:11px; padding-top:2px; }
+.ticker-row .m { color:white; }
+.ticker-row .m strong { color:var(--teal); font-weight:500; }
+.ticker-row .s { color:rgba(255,255,255,0.5); font-size:11px; padding-top:2px; }
+
+.left-foot {
+  position:relative; z-index:1; display:flex; gap:18px; font-size:12px;
+  color:rgba(255,255,255,0.45);
+}
+.left-foot a { color:rgba(255,255,255,0.7); text-decoration:none; }
+.left-foot a:hover { color:white; }
+
+/* Right form panel */
+.right {
+  background:var(--white); padding:48px;
+  display:flex; align-items:center; justify-content:center;
+}
+.form-wrap { width:100%; max-width:420px; }
+.form-h {
+  font-size:26px; font-weight:600; color:var(--navy);
+  letter-spacing:-0.01em; margin:0 0 6px;
+}
+.form-sub { font-size:14px; color:rgba(14,20,60,0.6); margin-bottom:28px; }
+
+.field { margin-bottom:16px; }
+.label {
+  display:block; font-size:11px; font-weight:600; letter-spacing:0.06em;
+  text-transform:uppercase; color:rgba(14,20,60,0.7); margin-bottom:7px;
+}
+.input {
+  width:100%; padding:11px 14px; font-size:14px; font-family:inherit;
+  background:white; border:1px solid var(--border); border-radius:7px;
+  color:var(--charcoal); transition:all 120ms;
+}
+.input:focus {
+  outline:none; border-color:var(--teal);
+  box-shadow:0 0 0 3px rgba(22,193,194,0.15);
+}
+.input-group { position:relative; }
+.input-group .input { padding-right:42px; }
+.input-icon {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  background:none; border:none; padding:4px;
+  color:rgba(14,20,60,0.5); cursor:pointer;
+}
+.input-icon:hover { color:var(--navy); }
+
+.field-row {
+  display:flex; align-items:center; justify-content:space-between;
+  margin:-4px 0 18px; font-size:12.5px;
+}
+.checkbox { display:inline-flex; align-items:center; gap:7px; color:rgba(14,20,60,0.7); cursor:pointer; }
+.checkbox input { accent-color:var(--teal); }
+.link { color:var(--teal); text-decoration:none; font-weight:500; }
+.link:hover { text-decoration:underline; }
+
+.btn-primary {
+  width:100%; padding:12px; background:var(--navy); color:white;
+  border:1px solid var(--navy); border-radius:7px;
+  font-size:14px; font-weight:600; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  transition:all 120ms; font-family:inherit;
+}
+.btn-primary:hover { background:#1a2255; }
+
+.divider {
+  display:flex; align-items:center; gap:12px; margin:22px 0;
+  color:rgba(14,20,60,0.4); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; font-weight:500;
+}
+.divider::before, .divider::after { content:""; flex:1; height:1px; background:var(--border); }
+
+.btn-sso {
+  width:100%; padding:11px; background:white;
+  border:1px solid var(--border); border-radius:7px;
+  font-size:14px; font-weight:500; color:var(--charcoal); cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  font-family:inherit; transition:all 120ms;
+}
+.btn-sso:hover { background:var(--lightgrey); border-color:var(--grey); }
+.btn-sso svg { width:16px; height:16px; }
+.btn-sso + .btn-sso { margin-top:8px; }
+
+.tenant-card {
+  display:flex; align-items:center; gap:12px;
+  padding:11px 14px; background:var(--lightgrey);
+  border:1px solid var(--border); border-radius:7px;
+  cursor:pointer; transition:all 120ms;
+}
+.tenant-card:hover { border-color:var(--teal); background:white; }
+.tenant-icon {
+  width:32px; height:32px; border-radius:6px; background:var(--navy);
+  color:white; font-size:11px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.tenant-icon.alt { background:var(--teal); color:var(--navy); }
+.tenant-icon.gov { background:#3a3f60; }
+.tenant-l { flex:1; min-width:0; }
+.tenant-name { font-size:13.5px; font-weight:600; color:var(--navy); }
+.tenant-meta { font-size:11px; color:rgba(14,20,60,0.55); }
+.tenant-arrow { color:rgba(14,20,60,0.35); }
+.tenant-card:hover .tenant-arrow { color:var(--teal); }
+
+.foot {
+  margin-top:28px; padding-top:20px; border-top:1px solid var(--border);
+  font-size:12px; color:rgba(14,20,60,0.55); text-align:center;
+}
+.foot a { color:var(--teal); text-decoration:none; font-weight:500; }
+
+.help {
+  font-size:11.5px; color:rgba(14,20,60,0.55); margin-top:20px;
+  display:flex; gap:14px; justify-content:space-between;
+}
+.help a { color:rgba(14,20,60,0.55); text-decoration:none; }
+.help a:hover { color:var(--navy); }
+
+/* Compliance footer */
+.compliance {
+  display:flex; align-items:center; gap:14px; margin-top:14px;
+  padding:11px 14px; background:rgba(14,20,60,0.02);
+  border-radius:6px; font-size:11px; color:rgba(14,20,60,0.55);
+}
+.compliance svg { color:var(--teal); flex-shrink:0; }
+
+.tab-pills {
+  display:inline-flex; padding:3px; background:var(--lightgrey);
+  border-radius:8px; margin-bottom:24px; border:1px solid var(--border);
+}
+.tab-pill {
+  padding:7px 14px; background:none; border:none; font-family:inherit;
+  font-size:12.5px; font-weight:500; color:rgba(14,20,60,0.6);
+  border-radius:6px; cursor:pointer;
+}
+.tab-pill.is-active { background:white; color:var(--navy); font-weight:600; box-shadow:0 1px 2px rgba(14,20,60,0.06); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const { useState } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "step": "credentials",
+  "viewerType": "admin"
+}/*EDITMODE-END*/;
+
+const Icon = ({ name, size = 16 }) => {
+  const s = { fill:"none", stroke:"currentColor", strokeWidth:1.6, strokeLinecap:"round", strokeLinejoin:"round" };
+  const p = {
+    eye:<><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" {...s}/><circle cx="12" cy="12" r="3" {...s}/></>,
+    eye_off:<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a18.45 18.45 0 0 1 5.06-5.94M9.9 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22" {...s}/></>,
+    arrow:<><path d="M5 12h14M13 5l7 7-7 7" {...s}/></>,
+    arrow_back:<><path d="M19 12H5M12 19l-7-7 7-7" {...s}/></>,
+    chevron:<><path d="M9 6l6 6-6 6" {...s}/></>,
+    shield:<><path d="M12 2 4 5v6c0 5 3.5 8.7 8 10 4.5-1.3 8-5 8-10V5z" {...s}/><path d="m9 12 2 2 4-4" {...s}/></>,
+    google:<><path fill="#4285F4" stroke="none" d="M21.35 11.1h-9.17v2.96h5.27c-.23 1.18-1.66 3.46-5.27 3.46-3.17 0-5.76-2.62-5.76-5.85s2.59-5.85 5.76-5.85c1.81 0 3.02.77 3.71 1.43l2.53-2.43C17.05 3.43 15.06 2.5 12.18 2.5 6.97 2.5 2.74 6.73 2.74 11.94s4.23 9.44 9.44 9.44c5.45 0 9.06-3.83 9.06-9.22 0-.62-.07-1.09-.15-1.56z"/></>,
+    microsoft:<><rect x="3" y="3" width="8.5" height="8.5" fill="#F25022" stroke="none"/><rect x="12.5" y="3" width="8.5" height="8.5" fill="#7FBA00" stroke="none"/><rect x="3" y="12.5" width="8.5" height="8.5" fill="#00A4EF" stroke="none"/><rect x="12.5" y="12.5" width="8.5" height="8.5" fill="#FFB900" stroke="none"/></>,
+    key:<><circle cx="8" cy="15" r="4" {...s}/><path d="m10.85 12.15 7.4-7.4 1.5 1.5-1.5 1.5 1.5 1.5-2 2-1.5-1.5-1.5 1.5" {...s}/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>{p[name]}</svg>;
+};
+
+const Brand = () => (
+  <div className="brand">
+    <span className="brand-mark">D</span>
+    <span className="brand-name">Dastify</span>
+  </div>
+);
+
+// ─── Step: Credentials ──────────────────────────────────────────────────
+const StepCredentials = ({ onNext, viewerType, setTweak }) => {
+  const [showPwd, setShowPwd] = useState(false);
+  return (
+    <div className="form-wrap">
+      <div className="tab-pills">
+        <button className={`tab-pill ${viewerType === "admin"  ? "is-active" : ""}`} onClick={() => setTweak("viewerType", "admin")}>Internal team</button>
+        <button className={`tab-pill ${viewerType === "client" ? "is-active" : ""}`} onClick={() => setTweak("viewerType", "client")}>Client</button>
+      </div>
+
+      <h1 className="form-h">Sign in to Dastify</h1>
+      <p className="form-sub">{viewerType === "admin" ? "Internal team access. SSO is required for staff accounts." : "Welcome back. Use your work email to continue."}</p>
+
+      <form onSubmit={(e) => { e.preventDefault(); onNext(); }}>
+        <div className="field">
+          <label className="label" htmlFor="email">Email</label>
+          <input id="email" className="input" type="email" defaultValue={viewerType === "admin" ? "maya.alvarez@dastify.com" : "salma@khanmed.com"} required/>
+        </div>
+        <div className="field">
+          <label className="label" htmlFor="pwd">Password</label>
+          <div className="input-group">
+            <input id="pwd" className="input" type={showPwd ? "text" : "password"} defaultValue="••••••••••••" required/>
+            <button type="button" className="input-icon" onClick={() => setShowPwd(!showPwd)} aria-label={showPwd ? "Hide" : "Show"}>
+              <Icon name={showPwd ? "eye_off" : "eye"} size={15}/>
+            </button>
+          </div>
+        </div>
+        <div className="field-row">
+          <label className="checkbox"><input type="checkbox" defaultChecked/>Keep me signed in</label>
+          <a className="link" href="#">Forgot password?</a>
+        </div>
+        <button type="submit" className="btn-primary">Continue<Icon name="arrow" size={14}/></button>
+      </form>
+
+      {viewerType === "admin" ? (
+        <>
+          <div className="divider">or</div>
+          <button className="btn-sso"><Icon name="microsoft" size={16}/>Continue with Microsoft (Dastify SSO)</button>
+          <button className="btn-sso"><Icon name="google" size={16}/>Continue with Google</button>
+        </>
+      ) : (
+        <>
+          <div className="divider">or</div>
+          <button className="btn-sso"><Icon name="key" size={16}/>Sign in with magic link</button>
+        </>
+      )}
+
+      <div className="compliance">
+        <Icon name="shield" size={14}/>
+        <span>HIPAA-compliant · SOC 2 Type II · TLS 1.3 in transit, AES-256 at rest. PHI access is RLS-scoped per tenant.</span>
+      </div>
+      <div className="foot">
+        {viewerType === "client" ? <>New to Dastify? <a href="#">Your admin will invite you</a> — clients can't self-sign-up.</> : <>Need access? <a href="#">Contact IT</a></>}
+      </div>
+    </div>
+  );
+};
+
+// ─── Step: 2FA ──────────────────────────────────────────────────────────
+const StepTwoFactor = ({ onNext, onBack }) => {
+  const [code, setCode] = useState(["","","","","",""]);
+  const refs = [React.useRef(),React.useRef(),React.useRef(),React.useRef(),React.useRef(),React.useRef()];
+  const update = (i, v) => {
+    if (!/^\d*$/.test(v)) return;
+    const next = [...code]; next[i] = v.slice(-1); setCode(next);
+    if (v && i < 5) refs[i+1].current?.focus();
+  };
+  return (
+    <div className="form-wrap">
+      <button onClick={onBack} style={{ background:"none", border:"none", color:"rgba(14,20,60,0.6)", fontSize:12, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6, marginBottom:18, padding:0, fontFamily:"inherit" }}>
+        <Icon name="arrow_back" size={12}/>Back to sign in
+      </button>
+      <h1 className="form-h">Two-factor verification</h1>
+      <p className="form-sub">We sent a 6-digit code to your authenticator app. It expires in <strong style={{ color:"var(--navy)" }}>2:48</strong>.</p>
+
+      <div style={{ display:"flex", gap:8, marginBottom:18 }}>
+        {code.map((v, i) => (
+          <input key={i} ref={refs[i]} className="input" maxLength="1" value={v}
+            onChange={(e) => update(i, e.target.value)}
+            style={{ width:48, height:54, fontSize:22, textAlign:"center", fontFamily:"'JetBrains Mono',monospace", fontWeight:600 }}/>
+        ))}
+      </div>
+
+      <button className="btn-primary" onClick={onNext}>Verify<Icon name="arrow" size={14}/></button>
+      <div className="foot">
+        <a href="#">Use a backup code</a> · <a href="#">Lost access to authenticator?</a>
+      </div>
+    </div>
+  );
+};
+
+// ─── Step: Tenant chooser ───────────────────────────────────────────────
+const StepTenant = ({ onNext, viewerType }) => {
+  const tenants = viewerType === "admin"
+    ? [
+        { id:"dastify",     name:"Dastify Internal",        meta:"All clients · admin access",    role:"Admin" },
+        { id:"khan",        name:"Khan Internal Medicine",  meta:"1 provider · 14 open",          role:"Biller" },
+        { id:"northbay",    name:"North Bay Cardiology",    meta:"3 providers · 9 open",          role:"Biller" },
+        { id:"sierra",      name:"Sierra Family Health",    meta:"6 providers · 21 open",         role:"Biller" },
+      ]
+    : [
+        { id:"khan",        name:"Khan Internal Medicine",  meta:"1 provider · 14 open",          role:"Practice Admin" },
+      ];
+  return (
+    <div className="form-wrap">
+      <h1 className="form-h">Choose a workspace</h1>
+      <p className="form-sub">{viewerType === "admin" ? "You're a member of multiple tenants. Pick one to continue — you can switch any time." : "You have access to the following workspace."}</p>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {tenants.map((t, i) => (
+          <button key={t.id} className="tenant-card" onClick={onNext} style={{ textAlign:"left", fontFamily:"inherit" }}>
+            <div className={`tenant-icon ${i === 0 ? "" : i === 1 ? "alt" : ""}`}>
+              {t.name.split(" ").slice(0,2).map(w => w[0]).join("")}
+            </div>
+            <div className="tenant-l">
+              <div className="tenant-name">{t.name}</div>
+              <div className="tenant-meta">{t.meta} · <span style={{ color:"var(--teal)", fontWeight:500 }}>{t.role}</span></div>
+            </div>
+            <span className="tenant-arrow"><Icon name="chevron" size={16}/></span>
+          </button>
+        ))}
+      </div>
+
+      <div className="compliance">
+        <Icon name="shield" size={14}/>
+        <span>Switching tenants ends your current session and re-applies row-level security. Your action history is per-tenant.</span>
+      </div>
+    </div>
+  );
+};
+
+// ─── App ────────────────────────────────────────────────────────────────
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  const Step =
+    t.step === "twofactor" ? <StepTwoFactor onNext={() => setTweak("step","tenant")} onBack={() => setTweak("step","credentials")}/>
+    : t.step === "tenant"  ? <StepTenant viewerType={t.viewerType} onNext={() => location.href = "Dashboard.html"}/>
+    :                        <StepCredentials viewerType={t.viewerType} setTweak={setTweak} onNext={() => setTweak("step", t.viewerType === "admin" ? "twofactor" : "tenant")}/>;
+
+  return (
+    <>
+      <div className="split">
+        <div className="left">
+          <Brand/>
+          <div className="left-mid">
+            <div className="eyebrow">Credentialing platform</div>
+            <h2 className="tagline">Get providers <em>in-network</em> faster.</h2>
+            <p className="lede">Dastify keeps every payer enrollment, recred, and document in one place — with the audit trail your billing team and your payers can both trust.</p>
+            <div className="ticker">
+              <div className="ticker-h">Live · network activity (anonymized)</div>
+              <div className="ticker-row"><span className="t">14:32</span><span className="m"><strong>Aetna TX</strong> approved · effective 2026-06-01</span><span className="s">2m ago</span></div>
+              <div className="ticker-row"><span className="t">14:18</span><span className="m">Recred submitted to <strong>BCBS Texas</strong></span><span className="s">16m ago</span></div>
+              <div className="ticker-row"><span className="t">13:55</span><span className="m"><strong>United HC</strong> requested malpractice COI</span><span className="s">39m ago</span></div>
+              <div className="ticker-row"><span className="t">13:41</span><span className="m">8 enrollments moved to <strong>in_review</strong></span><span className="s">53m ago</span></div>
+            </div>
+          </div>
+          <div className="left-foot">
+            <span>v4.12 · build 2026.05</span>
+            <a href="#">Status</a><a href="#">Privacy</a><a href="#">Terms</a>
+          </div>
+        </div>
+        <div className="right">{Step}</div>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Step">
+          <TweakRadio value={t.step} onChange={v => setTweak("step", v)}
+            options={[
+              { value:"credentials", label:"Sign in" },
+              { value:"twofactor",   label:"2FA" },
+              { value:"tenant",      label:"Tenant" },
+            ]}/>
+        </TweakSection>
+        <TweakSection title="Viewer type">
+          <TweakRadio value={t.viewerType} onChange={v => setTweak("viewerType", v)}
+            options={[
+              { value:"admin",  label:"Internal" },
+              { value:"client", label:"Client" },
+            ]}/>
+          <div style={{ fontSize:11, color:"rgba(14,20,60,0.55)", marginTop:8, lineHeight:1.5 }}>
+            Admin gets SSO buttons, multi-tenant chooser, and 2FA. Clients get magic-link, single-tenant view.
+          </div>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

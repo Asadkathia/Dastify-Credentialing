@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Dastify — Empty, loading, error states</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:#0E143C; --teal:#16C1C2; --aqua:#4ECED1; --charcoal:#222;
+  --lightgrey:#F6F7FB; --grey:#C6CCD8; --white:#fff;
+  --red:#B3261E; --green:#2E7D32; --amber:#F4A300;
+  --navy-04:rgba(14,20,60,0.04); --navy-02:rgba(14,20,60,0.02);
+  --teal-12:rgba(22,193,194,0.12); --teal-08:rgba(22,193,194,0.08);
+  --red-08:rgba(179,38,30,0.08); --green-08:rgba(46,125,50,0.08); --amber-08:rgba(244,163,0,0.10);
+  --shadow-xs:0 1px 0 rgba(14,20,60,0.04);
+  --border:rgba(198,204,216,0.55);
+}
+*,*::before,*::after { box-sizing:border-box; }
+html, body { margin:0; padding:0; }
+body { font-family:'Poppins',-apple-system,sans-serif; -webkit-font-smoothing:antialiased; color:var(--charcoal); font-size:14px; line-height:22px; }
+button { cursor:pointer; font-family:inherit; }
+
+/* ─── Common chrome (mini topbar / sidebar) for context ─── */
+.frame { width:100%; height:100%; background:var(--lightgrey); display:flex; flex-direction:column; }
+.f-top { height:44px; background:var(--navy); color:white; display:flex; align-items:center; padding:0 18px; gap:10px; flex-shrink:0; }
+.f-mark { width:22px; height:22px; border-radius:5px; background:var(--teal); color:var(--navy); font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; }
+.f-name { font-size:13px; font-weight:600; }
+.f-sep { color:rgba(255,255,255,0.3); margin:0 2px; }
+.f-page { font-size:12px; color:rgba(255,255,255,0.65); }
+.f-spacer { flex:1; }
+.f-avatar { width:24px; height:24px; border-radius:50%; background:var(--teal); color:var(--navy); font-size:10px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+
+.f-body { flex:1; display:flex; min-height:0; }
+.f-side { width:140px; background:white; border-right:1px solid var(--border); padding:12px 8px; flex-shrink:0; }
+.f-nav { display:flex; align-items:center; gap:8px; padding:6px 8px; font-size:11px; color:rgba(14,20,60,0.7); border-radius:4px; margin-bottom:1px; }
+.f-nav.is-active { background:var(--teal-08); color:var(--navy); font-weight:600; }
+.f-nav-dot { width:5px; height:5px; border-radius:50%; background:currentColor; opacity:0.55; }
+
+.f-main { flex:1; min-width:0; padding:18px 22px; overflow:hidden; display:flex; flex-direction:column; }
+.f-h1 { font-size:18px; font-weight:600; color:var(--navy); margin:0 0 12px; }
+
+/* generic state container */
+.state-stage {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  background:white; border:1px solid var(--border); border-radius:8px;
+  padding:32px; text-align:center;
+}
+.state-inner { max-width:340px; }
+.state-icon-wrap {
+  width:56px; height:56px; border-radius:14px;
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 16px;
+}
+.state-h { font-size:16px; font-weight:600; color:var(--navy); margin:0 0 6px; }
+.state-msg { font-size:13px; color:rgba(14,20,60,0.65); line-height:1.5; margin:0 0 16px; }
+.state-actions { display:flex; gap:8px; justify-content:center; }
+
+.btn-primary { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:var(--navy); color:white; border:1px solid var(--navy); border-radius:6px; font-size:12.5px; font-weight:600; }
+.btn-primary:hover { background:#1a2255; }
+.btn-ghost { display:inline-flex; align-items:center; gap:6px; padding:8px 13px; background:white; color:var(--charcoal); border:1px solid var(--border); border-radius:6px; font-size:12.5px; font-weight:500; }
+.btn-ghost:hover { background:var(--lightgrey); }
+
+/* table skeleton (loading) */
+.skel-tbl { background:white; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.skel-row { display:grid; grid-template-columns:32px 2fr 1fr 1fr 90px 60px; gap:12px; padding:11px 14px; border-bottom:1px solid var(--border); align-items:center; }
+.skel-row:last-child { border-bottom:none; }
+.skel-row.head { background:var(--lightgrey); padding:9px 14px; }
+.skel-bar {
+  height:10px; border-radius:4px;
+  background:linear-gradient(90deg, rgba(14,20,60,0.05) 0%, rgba(14,20,60,0.10) 50%, rgba(14,20,60,0.05) 100%);
+  background-size:200% 100%;
+  animation:shimmer 1.4s linear infinite;
+}
+.skel-bar.dark { background:linear-gradient(90deg, rgba(14,20,60,0.08) 0%, rgba(14,20,60,0.16) 50%, rgba(14,20,60,0.08) 100%); background-size:200% 100%; animation:shimmer 1.4s linear infinite; }
+.skel-circle { width:24px; height:24px; border-radius:50%; background:linear-gradient(90deg, rgba(14,20,60,0.05) 0%, rgba(14,20,60,0.12) 50%, rgba(14,20,60,0.05) 100%); background-size:200% 100%; animation:shimmer 1.4s linear infinite; }
+@keyframes shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+
+/* KPI skeleton */
+.skel-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+.skel-kpi { background:white; border:1px solid var(--border); border-radius:8px; padding:14px; }
+
+/* error states / colored variants */
+.icon-empty   { background:var(--teal-08); color:var(--navy); }
+.icon-success { background:var(--green-08); color:var(--green); }
+.icon-warn    { background:var(--amber-08); color:#7a4f00; }
+.icon-danger  { background:var(--red-08); color:var(--red); }
+.icon-flat    { background:var(--lightgrey); color:rgba(14,20,60,0.55); }
+.icon-loading { background:var(--teal-08); color:var(--teal); }
+
+.banner { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border-radius:6px; font-size:12.5px; line-height:1.5; margin-bottom:14px; }
+.banner.warn { background:var(--amber-08); color:#5a3a00; border:1px solid rgba(244,163,0,0.25); }
+.banner.danger { background:var(--red-08); color:var(--red); border:1px solid rgba(179,38,30,0.18); }
+.banner.info { background:var(--teal-08); color:var(--navy); border:1px solid rgba(22,193,194,0.2); }
+.banner svg { flex-shrink:0; margin-top:1px; }
+.banner b { font-weight:600; }
+
+.code-block {
+  background:#0f1430; color:#e8eaf3;
+  border-radius:5px; padding:8px 10px;
+  font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.55;
+  text-align:left; margin-top:12px;
+}
+.code-block .key { color:#a4b1d6; }
+.code-block .val { color:#7eddb8; }
+.code-block .err { color:#ff8a87; }
+
+/* shake for retry */
+@keyframes spin { from { transform:rotate(0); } to { transform:rotate(360deg); } }
+.spin { animation:spin 1.2s linear infinite; }
+
+/* progress dots */
+.dots { display:inline-flex; gap:4px; }
+.dots span { width:6px; height:6px; border-radius:50%; background:var(--teal); animation:bounce 1.2s ease-in-out infinite; }
+.dots span:nth-child(2) { animation-delay:0.15s; }
+.dots span:nth-child(3) { animation-delay:0.3s; }
+@keyframes bounce { 0%,80%,100% { opacity:0.3; transform:translateY(0); } 40% { opacity:1; transform:translateY(-3px); } }
+
+/* form error */
+.input-err {
+  width:100%; padding:9px 11px; font-size:13px; font-family:inherit;
+  background:white; border:1px solid var(--red); border-radius:6px;
+  color:var(--charcoal);
+}
+.field-err { font-size:11.5px; color:var(--red); margin-top:5px; display:flex; align-items:center; gap:5px; }
+.label-mini { display:block; font-size:10px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:rgba(14,20,60,0.7); margin-bottom:6px; text-align:left; }
+
+/* doc card upload error */
+.upload-card { background:var(--lightgrey); border:1.5px dashed rgba(179,38,30,0.4); border-radius:8px; padding:18px; display:flex; align-items:center; gap:12px; }
+.upload-fail-icon { width:38px; height:38px; border-radius:7px; background:white; color:var(--red); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid rgba(179,38,30,0.18); }
+
+/* dim-rls watermark for permission state */
+.locked-stage { position:relative; flex:1; background:white; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.locked-blur { padding:18px; filter:blur(3.5px); pointer-events:none; opacity:0.5; }
+.locked-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(246,247,251,0.7); backdrop-filter:saturate(0.8); }
+.locked-card { background:white; border:1px solid var(--border); border-radius:10px; padding:24px; max-width:360px; text-align:center; box-shadow:0 12px 24px rgba(14,20,60,0.08); }
+
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<script type="text/babel">
+const { useState } = React;
+
+const Icon = ({ name, size = 16 }) => {
+  const s = { fill:"none", stroke:"currentColor", strokeWidth:1.6, strokeLinecap:"round", strokeLinejoin:"round" };
+  const p = {
+    plus:<><path d="M12 5v14M5 12h14" {...s}/></>,
+    refresh:<><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" {...s}/></>,
+    upload:<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" {...s}/></>,
+    inbox:<><path d="M22 12h-6l-2 3h-4l-2-3H2" {...s}/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" {...s}/></>,
+    search:<><circle cx="11" cy="11" r="7" {...s}/><path d="m21 21-4.3-4.3" {...s}/></>,
+    folder:<><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" {...s}/></>,
+    cloud_off:<><path d="M2 2l20 20" {...s}/><path d="M5.74 5.84A6 6 0 0 0 7 17h10a4 4 0 0 0 1.85-7.55" {...s}/></>,
+    alert_tri:<><path d="m12 2 11 19H1z" {...s}/><path d="M12 9v5M12 17.5h.01" {...s}/></>,
+    alert_circle:<><circle cx="12" cy="12" r="10" {...s}/><path d="M12 7v6M12 16.5h.01" {...s}/></>,
+    check:<><circle cx="12" cy="12" r="10" {...s}/><path d="m8 12 3 3 5-6" {...s}/></>,
+    lock:<><rect x="4" y="11" width="16" height="10" rx="2" {...s}/><path d="M8 11V7a4 4 0 0 1 8 0v4" {...s}/></>,
+    sparkle:<><path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l4.2 4.2M14.2 14.2l4.2 4.2M18.4 5.6l-4.2 4.2M9.8 14.2l-4.2 4.2" {...s}/></>,
+    wifi_off:<><path d="m1 1 22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" {...s}/></>,
+    list:<><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" {...s}/></>,
+    receipt:<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" {...s}/><path d="M14 2v6h6M9 13h6M9 17h6" {...s}/></>,
+    user_x:<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" {...s}/><circle cx="9" cy="7" r="4" {...s}/><path d="m17 8 5 5M22 8l-5 5" {...s}/></>,
+    chart:<><path d="M3 3v18h18" {...s}/><path d="m7 14 4-4 4 4 5-5" {...s}/></>,
+    clock:<><circle cx="12" cy="12" r="10" {...s}/><path d="M12 6v6l4 2" {...s}/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>{p[name]}</svg>;
+};
+
+// ─── Reusable mini-shell ────────────────────────────────────────────────
+const Shell = ({ page, activeNav, h1, children }) => {
+  const nav = [
+    { k:"dashboard", l:"Dashboard" },
+    { k:"inbox",     l:"Inbox" },
+    { k:"clients",   l:"Clients" },
+    { k:"providers", l:"Providers" },
+    { k:"enrollments", l:"Enrollments" },
+    { k:"recreds",   l:"Recreds" },
+    { k:"payers",    l:"Payers" },
+    { k:"documents", l:"Documents" },
+    { k:"reports",   l:"Reports" },
+    { k:"audit",     l:"Audit" },
+  ];
+  return (
+    <div className="frame">
+      <div className="f-top">
+        <span className="f-mark">D</span>
+        <span className="f-name">Dastify</span>
+        <span className="f-sep">/</span>
+        <span className="f-page">{page}</span>
+        <span className="f-spacer"/>
+        <span className="f-avatar">MA</span>
+      </div>
+      <div className="f-body">
+        <aside className="f-side">
+          {nav.map(n => (
+            <div key={n.k} className={`f-nav ${n.k === activeNav ? "is-active" : ""}`}>
+              <span className="f-nav-dot"/>{n.l}
+            </div>
+          ))}
+        </aside>
+        <main className="f-main">
+          <h1 className="f-h1">{h1}</h1>
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+const State = ({ icon, kind, title, msg, primary, secondary }) => (
+  <div className="state-inner">
+    <div className={`state-icon-wrap icon-${kind}`}><Icon name={icon} size={26}/></div>
+    <h3 className="state-h">{title}</h3>
+    <p className="state-msg">{msg}</p>
+    <div className="state-actions">
+      {primary  && <button className="btn-primary">{primary.icon && <Icon name={primary.icon} size={12}/>}{primary.label}</button>}
+      {secondary && <button className="btn-ghost">{secondary.icon && <Icon name={secondary.icon} size={12}/>}{secondary.label}</button>}
+    </div>
+  </div>
+);
+
+// ─── State boards ───────────────────────────────────────────────────────
+
+// Empty: no enrollments yet (first-run for a client account)
+const EmptyEnrollments = () => (
+  <Shell page="Enrollments" activeNav="enrollments" h1="Enrollments">
+    <div className="state-stage">
+      <State
+        icon="receipt" kind="empty"
+        title="No enrollments yet"
+        msg="Add your first provider and we'll start their payer enrollments. Most clients see in-network status within 60–90 days."
+        primary={{ label:"Add provider", icon:"plus" }}
+        secondary={{ label:"Browse payer library" }}
+      />
+    </div>
+  </Shell>
+);
+
+// Empty: filtered to nothing (search/filter returned 0)
+const EmptyFiltered = () => (
+  <Shell page="Enrollments — Stuck >7d" activeNav="enrollments" h1="Enrollments">
+    <div className="state-stage" style={{ padding:36 }}>
+      <State
+        icon="search" kind="flat"
+        title="Nothing stuck — nice work"
+        msg="No enrollments have been idle for more than 7 days under your current filters. Clear filters to see all open work."
+        secondary={{ label:"Clear filters" }}
+      />
+    </div>
+  </Shell>
+);
+
+// Empty: inbox zero
+const EmptyInbox = () => (
+  <Shell page="Inbox" activeNav="inbox" h1="Inbox">
+    <div className="state-stage">
+      <State
+        icon="check" kind="success"
+        title="Inbox zero"
+        msg="You've cleared every notification. New info-requests, approvals, and comments will land here as they happen."
+        secondary={{ label:"Open dashboard" }}
+      />
+    </div>
+  </Shell>
+);
+
+// Loading: dashboard initial fetch
+const LoadingDashboard = () => (
+  <Shell page="Dashboard" activeNav="dashboard" h1="Dashboard">
+    <div className="skel-kpis">
+      {[1,2,3,4].map(i => (
+        <div key={i} className="skel-kpi">
+          <div className="skel-bar" style={{ width:"60%", height:8, marginBottom:10 }}/>
+          <div className="skel-bar dark" style={{ width:"40%", height:22 }}/>
+          <div className="skel-bar" style={{ width:"75%", height:7, marginTop:8 }}/>
+        </div>
+      ))}
+    </div>
+    <div style={{ background:"white", border:"1px solid var(--border)", borderRadius:8, padding:18, height:240, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:14 }}>
+      <div className="dots"><span/><span/><span/></div>
+      <div style={{ fontSize:11.5, color:"rgba(14,20,60,0.5)" }}>Aggregating <span style={{ fontFamily:"'JetBrains Mono',monospace" }}>enrollments × payers</span> across your tenant…</div>
+    </div>
+  </Shell>
+);
+
+// Loading: list skeleton
+const LoadingList = () => (
+  <Shell page="Enrollments" activeNav="enrollments" h1="Enrollments">
+    <div className="skel-tbl">
+      <div className="skel-row head">
+        {[1,2,3,4,5,6].map(i => <div key={i} className="skel-bar" style={{ width:"60%", height:8 }}/>)}
+      </div>
+      {[1,2,3,4,5,6].map(i => (
+        <div key={i} className="skel-row">
+          <div className="skel-circle"/>
+          <div>
+            <div className="skel-bar dark" style={{ width:"70%", height:11, marginBottom:5 }}/>
+            <div className="skel-bar" style={{ width:"40%", height:8 }}/>
+          </div>
+          <div className="skel-bar" style={{ width:"55%", height:9 }}/>
+          <div className="skel-bar" style={{ width:"45%", height:9 }}/>
+          <div className="skel-bar" style={{ width:64, height:18, borderRadius:4 }}/>
+          <div className="skel-bar" style={{ width:"60%", height:9 }}/>
+        </div>
+      ))}
+    </div>
+  </Shell>
+);
+
+// Error: connection lost / can't reach backend
+const ErrorOffline = () => (
+  <Shell page="Dashboard" activeNav="dashboard" h1="Dashboard">
+    <div className="banner danger">
+      <Icon name="wifi_off" size={16}/>
+      <div><b>Connection lost.</b> We can't reach Dastify right now. Cached data shown below may be stale. Retrying every 5s.</div>
+    </div>
+    <div className="state-stage">
+      <State
+        icon="cloud_off" kind="danger"
+        title="Can't reach Dastify"
+        msg="Check your connection and try again. We'll keep retrying in the background."
+        primary={{ label:"Retry now", icon:"refresh" }}
+        secondary={{ label:"View status page" }}
+      />
+    </div>
+  </Shell>
+);
+
+// Error: server error with diagnostic
+const ErrorServer = () => (
+  <Shell page="Reports" activeNav="reports" h1="Reports">
+    <div className="state-stage">
+      <div className="state-inner">
+        <div className="state-icon-wrap icon-danger"><Icon name="alert_tri" size={26}/></div>
+        <h3 className="state-h">Something went wrong</h3>
+        <p className="state-msg">We couldn't generate this report. The error has been logged and our team has been notified.</p>
+        <div className="state-actions">
+          <button className="btn-primary"><Icon name="refresh" size={12}/>Try again</button>
+          <button className="btn-ghost">Contact support</button>
+        </div>
+        <div className="code-block">
+          <div><span className="key">trace_id:</span> <span className="val">"req_8f3a2b1c-d4e5-6789-abc"</span></div>
+          <div><span className="key">timestamp:</span> <span className="val">"2026-05-08T14:32:08Z"</span></div>
+          <div><span className="key">error:</span> <span className="err">"upstream timeout (clearinghouse)"</span></div>
+          <div><span className="key">retry_after:</span> <span className="val">"~30s"</span></div>
+        </div>
+      </div>
+    </div>
+  </Shell>
+);
+
+// Error: form validation
+const ErrorForm = () => (
+  <Shell page="New Enrollment · Step 2" activeNav="enrollments" h1="Provider information">
+    <div className="banner danger">
+      <Icon name="alert_circle" size={16}/>
+      <div><b>2 fields need attention</b> before you can continue.</div>
+    </div>
+    <div style={{ background:"white", border:"1px solid var(--border)", borderRadius:8, padding:18, display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+      <div>
+        <label className="label-mini">NPI (10 digits)</label>
+        <input className="input-err" defaultValue="12345678"/>
+        <div className="field-err"><Icon name="alert_circle" size={11}/>NPI must be exactly 10 digits — you entered 8.</div>
+      </div>
+      <div>
+        <label className="label-mini">CAQH ID</label>
+        <input className="input-err" defaultValue="CAQ-99999999"/>
+        <div className="field-err"><Icon name="alert_circle" size={11}/>CAQH 99999999 not found. Verify the number with the provider.</div>
+      </div>
+      <div>
+        <label className="label-mini" style={{ color:"rgba(14,20,60,0.7)" }}>Specialty</label>
+        <input style={{ width:"100%", padding:"9px 11px", fontSize:13, fontFamily:"inherit", border:"1px solid var(--border)", borderRadius:6 }} defaultValue="Internal Medicine"/>
+      </div>
+      <div>
+        <label className="label-mini" style={{ color:"rgba(14,20,60,0.7)" }}>Effective state</label>
+        <input style={{ width:"100%", padding:"9px 11px", fontSize:13, fontFamily:"inherit", border:"1px solid var(--border)", borderRadius:6 }} defaultValue="TX"/>
+      </div>
+    </div>
+  </Shell>
+);
+
+// Error: upload failed
+const ErrorUpload = () => (
+  <Shell page="Documents" activeNav="documents" h1="Documents & CAQH vault">
+    <div className="upload-card">
+      <div className="upload-fail-icon"><Icon name="alert_circle" size={20}/></div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:13, fontWeight:600, color:"var(--navy)" }}>Khan_Imran_Malpractice_COI_2026.pdf</div>
+        <div style={{ fontSize:11.5, color:"var(--red)", marginTop:2 }}>Upload failed · file exceeds 10 MB limit (your file: 14.2 MB)</div>
+      </div>
+      <button className="btn-ghost"><Icon name="refresh" size={11}/>Retry</button>
+      <button className="btn-ghost">Remove</button>
+    </div>
+    <div style={{ marginTop:14, padding:"30px 20px", textAlign:"center", border:"1.5px dashed var(--border)", borderRadius:8, color:"rgba(14,20,60,0.55)", fontSize:12.5 }}>
+      <Icon name="upload" size={20}/>
+      <div style={{ marginTop:6 }}>Drop files here, or <a style={{ color:"var(--teal)", fontWeight:500 }}>browse</a> — PDF, PNG, DOCX up to 10 MB.</div>
+    </div>
+  </Shell>
+);
+
+// Permission: RLS-blocked content
+const RLSBlocked = () => (
+  <Shell page="Provider · Dr. Lina Park" activeNav="providers" h1="Dr. Lina Park">
+    <div className="locked-stage">
+      <div className="locked-blur">
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:14 }}>
+          {[1,2,3,4].map(i => <div key={i} style={{ height:60, background:"var(--lightgrey)", borderRadius:8 }}/>)}
+        </div>
+        <div style={{ height:200, background:"var(--lightgrey)", borderRadius:8 }}/>
+      </div>
+      <div className="locked-overlay">
+        <div className="locked-card">
+          <div className="state-icon-wrap icon-warn" style={{ marginBottom:14 }}><Icon name="lock" size={26}/></div>
+          <h3 className="state-h">Provider belongs to another tenant</h3>
+          <p className="state-msg">Dr. Lina Park is enrolled under <strong style={{ color:"var(--navy)" }}>North Bay Cardiology</strong>. Your account doesn't have access to that workspace.</p>
+          <div className="state-actions" style={{ flexDirection:"column", gap:8 }}>
+            <button className="btn-primary" style={{ width:"100%", justifyContent:"center" }}>Switch workspace</button>
+            <button className="btn-ghost" style={{ width:"100%", justifyContent:"center" }}>Request access from admin</button>
+          </div>
+          <div style={{ fontSize:10.5, color:"rgba(14,20,60,0.5)", marginTop:12, fontFamily:"'JetBrains Mono',monospace" }}>
+            tenant_id mismatch · access denied by RLS
+          </div>
+        </div>
+      </div>
+    </div>
+  </Shell>
+);
+
+// Permission: read-only client view trying to do admin action
+const ReadOnly = () => (
+  <Shell page="Enrollment · ENR-104822" activeNav="enrollments" h1="Action restricted">
+    <div className="banner info">
+      <Icon name="lock" size={14}/>
+      <div>
+        <b>You're in client view.</b> Only Dastify staff can move enrollments forward. Use comments below to ask the team for an update —
+        the assigned biller is <b>Maya Alvarez</b>.
+      </div>
+    </div>
+    <div className="state-stage">
+      <State
+        icon="user_x" kind="flat"
+        title="Action restricted"
+        msg="Status transitions, denial reason editing, and bulk reassignment are admin-only. Your role is Practice Admin (read + comment + upload)."
+        secondary={{ label:"Add a comment instead" }}
+      />
+    </div>
+  </Shell>
+);
+
+// 404
+const NotFound = () => (
+  <Shell page="Page not found" activeNav={null} h1="404">
+    <div className="state-stage">
+      <State
+        icon="search" kind="flat"
+        title="We couldn't find that"
+        msg="The link may be broken, the enrollment may have been merged or withdrawn, or you may not have access in this workspace."
+        primary={{ label:"Back to dashboard" }}
+        secondary={{ label:"Open inbox" }}
+      />
+    </div>
+  </Shell>
+);
+
+// Maintenance / planned downtime banner
+const Maintenance = () => (
+  <Shell page="Dashboard" activeNav="dashboard" h1="Dashboard">
+    <div className="banner warn">
+      <Icon name="clock" size={14}/>
+      <div>
+        <b>Scheduled maintenance Sun May 11, 02:00–04:00 ET.</b> Submissions to BCBS, Aetna, and United HC will pause during this window.
+        Dashboards and document upload remain available.
+      </div>
+    </div>
+    <div className="state-stage" style={{ padding:36 }}>
+      <State
+        icon="sparkle" kind="loading"
+        title="Status normal"
+        msg="No incidents reported. Last successful clearinghouse sync 38 seconds ago."
+        secondary={{ label:"View status page" }}
+      />
+    </div>
+  </Shell>
+);
+
+// Recreds — empty (no upcoming)
+const EmptyRecreds = () => (
+  <Shell page="Recreds Pipeline" activeNav="recreds" h1="Recreds — next 12 months">
+    <div className="state-stage">
+      <State
+        icon="check" kind="success"
+        title="No recreds in the next 90 days"
+        msg="The closest re-credentialing window opens on 2026-09-14 for ENR-104544 · United HC FL. We'll surface it 60 days ahead."
+        secondary={{ label:"View 12-month forecast" }}
+      />
+    </div>
+  </Shell>
+);
+
+// ─── App ────────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas title="Empty, loading, error states" subtitle="Every screen of Dastify in its non-happy paths.">
+      <DCSection id="empty" title="Empty states">
+        <DCArtboard id="empty-enr"   label="A9 Enrollments — first run"     width={920} height={580}><EmptyEnrollments/></DCArtboard>
+        <DCArtboard id="empty-inbox" label="A3 Inbox — zero"                width={920} height={580}><EmptyInbox/></DCArtboard>
+        <DCArtboard id="empty-filt"  label="A9 Enrollments — filter empty"  width={920} height={580}><EmptyFiltered/></DCArtboard>
+        <DCArtboard id="empty-rec"   label="Recreds — none upcoming"        width={920} height={580}><EmptyRecreds/></DCArtboard>
+      </DCSection>
+
+      <DCSection id="loading" title="Loading states">
+        <DCArtboard id="load-dash" label="A2 Dashboard — initial fetch"  width={920} height={580}><LoadingDashboard/></DCArtboard>
+        <DCArtboard id="load-list" label="A9 Enrollments — list skeleton" width={920} height={580}><LoadingList/></DCArtboard>
+      </DCSection>
+
+      <DCSection id="error" title="Error states">
+        <DCArtboard id="err-offline" label="Offline / can't reach backend" width={920} height={580}><ErrorOffline/></DCArtboard>
+        <DCArtboard id="err-server"  label="Server error — diagnostic"     width={920} height={580}><ErrorServer/></DCArtboard>
+        <DCArtboard id="err-form"    label="A10 New Enrollment — validation" width={920} height={580}><ErrorForm/></DCArtboard>
+        <DCArtboard id="err-upload"  label="A6 Documents — upload failed"   width={920} height={580}><ErrorUpload/></DCArtboard>
+      </DCSection>
+
+      <DCSection id="permission" title="Permission &amp; access">
+        <DCArtboard id="rls"      label="RLS — wrong tenant"        width={920} height={580}><RLSBlocked/></DCArtboard>
+        <DCArtboard id="readonly" label="C-side — action restricted" width={920} height={580}><ReadOnly/></DCArtboard>
+        <DCArtboard id="notfound" label="404 — not found"            width={920} height={580}><NotFound/></DCArtboard>
+        <DCArtboard id="maint"    label="Scheduled maintenance"      width={920} height={580}><Maintenance/></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

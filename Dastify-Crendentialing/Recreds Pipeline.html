@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Dastify — Recreds Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:#0E143C; --teal:#16C1C2; --aqua:#4ECED1; --charcoal:#222222;
+  --lightgrey:#F6F7FB; --grey:#C6CCD8; --white:#FFFFFF;
+  --red:#B3261E; --green:#2E7D32; --amber:#F4A300;
+  --navy-08:rgba(14,20,60,0.08); --navy-04:rgba(14,20,60,0.04); --navy-02:rgba(14,20,60,0.02);
+  --teal-12:rgba(22,193,194,0.12); --teal-08:rgba(22,193,194,0.08);
+  --red-08:rgba(179,38,30,0.08); --green-08:rgba(46,125,50,0.08); --amber-08:rgba(244,163,0,0.10);
+  --shadow-xs:0 1px 0 rgba(14,20,60,0.04);
+  --shadow-sm:0 1px 2px rgba(14,20,60,0.06), 0 1px 1px rgba(14,20,60,0.04);
+  --shadow-focus:0 0 0 3px var(--teal-12);
+  --border:rgba(198,204,216,0.55);
+}
+*,*::before,*::after { box-sizing:border-box; }
+html, body { margin:0; padding:0; }
+body {
+  font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  -webkit-font-smoothing:antialiased; color:var(--charcoal); background:var(--lightgrey);
+  font-size:14px; line-height:22px;
+}
+button, input, select { font-family:inherit; }
+button { cursor:pointer; }
+a { color:inherit; text-decoration:none; }
+
+/* Topbar */
+.topbar {
+  height:56px; background:var(--navy); color:white;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px; position:sticky; top:0; z-index:50;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.brand { display:flex; align-items:center; gap:10px; font-weight:600; }
+.brand-mark {
+  width:26px; height:26px; border-radius:6px; background:var(--teal);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--navy); font-size:12px; font-weight:700;
+}
+.brand-name { font-size:15px; }
+.brand-sep { color:rgba(255,255,255,0.3); margin:0 4px; }
+.brand-page { font-size:13px; color:rgba(255,255,255,0.65); font-weight:400; }
+.topbar-search {
+  display:flex; align-items:center; gap:8px; padding:6px 10px;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1);
+  border-radius:6px; color:rgba(255,255,255,0.65); font-size:12px; min-width:300px;
+}
+.topbar-search kbd {
+  margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px;
+  padding:1px 5px; background:rgba(255,255,255,0.1); border-radius:3px;
+}
+.topbar-actions { display:flex; align-items:center; gap:6px; }
+.topbar-icon-btn {
+  width:34px; height:34px; border-radius:6px; background:none; border:none;
+  color:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center;
+  position:relative;
+}
+.topbar-icon-btn:hover { background:rgba(255,255,255,0.08); color:white; }
+.topbar-icon-btn .ping {
+  position:absolute; top:6px; right:6px; width:8px; height:8px;
+  background:var(--teal); border-radius:50%; box-shadow:0 0 0 2px var(--navy);
+}
+.avatar {
+  width:30px; height:30px; border-radius:50%;
+  background:var(--teal); color:var(--navy);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:600;
+}
+
+.app-body { display:flex; min-height:calc(100vh - 56px); }
+.sidebar {
+  width:240px; flex-shrink:0; background:var(--white);
+  border-right:1px solid var(--border); padding:24px 0;
+}
+.sidebar-section { padding:0 12px; }
+.sidebar-label {
+  font-size:10px; font-weight:600; letter-spacing:0.14em;
+  text-transform:uppercase; color:rgba(14,20,60,0.45);
+  padding:0 12px 12px;
+}
+.sidebar-item {
+  display:flex; align-items:center; gap:12px; padding:9px 12px;
+  border-radius:6px; color:rgba(14,20,60,0.7);
+  font-size:13px; font-weight:500;
+  position:relative; margin-bottom:1px;
+  transition:all 120ms;
+}
+.sidebar-item:hover { background:var(--navy-04); color:var(--navy); }
+.sidebar-item.is-active {
+  background:var(--teal-08); color:var(--navy); font-weight:600;
+}
+.sidebar-item.is-active::before {
+  content:""; position:absolute; left:-12px; top:6px; bottom:6px;
+  width:2px; background:var(--teal); border-radius:0 2px 2px 0;
+}
+.sidebar-item.is-active svg { color:var(--teal); }
+.sidebar-badge {
+  margin-left:auto; padding:1px 7px;
+  background:var(--amber-08); color:var(--amber);
+  border-radius:9999px; font-size:10px; font-weight:600;
+}
+.sidebar-divider { margin:16px 24px; height:1px; background:var(--border); }
+
+.main { flex:1; min-width:0; padding:28px 28px 64px; max-width:1600px; }
+
+/* Header */
+.page-header { margin-bottom:22px; display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.page-h1 {
+  font-size:24px; font-weight:600; color:var(--navy); margin:0;
+  letter-spacing:-0.005em;
+}
+.page-sub { font-size:13px; color:rgba(14,20,60,0.6); margin-top:4px; }
+.page-sub strong { color:var(--charcoal); font-weight:600; }
+.page-actions { display:flex; align-items:center; gap:8px; }
+
+/* segmented */
+.segmented {
+  display:flex; background:white; border:1px solid var(--border);
+  border-radius:6px; padding:3px;
+}
+.seg {
+  background:none; border:none; padding:6px 12px;
+  font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
+  color:rgba(14,20,60,0.6); border-radius:4px;
+}
+.seg:hover { background:var(--navy-04); color:var(--navy); }
+.seg.is-active { background:var(--navy); color:white; }
+
+/* KPI strip */
+.kpi-strip {
+  display:grid; grid-template-columns:repeat(4, 1fr);
+  gap:14px; margin-bottom:20px;
+}
+.kpi-tile {
+  background:white; border:1px solid var(--border); border-radius:8px;
+  padding:16px 18px;
+}
+.kpi-tile.kpi-warn   { border-left:3px solid var(--amber); }
+.kpi-tile.kpi-danger { border-left:3px solid var(--red); }
+.kpi-tile.kpi-ok     { border-left:3px solid var(--green); }
+.kpi-tile.kpi-flat   { border-left:3px solid var(--teal); }
+.kpi-l {
+  font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase;
+  color:rgba(14,20,60,0.55); margin-bottom:8px;
+}
+.kpi-v {
+  font-size:28px; font-weight:700; color:var(--navy);
+  font-variant-numeric:tabular-nums; line-height:32px;
+  display:flex; align-items:baseline; gap:4px;
+}
+.kpi-v small { font-size:14px; color:rgba(14,20,60,0.55); font-weight:500; }
+.kpi-meta { font-size:11px; color:rgba(14,20,60,0.55); margin-top:6px; }
+.kpi-meta strong { color:var(--charcoal); font-weight:600; }
+
+@media (max-width:1100px) { .kpi-strip { grid-template-columns:repeat(2, 1fr); } }
+
+/* Timeline card */
+.timeline-card {
+  background:white; border:1px solid var(--border);
+  border-radius:8px; box-shadow:var(--shadow-xs); margin-bottom:20px;
+  overflow:hidden;
+}
+.tl-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px; border-bottom:1px solid var(--border);
+}
+.tl-h { font-size:14px; font-weight:600; color:var(--navy); margin:0; }
+.tl-sub { font-size:12px; color:rgba(14,20,60,0.55); margin-top:2px; }
+.tl-filters { display:flex; align-items:center; gap:8px; }
+.fp {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 10px; background:white;
+  border:1px solid var(--border); border-radius:5px;
+  font-size:12px; font-weight:500; color:var(--charcoal);
+}
+.fp:hover { background:var(--lightgrey); border-color:var(--grey); }
+.fp.is-on { border-color:var(--teal); background:var(--teal-08); color:var(--navy); }
+.fp svg { color:rgba(14,20,60,0.5); }
+
+.tl-scroll { overflow-x:auto; }
+.tl-grid {
+  display:grid; min-width:1100px;
+  grid-template-columns:280px 1fr;
+}
+.tl-col-l { background:var(--lightgrey); }
+.tl-col-r { position:relative; }
+
+/* month header */
+.tl-months {
+  display:grid; grid-template-columns:repeat(12, 1fr);
+  font-size:10px; font-weight:600; letter-spacing:0.12em;
+  text-transform:uppercase; color:rgba(14,20,60,0.6);
+  border-bottom:1px solid var(--border);
+  background:var(--lightgrey); position:sticky; top:0; z-index:1;
+}
+.tl-month {
+  padding:9px 6px; text-align:center;
+  border-right:1px solid var(--border);
+  position:relative;
+}
+.tl-month:last-child { border-right:none; }
+.tl-month-yr { display:block; font-size:9px; color:rgba(14,20,60,0.4); font-weight:500; margin-top:1px; }
+.tl-month.is-now { color:var(--teal); }
+
+.tl-rows-l, .tl-rows-r { display:flex; flex-direction:column; }
+.tl-rows-l > div, .tl-rows-r > div { height:48px; border-bottom:1px solid var(--border); }
+.tl-rows-l > div:last-child, .tl-rows-r > div:last-child { border-bottom:none; }
+
+/* left row labels */
+.tl-row-label {
+  display:grid; grid-template-columns:1fr auto;
+  gap:8px; align-items:center;
+  padding:0 16px;
+  border-right:1px solid var(--border);
+}
+.tl-rl-l { min-width:0; }
+.tl-rl-name {
+  font-size:13px; font-weight:600; color:var(--navy);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.tl-rl-meta {
+  font-size:11px; color:rgba(14,20,60,0.55);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.tl-rl-r {
+  font-size:10px; font-weight:600; letter-spacing:0.06em;
+  color:rgba(14,20,60,0.55); text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+
+/* right grid rows */
+.tl-row-r {
+  position:relative;
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px);
+  background-size:calc(100%/12) 100%;
+}
+.tl-row-r.is-stripe { background-color:var(--navy-02); }
+
+.tl-bar {
+  position:absolute; top:50%; transform:translateY(-50%);
+  height:22px; border-radius:4px; padding:0 10px;
+  display:flex; align-items:center; gap:6px;
+  font-size:11px; font-weight:600; color:white;
+  white-space:nowrap; overflow:hidden;
+  cursor:pointer;
+  box-shadow:var(--shadow-sm);
+  transition:filter 120ms;
+}
+.tl-bar:hover { filter:brightness(1.1); }
+.tl-bar.b-scheduled { background:var(--teal); color:var(--navy); }
+.tl-bar.b-active    { background:var(--navy); color:white; }
+.tl-bar.b-risk      { background:var(--amber); color:#5a3700; }
+.tl-bar.b-overdue   { background:var(--red); color:white; }
+.tl-bar.b-done      { background:var(--green); color:white; opacity:0.8; }
+
+.tl-bar .b-dot {
+  width:5px; height:5px; border-radius:50%; background:currentColor; flex-shrink:0;
+}
+
+/* today line */
+.tl-today {
+  position:absolute; top:0; bottom:0; width:1.5px;
+  background:var(--teal); pointer-events:none; z-index:2;
+}
+.tl-today::before {
+  content:""; position:absolute; top:-1px; left:-4px;
+  width:9px; height:9px; border-radius:50%;
+  background:var(--teal); box-shadow:0 0 0 3px white;
+}
+.tl-today-label {
+  position:absolute; top:-22px; left:6px;
+  font-size:10px; font-weight:600; letter-spacing:0.06em;
+  color:var(--teal); background:white; padding:1px 5px;
+  border-radius:3px; border:1px solid var(--teal-12);
+}
+
+/* legend */
+.legend {
+  display:flex; align-items:center; gap:18px;
+  padding:12px 20px; background:var(--lightgrey);
+  border-top:1px solid var(--border);
+  font-size:11px; color:rgba(14,20,60,0.65);
+}
+.legend-item { display:inline-flex; align-items:center; gap:6px; font-weight:500; }
+.legend-sw { width:12px; height:8px; border-radius:2px; }
+
+/* this-week table */
+.split-row { display:grid; grid-template-columns:60fr 40fr; gap:18px; }
+@media (max-width:1100px) { .split-row { grid-template-columns:1fr; } }
+
+.card {
+  background:white; border:1px solid var(--border); border-radius:8px;
+  box-shadow:var(--shadow-xs); overflow:hidden;
+}
+.card-head {
+  padding:14px 18px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.card-h { font-size:13px; font-weight:600; color:var(--navy); margin:0; }
+.card-sub { font-size:12px; color:rgba(14,20,60,0.55); margin-top:2px; }
+.card-body { padding:6px 0; }
+
+.tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.tbl thead th {
+  text-align:left; padding:8px 18px;
+  font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase;
+  color:rgba(14,20,60,0.6);
+  border-bottom:1px solid var(--border); background:var(--lightgrey);
+}
+.tbl tbody td {
+  padding:11px 18px; border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+.tbl tbody tr:last-child td { border-bottom:none; }
+.tbl tbody tr:hover { background:var(--navy-02); cursor:pointer; }
+.tbl-name { font-weight:600; color:var(--navy); }
+.tbl-meta { font-size:11px; color:rgba(14,20,60,0.55); }
+.mono { font-family:'JetBrains Mono', monospace; font-variant-numeric:tabular-nums; font-size:12px; }
+
+.pill {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:2px 8px; border-radius:4px;
+  font-size:10px; font-weight:600; letter-spacing:0.06em;
+  text-transform:uppercase; line-height:1.4;
+}
+.pill-warn   { background:var(--amber-08); color:#7a4f00; }
+.pill-danger { background:var(--red-08);   color:var(--red); }
+.pill-ok     { background:var(--green-08); color:#1B5E20; }
+.pill-flat   { background:var(--lightgrey); color:rgba(14,20,60,0.6); }
+.pill-teal   { background:var(--teal-08); color:var(--navy); }
+.pill-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+/* by-payer side card */
+.payer-row {
+  display:grid; grid-template-columns:1fr auto;
+  gap:14px; padding:10px 18px;
+  align-items:center; border-bottom:1px solid var(--border);
+}
+.payer-row:last-child { border-bottom:none; }
+.payer-name { font-size:13px; font-weight:600; color:var(--navy); }
+.payer-bar { margin-top:5px; height:6px; background:var(--lightgrey); border-radius:2px; overflow:hidden; }
+.payer-bar-seg { height:100%; display:inline-block; }
+.payer-meta {
+  font-size:11px; color:rgba(14,20,60,0.55); margin-top:3px;
+  font-variant-numeric:tabular-nums;
+}
+.payer-count {
+  font-size:18px; font-weight:700; color:var(--navy);
+  font-variant-numeric:tabular-nums;
+}
+
+.btn-primary {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 16px; background:var(--navy); color:white;
+  border:1px solid var(--navy); border-radius:6px;
+  font-size:13px; font-weight:600;
+}
+.btn-primary:hover { background:#1a2255; }
+.btn-ghost {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 14px; background:white; color:var(--charcoal);
+  border:1px solid var(--border); border-radius:6px;
+  font-size:13px; font-weight:500;
+}
+.btn-ghost:hover { background:var(--lightgrey); border-color:var(--grey); }
+
+::selection { background:var(--teal-12); color:var(--navy); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+/* global React, ReactDOM, TweaksPanel, useTweaks, TweakSection, TweakRadio */
+const { useState, useMemo } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "viewMode": "admin",
+  "groupBy": "client",
+  "showDone": true
+}/*EDITMODE-END*/;
+
+const Icon = ({ name, size = 16 }) => {
+  const s = { fill:"none", stroke:"currentColor", strokeWidth:1.6, strokeLinecap:"round", strokeLinejoin:"round" };
+  const p = {
+    inbox: <><path d="M22 12h-6l-2 3h-4l-2-3H2" {...s}/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" {...s}/></>,
+    bell: <><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" {...s}/><path d="M14 21a2 2 0 0 1-4 0" {...s}/></>,
+    search: <><circle cx="11" cy="11" r="7" {...s}/><path d="m21 21-4.3-4.3" {...s}/></>,
+    settings: <><circle cx="12" cy="12" r="3" {...s}/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" {...s}/></>,
+    dashboard: <><rect x="3" y="3" width="7" height="9" {...s}/><rect x="14" y="3" width="7" height="5" {...s}/><rect x="14" y="12" width="7" height="9" {...s}/><rect x="3" y="16" width="7" height="5" {...s}/></>,
+    clients: <><path d="M3 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" {...s}/><circle cx="10" cy="7" r="4" {...s}/><path d="M19 8a3 3 0 1 0-3-3" {...s}/></>,
+    providers: <><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" {...s}/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" {...s}/><path d="M16 3v3M14.5 4.5h3" {...s}/></>,
+    enrollments: <><rect x="3" y="4" width="18" height="16" rx="1.5" {...s}/><path d="M3 9h18M8 4v16" {...s}/></>,
+    recreds: <><circle cx="12" cy="12" r="9" {...s}/><path d="M12 7v5l3 2" {...s}/></>,
+    payers: <><rect x="3" y="6" width="18" height="13" rx="1.5" {...s}/><path d="M3 10h18M7 15h3" {...s}/></>,
+    documents: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" {...s}/><path d="M14 2v6h6M9 13h6M9 17h6" {...s}/></>,
+    audit: <><circle cx="6" cy="6" r="2" {...s}/><circle cx="18" cy="18" r="2" {...s}/><path d="M6 8v8a2 2 0 0 0 2 2h8" {...s}/></>,
+    chevron: <><path d="M6 9l6 6 6-6" {...s}/></>,
+    download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" {...s}/></>,
+    plus: <><path d="M12 5v14M5 12h14" {...s}/></>,
+    filter: <><path d="M3 4h18l-7 8v6l-4 2v-8L3 4z" {...s}/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>{p[name]}</svg>;
+};
+
+// ─── Data ────────────────────────────────────────────────────────────────
+// Months: May 2026 → Apr 2027 (12 months from "today" = May 8, 2026)
+const months = [
+  { idx:0,  name:"May",  yr:"'26", isNow:true  },
+  { idx:1,  name:"Jun",  yr:"'26" },
+  { idx:2,  name:"Jul",  yr:"'26" },
+  { idx:3,  name:"Aug",  yr:"'26" },
+  { idx:4,  name:"Sep",  yr:"'26" },
+  { idx:5,  name:"Oct",  yr:"'26" },
+  { idx:6,  name:"Nov",  yr:"'26" },
+  { idx:7,  name:"Dec",  yr:"'26" },
+  { idx:8,  name:"Jan",  yr:"'27" },
+  { idx:9,  name:"Feb",  yr:"'27" },
+  { idx:10, name:"Mar",  yr:"'27" },
+  { idx:11, name:"Apr",  yr:"'27" },
+];
+// "Today" = May 8 → 8/31 of month 0 ≈ 0.26 of month width
+const todayPos = 0 + 8/31;
+
+// Each enrollment: provider, client, payer, state, ENR id,
+// startMonth (recred window opens), endMonth (window closes / target eff), status
+const rows = [
+  { id:"ENR-104544", provider:"Dr. Imran Khan",      client:"Khan Internal Medicine",   payer:"United HC",    state:"FL", start:0.45, end:3.5, status:"scheduled", days:14 },
+  { id:"ENR-104540", provider:"Dr. Imran Khan",      client:"Khan Internal Medicine",   payer:"Aetna",        state:"CA", start:0,    end:0.5, status:"overdue",   days:-3 },
+  { id:"ENR-104822", provider:"Dr. Imran Khan",      client:"Khan Internal Medicine",   payer:"Aetna",        state:"TX", start:0,    end:1.4, status:"active",    days:6 },
+  { id:"ENR-104810", provider:"Dr. Imran Khan",      client:"Khan Internal Medicine",   payer:"BCBS TX",      state:"TX", start:0.7,  end:1.1, status:"done",      days:-1 },
+
+  { id:"ENR-103221", provider:"Dr. Lina Park",       client:"North Bay Cardiology",      payer:"Cigna",        state:"AZ", start:0.6,  end:2.7, status:"scheduled", days:18 },
+  { id:"ENR-103219", provider:"Dr. Lina Park",       client:"North Bay Cardiology",      payer:"Anthem",       state:"AZ", start:1.1,  end:3.4, status:"scheduled", days:35 },
+  { id:"ENR-103188", provider:"Dr. Marco Velez",     client:"North Bay Cardiology",      payer:"Humana",       state:"AZ", start:0.1,  end:0.9, status:"risk",      days:4 },
+
+  { id:"ENR-102901", provider:"Dr. Yuki Tanaka",     client:"Sierra Family Health",      payer:"Aetna",        state:"NV", start:2.2,  end:5.1, status:"scheduled", days:60 },
+  { id:"ENR-102877", provider:"Dr. Yuki Tanaka",     client:"Sierra Family Health",      payer:"BCBS NV",      state:"NV", start:3.3,  end:6.2, status:"scheduled", days:96 },
+  { id:"ENR-102544", provider:"Dr. Sam Okonkwo",     client:"Sierra Family Health",      payer:"United HC",    state:"NV", start:4.4,  end:7.1, status:"scheduled", days:127 },
+
+  { id:"ENR-101188", provider:"Dr. Priya Iyer",      client:"Cascade Pediatrics",        payer:"Premera",      state:"WA", start:5.5,  end:8.5, status:"scheduled", days:158 },
+  { id:"ENR-101104", provider:"Dr. Priya Iyer",      client:"Cascade Pediatrics",        payer:"Regence",      state:"OR", start:6.0,  end:9.0, status:"scheduled", days:174 },
+  { id:"ENR-101099", provider:"Dr. Anh Nguyen",      client:"Cascade Pediatrics",        payer:"Kaiser",       state:"WA", start:7.4,  end:10.1, status:"scheduled", days:215 },
+
+  { id:"ENR-100844", provider:"Dr. Daniela Cruz",    client:"Lakeshore Surgery Group",   payer:"Aetna",        state:"IL", start:8.1,  end:10.8, status:"scheduled", days:230 },
+  { id:"ENR-100822", provider:"Dr. Daniela Cruz",    client:"Lakeshore Surgery Group",   payer:"BCBS IL",      state:"IL", start:9.2,  end:11.7, status:"scheduled", days:265 },
+];
+
+const groupRows = (rows, by) => {
+  const g = {};
+  for (const r of rows) {
+    const k = by === "client" ? r.client : by === "payer" ? r.payer : "All";
+    (g[k] = g[k] || []).push(r);
+  }
+  return Object.entries(g).map(([k, v]) => ({ label: k, rows: v }));
+};
+
+// ─── Sidebar ─────────────────────────────────────────────────────────────
+const Sidebar = ({ viewMode }) => {
+  const adminNav = [
+    { icon:"dashboard",   label:"Dashboard",   href:"Dashboard.html" },
+    { icon:"inbox",       label:"Inbox",       badge:6, href:"Inbox.html" },
+    { icon:"clients",     label:"Clients" },
+    { icon:"providers",   label:"Providers" },
+    { icon:"enrollments", label:"Enrollments", href:"Enrollments.html" },
+    { icon:"recreds",     label:"Recreds Queue", active:true, badge:12 },
+    { icon:"payers",      label:"Payers" },
+    { icon:"documents",   label:"Documents" },
+    { icon:"audit",       label:"Audit Log" },
+  ];
+  const clientNav = [
+    { icon:"dashboard",   label:"Dashboard",   href:"Dashboard.html" },
+    { icon:"inbox",       label:"Inbox",       badge:3, href:"Inbox.html" },
+    { icon:"providers",   label:"Providers" },
+    { icon:"enrollments", label:"Enrollments", href:"Enrollments.html" },
+    { icon:"recreds",     label:"Recreds Coming Due", active:true, badge:4 },
+    { icon:"documents",   label:"Documents" },
+  ];
+  const nav = viewMode === "admin" ? adminNav : clientNav;
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-section">
+        <div className="sidebar-label">{viewMode === "admin" ? "Workspace" : "Khan Internal Medicine"}</div>
+        {nav.map(item => (
+          <a key={item.label} className={`sidebar-item ${item.active ? "is-active" : ""}`} href={item.href || "#"}>
+            <Icon name={item.icon} size={16}/><span>{item.label}</span>
+            {item.badge != null && <span className="sidebar-badge">{item.badge}</span>}
+          </a>
+        ))}
+      </div>
+      <div className="sidebar-divider"/>
+      <div className="sidebar-section">
+        <a className="sidebar-item" href="#"><Icon name="settings" size={16}/><span>Settings</span></a>
+      </div>
+    </aside>
+  );
+};
+
+const TopBar = () => (
+  <div className="topbar">
+    <div className="brand">
+      <span className="brand-mark">D</span>
+      <span className="brand-name">Dastify</span>
+      <span className="brand-sep">/</span>
+      <span className="brand-page">Recreds Pipeline</span>
+    </div>
+    <div className="topbar-search">
+      <Icon name="search" size={14}/>
+      <span>Search providers, enrollments, payers…</span>
+      <kbd>⌘K</kbd>
+    </div>
+    <div className="topbar-actions">
+      <a className="topbar-icon-btn" href="Inbox.html"><Icon name="bell" size={16}/><span className="ping"/></a>
+      <button className="topbar-icon-btn"><Icon name="settings" size={16}/></button>
+      <div className="avatar" style={{ marginLeft: 8 }}>MA</div>
+    </div>
+  </div>
+);
+
+// ─── Timeline bar ───────────────────────────────────────────────────────
+const Bar = ({ row }) => {
+  const left = (row.start / 12) * 100;
+  const width = ((row.end - row.start) / 12) * 100;
+  const cls = `tl-bar b-${row.status}`;
+  const label =
+    row.status === "overdue" ? `${row.payer} · OVERDUE ${Math.abs(row.days)}d`
+    : row.status === "active" ? `${row.payer} · IN FLIGHT`
+    : row.status === "done" ? `${row.payer} · APPROVED`
+    : row.status === "risk" ? `${row.payer} · AT RISK`
+    : row.payer;
+  return (
+    <div className={cls} style={{ left:`${left}%`, width:`${width}%` }} title={`${row.id} · ${row.payer} · ${row.state}`}>
+      <span className="b-dot"/>
+      <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{label}</span>
+    </div>
+  );
+};
+
+const Timeline = ({ data }) => (
+  <div className="tl-scroll">
+    <div className="tl-grid">
+      <div className="tl-col-l">
+        <div style={{ height:36, borderBottom:"1px solid var(--border)", borderRight:"1px solid var(--border)", display:"flex", alignItems:"center", padding:"0 16px", background:"var(--lightgrey)" }}>
+          <span style={{ fontSize:10, fontWeight:600, letterSpacing:"0.12em", textTransform:"uppercase", color:"rgba(14,20,60,0.55)" }}>Provider · Enrollment</span>
+        </div>
+        <div className="tl-rows-l">
+          {data.flatMap((g, gi) => [
+            <div key={`${gi}-h`} style={{ height:32, padding:"0 16px", borderRight:"1px solid var(--border)", borderBottom:"1px solid var(--border)", background:"var(--navy)", color:"white", display:"flex", alignItems:"center", fontSize:11, fontWeight:600, letterSpacing:"0.06em" }}>
+              {g.label} <span style={{ marginLeft:"auto", opacity:0.7, fontSize:10 }}>{g.rows.length}</span>
+            </div>,
+            ...g.rows.map(r => (
+              <div key={r.id} className="tl-row-label">
+                <div className="tl-rl-l">
+                  <div className="tl-rl-name">{r.provider}</div>
+                  <div className="tl-rl-meta">{r.id} · {r.payer} · {r.state}</div>
+                </div>
+                <div className="tl-rl-r">
+                  {r.status === "overdue" ? <span className="pill pill-danger"><span className="pill-dot"/>{Math.abs(r.days)}d over</span>
+                   : r.status === "risk" ? <span className="pill pill-warn"><span className="pill-dot"/>{r.days}d</span>
+                   : r.status === "done" ? <span className="pill pill-ok"><span className="pill-dot"/>done</span>
+                   : r.status === "active" ? <span className="pill pill-teal"><span className="pill-dot"/>in flight</span>
+                   : <span style={{ fontSize:11, color:"rgba(14,20,60,0.55)" }}>{r.days}d</span>}
+                </div>
+              </div>
+            )),
+          ])}
+        </div>
+      </div>
+      <div className="tl-col-r">
+        <div className="tl-months">
+          {months.map(m => (
+            <div key={m.idx} className={`tl-month ${m.isNow ? "is-now" : ""}`}>
+              {m.name}<span className="tl-month-yr">{m.yr}</span>
+            </div>
+          ))}
+        </div>
+        <div className="tl-rows-r" style={{ position:"relative" }}>
+          {data.flatMap((g, gi) => [
+            <div key={`${gi}-h`} style={{ height:32, borderBottom:"1px solid var(--border)", background:"var(--navy)", opacity:0.06 }}/>,
+            ...g.rows.map((r, ri) => (
+              <div key={r.id} className={`tl-row-r ${ri % 2 === 1 ? "is-stripe" : ""}`}>
+                <Bar row={r}/>
+              </div>
+            )),
+          ])}
+          <div className="tl-today" style={{ left:`${(todayPos / 12) * 100}%` }}>
+            <span className="tl-today-label">TODAY</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Side card: by-payer breakdown ──────────────────────────────────────
+const ByPayer = ({ rows }) => {
+  const map = {};
+  for (const r of rows) {
+    const m = map[r.payer] = map[r.payer] || { total:0, scheduled:0, active:0, risk:0, overdue:0, done:0 };
+    m.total++; m[r.status]++;
+  }
+  const list = Object.entries(map).sort((a,b) => b[1].total - a[1].total);
+  return (
+    <div>
+      {list.map(([name, m]) => {
+        const seg = (n, color) => n > 0 && <span className="payer-bar-seg" style={{ width:`${(n/m.total)*100}%`, background:color }}/>;
+        return (
+          <div key={name} className="payer-row">
+            <div>
+              <div className="payer-name">{name}</div>
+              <div className="payer-bar">
+                {seg(m.overdue, "var(--red)")}
+                {seg(m.risk, "var(--amber)")}
+                {seg(m.active, "var(--navy)")}
+                {seg(m.scheduled, "var(--teal)")}
+                {seg(m.done, "var(--green)")}
+              </div>
+              <div className="payer-meta">
+                {m.overdue > 0 && <span style={{ color:"var(--red)" }}>{m.overdue} overdue</span>}
+                {m.overdue > 0 && (m.risk + m.scheduled + m.done > 0) && " · "}
+                {m.risk > 0 && <span style={{ color:"var(--amber)" }}>{m.risk} at risk</span>}
+                {m.risk > 0 && (m.scheduled + m.done > 0) && " · "}
+                {m.scheduled > 0 && <span>{m.scheduled} scheduled</span>}
+                {m.scheduled > 0 && m.done > 0 && " · "}
+                {m.done > 0 && <span style={{ color:"var(--green)" }}>{m.done} done</span>}
+              </div>
+            </div>
+            <div className="payer-count">{m.total}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ─── Renewals due this month table ──────────────────────────────────────
+const DueThisMonth = ({ rows }) => {
+  const due = rows.filter(r => r.status === "overdue" || r.status === "risk" || (r.status === "scheduled" && r.start < 1) || r.status === "active");
+  return (
+    <table className="tbl">
+      <thead>
+        <tr><th>Enrollment</th><th>Provider · Payer</th><th>Window</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {due.slice(0, 8).map(r => (
+          <tr key={r.id}>
+            <td><span className="mono" style={{ color:"var(--navy)", fontWeight:600 }}>{r.id}</span><div className="tbl-meta">{r.client}</div></td>
+            <td><span className="tbl-name" style={{ fontSize:13 }}>{r.provider}</span><div className="tbl-meta">{r.payer} · {r.state}</div></td>
+            <td>
+              <span className="mono">
+                {r.status === "overdue" ? `−${Math.abs(r.days)}d` : `+${r.days}d`}
+              </span>
+            </td>
+            <td>
+              {r.status === "overdue" ? <span className="pill pill-danger"><span className="pill-dot"/>Overdue</span>
+              : r.status === "risk" ? <span className="pill pill-warn"><span className="pill-dot"/>At risk</span>
+              : r.status === "active" ? <span className="pill pill-teal"><span className="pill-dot"/>In flight</span>
+              : <span className="pill pill-flat"><span className="pill-dot"/>Scheduled</span>}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
+// ─── App ────────────────────────────────────────────────────────────────
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const viewMode = t.viewMode || "admin";
+  const groupBy = t.groupBy || "client";
+  const showDone = t.showDone !== false;
+
+  const [statusFilter, setStatusFilter] = useState("all"); // all | overdue | risk | scheduled
+
+  const scoped = useMemo(() => {
+    let r = rows;
+    if (viewMode === "client") r = r.filter(x => x.client === "Khan Internal Medicine");
+    if (!showDone) r = r.filter(x => x.status !== "done");
+    if (statusFilter !== "all") r = r.filter(x => x.status === statusFilter);
+    return r;
+  }, [viewMode, showDone, statusFilter]);
+
+  const grouped = useMemo(() => groupRows(scoped, groupBy), [scoped, groupBy]);
+
+  const counts = useMemo(() => ({
+    total: scoped.length,
+    overdue: scoped.filter(r => r.status === "overdue").length,
+    risk: scoped.filter(r => r.status === "risk").length,
+    thisMonth: scoped.filter(r => r.start < 1).length,
+    next30: scoped.filter(r => r.start >= 0 && r.start < 1 && r.status !== "done").length,
+    done: scoped.filter(r => r.status === "done").length,
+  }), [scoped]);
+
+  return (
+    <>
+      <TopBar/>
+      <div className="app-body">
+        <Sidebar viewMode={viewMode}/>
+        <main className="main">
+          <div className="page-header">
+            <div>
+              <h1 className="page-h1">Recreds Pipeline</h1>
+              <div className="page-sub">
+                {viewMode === "admin"
+                  ? <>Cycles renewing in next 12 months · <strong>{counts.total}</strong> enrollments tracked across <strong>{grouped.length}</strong> {groupBy === "client" ? "clients" : groupBy === "payer" ? "payers" : "rows"}</>
+                  : <>Khan Internal Medicine · <strong>{counts.total}</strong> recreds in next 12 months</>}
+              </div>
+            </div>
+            <div className="page-actions">
+              <div className="segmented">
+                <button className="seg is-active">12mo</button>
+                <button className="seg">6mo</button>
+                <button className="seg">3mo</button>
+              </div>
+              <button className="btn-ghost"><Icon name="download" size={13}/>Export CSV</button>
+            </div>
+          </div>
+
+          {/* KPI strip */}
+          <div className="kpi-strip">
+            <div className="kpi-tile kpi-danger">
+              <div className="kpi-l">Overdue</div>
+              <div className="kpi-v">{counts.overdue}</div>
+              <div className="kpi-meta">Past window — billable touchpoint risk</div>
+            </div>
+            <div className="kpi-tile kpi-warn">
+              <div className="kpi-l">At risk this week</div>
+              <div className="kpi-v">{counts.risk}</div>
+              <div className="kpi-meta">Within 7 days of window close</div>
+            </div>
+            <div className="kpi-tile kpi-flat">
+              <div className="kpi-l">Open this month</div>
+              <div className="kpi-v">{counts.thisMonth}<small>· May</small></div>
+              <div className="kpi-meta">Window opens before Jun 1</div>
+            </div>
+            <div className="kpi-tile kpi-ok">
+              <div className="kpi-l">Done last 30d</div>
+              <div className="kpi-v">{counts.done}</div>
+              <div className="kpi-meta">Approved or effective in window</div>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div className="timeline-card">
+            <div className="tl-head">
+              <div>
+                <h3 className="tl-h">12-month forecast</h3>
+                <div className="tl-sub">Each bar = one recred window. Drag to reschedule · click to open enrollment.</div>
+              </div>
+              <div className="tl-filters">
+                <button className={`fp ${statusFilter === "all" ? "is-on" : ""}`} onClick={() => setStatusFilter("all")}>All</button>
+                <button className={`fp ${statusFilter === "overdue" ? "is-on" : ""}`} onClick={() => setStatusFilter("overdue")}><span className="pill-dot" style={{ background:"var(--red)" }}/>Overdue</button>
+                <button className={`fp ${statusFilter === "risk" ? "is-on" : ""}`} onClick={() => setStatusFilter("risk")}><span className="pill-dot" style={{ background:"var(--amber)" }}/>At risk</button>
+                <button className={`fp ${statusFilter === "scheduled" ? "is-on" : ""}`} onClick={() => setStatusFilter("scheduled")}><span className="pill-dot" style={{ background:"var(--teal)" }}/>Scheduled</button>
+              </div>
+            </div>
+            <Timeline data={grouped}/>
+            <div className="legend">
+              <span className="legend-item"><span className="legend-sw" style={{ background:"var(--red)" }}/>Overdue</span>
+              <span className="legend-item"><span className="legend-sw" style={{ background:"var(--amber)" }}/>At risk</span>
+              <span className="legend-item"><span className="legend-sw" style={{ background:"var(--navy)" }}/>In flight</span>
+              <span className="legend-item"><span className="legend-sw" style={{ background:"var(--teal)" }}/>Scheduled</span>
+              <span className="legend-item"><span className="legend-sw" style={{ background:"var(--green)" }}/>Approved</span>
+              <span style={{ marginLeft:"auto", color:"rgba(14,20,60,0.55)" }}>{scoped.length} of {rows.length} cycles shown</span>
+            </div>
+          </div>
+
+          {/* Bottom row */}
+          <div className="split-row">
+            <div className="card">
+              <div className="card-head">
+                <div>
+                  <h3 className="card-h">Renewals to action</h3>
+                  <div className="card-sub">Sorted by urgency — overdue first.</div>
+                </div>
+                <a href="Enrollments.html" style={{ fontSize:12, color:"var(--teal)", fontWeight:600 }}>Open in Enrollments →</a>
+              </div>
+              <div className="card-body">
+                <DueThisMonth rows={scoped}/>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-head">
+                <div>
+                  <h3 className="card-h">By payer</h3>
+                  <div className="card-sub">Recreds count + status mix.</div>
+                </div>
+              </div>
+              <div className="card-body">
+                <ByPayer rows={scoped}/>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="View as">
+          <TweakRadio
+            value={viewMode}
+            onChange={v => setTweak("viewMode", v)}
+            options={[
+              { value:"admin",  label:"Admin" },
+              { value:"client", label:"Client" },
+            ]}
+          />
+          <div style={{ fontSize:11, color:"rgba(14,20,60,0.55)", marginTop:8, lineHeight:1.5 }}>
+            Admin sees every client's pipeline. Client view scopes to Khan Internal Medicine only.
+          </div>
+        </TweakSection>
+        <TweakSection title="Group rows by">
+          <TweakRadio
+            value={groupBy}
+            onChange={v => setTweak("groupBy", v)}
+            options={[
+              { value:"client", label:"Client" },
+              { value:"payer",  label:"Payer" },
+              { value:"none",   label:"None" },
+            ]}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

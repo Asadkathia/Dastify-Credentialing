@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Dastify — Transition Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --navy:#0E143C; --teal:#16C1C2; --aqua:#4ECED1; --charcoal:#222222;
+  --lightgrey:#F6F7FB; --grey:#C6CCD8; --white:#FFFFFF;
+  --red:#B3261E; --green:#2E7D32; --amber:#F4A300;
+  --navy-08:rgba(14,20,60,0.08); --navy-04:rgba(14,20,60,0.04);
+  --teal-12:rgba(22,193,194,0.12); --teal-08:rgba(22,193,194,0.08);
+  --red-08:rgba(179,38,30,0.08); --green-08:rgba(46,125,50,0.08); --amber-08:rgba(244,163,0,0.10);
+  --shadow-sm:0 1px 2px rgba(14,20,60,0.06), 0 1px 1px rgba(14,20,60,0.04);
+  --shadow-lg:0 24px 64px rgba(14,20,60,0.24), 0 6px 16px rgba(14,20,60,0.12);
+  --shadow-focus:0 0 0 3px var(--teal-12);
+  --border:rgba(198,204,216,0.55);
+}
+*,*::before,*::after { box-sizing:border-box; }
+html, body { margin:0; padding:0; }
+body {
+  font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  -webkit-font-smoothing:antialiased; color:var(--charcoal); background:var(--lightgrey);
+  font-size:14px; line-height:22px; overflow:hidden;
+}
+button, input, textarea, select { font-family:inherit; }
+button { cursor:pointer; }
+button:disabled { cursor:not-allowed; opacity:0.5; }
+a { color:inherit; text-decoration:none; }
+
+/* ─── Backdrop page (dimmed enrollment detail) ─── */
+.backdrop-page {
+  position:fixed; inset:0; overflow:hidden;
+  filter:blur(2px) saturate(0.85);
+  pointer-events:none;
+  user-select:none;
+}
+.bp-topbar {
+  height:56px; background:var(--navy);
+  display:flex; align-items:center; padding:0 24px;
+  gap:24px;
+}
+.bp-logo {
+  width:22px; height:22px; border-radius:5px;
+  background:var(--teal);
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:var(--navy);
+}
+.bp-app-body { display:flex; height:calc(100vh - 56px); }
+.bp-sidebar {
+  width:240px; background:white; border-right:1px solid var(--border);
+  padding:24px 12px;
+}
+.bp-sb-item {
+  height:34px; background:var(--navy-04); border-radius:6px;
+  margin-bottom:4px;
+}
+.bp-sb-item.is-active { background:var(--teal-08); }
+.bp-main {
+  flex:1; padding:32px;
+  display:flex; flex-direction:column; gap:18px;
+}
+.bp-block {
+  background:white; border:1px solid var(--border);
+  border-radius:8px; padding:20px;
+}
+.bp-h1 {
+  height:30px; width:60%; background:var(--navy-04); border-radius:4px;
+  margin-bottom:14px;
+}
+.bp-line { height:12px; background:var(--lightgrey); border-radius:3px; margin-bottom:8px; }
+
+/* dim overlay */
+.scrim {
+  position:fixed; inset:0; background:rgba(14,20,60,0.55);
+  backdrop-filter:blur(1px);
+  z-index:90;
+  animation:scrim-in 200ms ease-out;
+}
+@keyframes scrim-in { from { opacity:0; } to { opacity:1; } }
+
+/* ─── Modal shell ─── */
+.modal {
+  position:fixed; top:50%; left:50%;
+  transform:translate(-50%, -50%);
+  width:min(820px, calc(100vw - 48px));
+  max-height:calc(100vh - 64px);
+  background:white; border-radius:12px;
+  box-shadow:var(--shadow-lg);
+  display:flex; flex-direction:column;
+  z-index:100;
+  animation:modal-in 240ms cubic-bezier(.16,1,.3,1);
+}
+@keyframes modal-in {
+  from { opacity:0; transform:translate(-50%, -48%) scale(0.97); }
+  to   { opacity:1; transform:translate(-50%, -50%) scale(1); }
+}
+.modal-head {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:14px; padding:20px 24px 16px;
+  border-bottom:1px solid var(--border);
+}
+.modal-eyebrow {
+  font-size:10px; font-weight:600; letter-spacing:0.14em;
+  text-transform:uppercase; color:var(--teal); margin-bottom:4px;
+}
+.modal-title {
+  font-size:18px; font-weight:600; color:var(--navy);
+  margin:0; letter-spacing:-0.005em;
+}
+.modal-sub {
+  font-size:12px; color:rgba(14,20,60,0.6); margin-top:4px;
+}
+.modal-sub strong { color:var(--charcoal); font-weight:600; }
+.modal-x {
+  background:none; border:none; padding:6px; border-radius:4px;
+  color:rgba(14,20,60,0.55);
+  transition:all 120ms;
+}
+.modal-x:hover { background:var(--navy-04); color:var(--navy); }
+
+.modal-body { padding:20px 24px; overflow-y:auto; flex:1; }
+.modal-foot {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:14px 24px;
+  border-top:1px solid var(--border); background:var(--lightgrey);
+  border-radius:0 0 12px 12px;
+}
+.foot-meta {
+  font-size:12px; color:rgba(14,20,60,0.6);
+  display:inline-flex; align-items:center; gap:6px;
+}
+
+/* ─── Status arrow row ─── */
+.transition-row {
+  display:flex; align-items:center; gap:14px;
+  padding:14px 16px; margin-bottom:20px;
+  background:var(--lightgrey); border-radius:8px;
+}
+.tr-side { flex:1; min-width:0; }
+.tr-label {
+  font-size:10px; font-weight:600; letter-spacing:0.12em;
+  text-transform:uppercase; color:rgba(14,20,60,0.55);
+  margin-bottom:6px;
+}
+.tr-status {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:7px 12px; border-radius:6px;
+  font-size:13px; font-weight:600; line-height:1.3;
+}
+.tr-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.tr-arrow {
+  flex-shrink:0; color:rgba(14,20,60,0.4);
+  display:flex; align-items:center; justify-content:center;
+  width:32px;
+}
+
+/* status colors */
+.st-intake         { background:#E5E7EE; color:var(--charcoal); }
+.st-intake-dot     { background:var(--grey); }
+.st-prep           { background:var(--teal-08); color:var(--navy); }
+.st-prep-dot       { background:var(--aqua); }
+.st-submitted      { background:var(--teal-08); color:var(--navy); }
+.st-submitted-dot  { background:var(--teal); }
+.st-in_review      { background:var(--teal-08); color:var(--navy); }
+.st-in_review-dot  { background:var(--teal); }
+.st-info_requested { background:var(--amber-08); color:#7a4f00; }
+.st-info_requested-dot { background:var(--amber); }
+.st-approved       { background:var(--green-08); color:#1B5E20; }
+.st-approved-dot   { background:var(--green); }
+.st-effective      { background:var(--green-08); color:#1B5E20; }
+.st-effective-dot  { background:var(--green); }
+.st-denied         { background:var(--red-08); color:var(--red); }
+.st-denied-dot     { background:var(--red); }
+.st-withdrawn      { background:#E5E7EE; color:rgba(14,20,60,0.55); }
+.st-withdrawn-dot  { background:var(--grey); }
+.st-closed         { background:#E5E7EE; color:rgba(14,20,60,0.55); }
+.st-closed-dot     { background:var(--grey); }
+
+/* placeholder when no new status picked */
+.tr-status-placeholder {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:7px 12px; border:1.5px dashed var(--grey);
+  border-radius:6px; color:rgba(14,20,60,0.45);
+  font-size:13px; font-weight:500;
+}
+
+/* ─── Form ─── */
+.field { margin-bottom:18px; }
+.field-row {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:14px; margin-bottom:18px;
+}
+.field-label {
+  display:flex; align-items:center; gap:6px;
+  font-size:11px; font-weight:600;
+  letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--navy); margin-bottom:8px;
+}
+.field-required { color:var(--red); font-size:14px; line-height:1; }
+.field-optional {
+  font-size:10px; font-weight:500; letter-spacing:0;
+  text-transform:none; color:rgba(14,20,60,0.5);
+}
+
+.input, .select, .textarea {
+  width:100%; padding:9px 11px; background:white;
+  border:1px solid var(--border); border-radius:6px;
+  font-size:13px; color:var(--charcoal); outline:none;
+  transition:all 120ms;
+}
+.input:focus, .select:focus, .textarea:focus {
+  border-color:var(--teal); box-shadow:var(--shadow-focus);
+}
+.textarea { resize:vertical; min-height:74px; line-height:1.5; }
+
+/* ─── New-status picker (chip grid) ─── */
+.status-grid {
+  display:grid; grid-template-columns:repeat(2, 1fr); gap:6px;
+}
+.status-chip-btn {
+  display:flex; align-items:center; gap:9px; width:100%;
+  padding:8px 12px; background:white;
+  border:1.5px solid var(--border); border-radius:6px;
+  font-size:13px; text-align:left;
+  transition:all 120ms;
+}
+.status-chip-btn:hover:not(:disabled) {
+  border-color:var(--grey); background:var(--navy-04);
+}
+.status-chip-btn.is-selected {
+  border-color:var(--teal); background:var(--teal-08);
+}
+.status-chip-btn:disabled {
+  background:repeating-linear-gradient(45deg, white, white 4px, var(--lightgrey) 4px, var(--lightgrey) 8px);
+  color:rgba(14,20,60,0.35); border-color:var(--border);
+  cursor:not-allowed; opacity:1;
+}
+.scb-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.scb-label { font-weight:600; color:var(--navy); }
+.status-chip-btn:disabled .scb-label { color:rgba(14,20,60,0.4); }
+.scb-meta { margin-left:auto; font-size:10px; color:rgba(14,20,60,0.5); font-weight:500; }
+.scb-locked { margin-left:auto; font-size:10px; color:rgba(14,20,60,0.4); font-style:italic; }
+
+/* ─── Notify list ─── */
+.notify-list {
+  background:var(--lightgrey); border:1px solid var(--border);
+  border-radius:8px; padding:6px;
+  display:flex; flex-direction:column; gap:2px;
+}
+.notify-row {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; border-radius:5px;
+  transition:background 80ms;
+}
+.notify-row:hover { background:white; }
+.notify-row input { margin:0; }
+.notify-name { font-size:13px; font-weight:600; color:var(--navy); }
+.notify-meta {
+  font-size:11px; color:rgba(14,20,60,0.6);
+  margin-left:auto;
+}
+.notify-role {
+  font-size:10px; font-weight:600; letter-spacing:0.06em;
+  text-transform:uppercase; color:rgba(14,20,60,0.55);
+  padding:1px 6px; background:white; border-radius:3px;
+  border:1px solid var(--border);
+}
+
+/* checkbox + radio */
+input[type="checkbox"], input[type="radio"] {
+  appearance:none; -webkit-appearance:none;
+  width:15px; height:15px; border:1.5px solid var(--grey);
+  background:white;
+  cursor:pointer; transition:all 120ms; position:relative;
+  flex-shrink:0;
+}
+input[type="checkbox"] { border-radius:3px; }
+input[type="radio"] { border-radius:50%; }
+input[type="checkbox"]:hover, input[type="radio"]:hover { border-color:var(--teal); }
+input[type="checkbox"]:checked {
+  background:var(--teal); border-color:var(--teal);
+}
+input[type="checkbox"]:checked::after {
+  content:""; position:absolute; left:3px; top:0;
+  width:5px; height:9px;
+  border:solid white; border-width:0 2px 2px 0;
+  transform:rotate(45deg);
+}
+input[type="radio"]:checked {
+  border-color:var(--teal); background:var(--teal);
+  box-shadow:inset 0 0 0 3px white;
+}
+
+/* ─── Audit preview (right-rail style block) ─── */
+.audit-preview {
+  background:#0E143C; color:white;
+  border-radius:8px; padding:14px 16px; margin-top:18px;
+  font-family:'JetBrains Mono', monospace; font-size:11.5px;
+  line-height:1.6;
+}
+.audit-preview-head {
+  font-size:9px; font-weight:600; letter-spacing:0.18em;
+  text-transform:uppercase; color:rgba(255,255,255,0.5);
+  margin-bottom:8px; font-family:'Poppins', sans-serif;
+  display:flex; align-items:center; gap:6px;
+}
+.audit-preview-line { color:rgba(255,255,255,0.85); }
+.ap-key   { color:#7DD3D4; }
+.ap-arrow { color:rgba(255,255,255,0.4); }
+.ap-val   { color:white; }
+.ap-amber { color:#FFCB6B; }
+.ap-green { color:#A5D6A7; }
+
+/* ─── Doc attach ─── */
+.attach-zone {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 14px; background:var(--lightgrey);
+  border:1.5px dashed var(--grey); border-radius:6px;
+  cursor:pointer; transition:all 120ms;
+}
+.attach-zone:hover { border-color:var(--teal); background:var(--teal-08); }
+.attach-zone svg { color:rgba(14,20,60,0.55); }
+.attach-zone-l { font-size:13px; font-weight:600; color:var(--navy); }
+.attach-zone-r { font-size:11px; color:rgba(14,20,60,0.55); margin-left:auto; }
+.attach-list { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
+.attach-item {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px; background:white;
+  border:1px solid var(--border); border-radius:6px;
+  font-size:12px;
+}
+.attach-item-name { font-weight:500; color:var(--charcoal); flex:1; }
+.attach-item-size { color:rgba(14,20,60,0.5); }
+.attach-x {
+  background:none; border:none; padding:2px;
+  color:rgba(14,20,60,0.5); border-radius:3px;
+}
+.attach-x:hover { background:var(--navy-04); color:var(--red); }
+
+/* ─── Buttons ─── */
+.btn-primary {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 16px; background:var(--navy); color:white;
+  border:1px solid var(--navy); border-radius:6px;
+  font-size:13px; font-weight:600;
+  transition:all 120ms;
+}
+.btn-primary:hover:not(:disabled) { background:#1a2255; }
+.btn-primary-ok { background:var(--green); border-color:var(--green); }
+.btn-primary-ok:hover:not(:disabled) { background:#256528; border-color:#256528; }
+.btn-primary-warn { background:var(--red); border-color:var(--red); }
+.btn-primary-warn:hover:not(:disabled) { background:#8B1D17; border-color:#8B1D17; }
+.btn-ghost {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 14px; background:white; color:var(--charcoal);
+  border:1px solid var(--border); border-radius:6px;
+  font-size:13px; font-weight:500;
+  transition:all 120ms;
+}
+.btn-ghost:hover { background:var(--lightgrey); border-color:var(--grey); }
+
+/* ─── Section heading inside modal ─── */
+.section-h {
+  font-size:11px; font-weight:600; letter-spacing:0.12em;
+  text-transform:uppercase; color:rgba(14,20,60,0.55);
+  margin:18px 0 8px; display:flex; align-items:center; gap:6px;
+}
+.section-h::before {
+  content:""; flex-shrink:0; width:14px; height:1px;
+  background:var(--teal);
+}
+
+/* ─── Warn callout ─── */
+.callout {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:11px 14px; border-radius:6px;
+  font-size:12px; line-height:1.5; margin-bottom:18px;
+}
+.callout-warn { background:var(--amber-08); border-left:3px solid var(--amber); color:var(--charcoal); }
+.callout-warn strong { color:#7a4f00; }
+.callout-info { background:var(--teal-08); border-left:3px solid var(--teal); color:var(--charcoal); }
+.callout-danger { background:var(--red-08); border-left:3px solid var(--red); color:var(--charcoal); }
+.callout-danger strong { color:var(--red); }
+.callout svg { flex-shrink:0; margin-top:1px; }
+
+::selection { background:var(--teal-12); color:var(--navy); }
+
+/* tiny tab to launch modal again — only used if dismissed */
+.relaunch {
+  position:fixed; bottom:24px; left:24px; z-index:99;
+  padding:10px 16px; background:var(--navy); color:white;
+  border:none; border-radius:6px; font-size:13px; font-weight:600;
+  box-shadow:var(--shadow-sm);
+  display:flex; align-items:center; gap:8px;
+}
+</style>
+</head>
+<body>
+
+<!-- Static dimmed page chrome behind the modal -->
+<div class="backdrop-page" aria-hidden>
+  <div class="bp-topbar">
+    <div class="bp-logo">D</div>
+    <div style="height:14px;width:160px;background:rgba(255,255,255,0.15);border-radius:3px"></div>
+  </div>
+  <div class="bp-app-body">
+    <aside class="bp-sidebar">
+      <div class="bp-sb-item"></div>
+      <div class="bp-sb-item"></div>
+      <div class="bp-sb-item"></div>
+      <div class="bp-sb-item is-active"></div>
+      <div class="bp-sb-item"></div>
+      <div class="bp-sb-item"></div>
+      <div class="bp-sb-item"></div>
+      <div class="bp-sb-item"></div>
+    </aside>
+    <main class="bp-main">
+      <div class="bp-h1"></div>
+      <div class="bp-block">
+        <div class="bp-line" style="width:40%"></div>
+        <div class="bp-line" style="width:80%"></div>
+        <div class="bp-line" style="width:65%"></div>
+        <div class="bp-line" style="width:75%"></div>
+      </div>
+      <div class="bp-block">
+        <div class="bp-line" style="width:30%"></div>
+        <div class="bp-line" style="width:90%"></div>
+        <div class="bp-line" style="width:60%"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+/* global React, ReactDOM, TweaksPanel, useTweaks, TweakSection, TweakRadio */
+const { useState, useMemo } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "currentStatus": "intake",
+  "scenario": "approved"
+}/*EDITMODE-END*/;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status DAG — valid forward transitions
+// ─────────────────────────────────────────────────────────────────────────────
+const transitions = {
+  intake:         ["prep", "withdrawn"],
+  prep:           ["submitted", "withdrawn"],
+  submitted:      ["in_review", "withdrawn"],
+  in_review:      ["info_requested", "approved", "denied", "withdrawn"],
+  info_requested: ["in_review", "withdrawn"],
+  approved:       ["effective", "denied"],
+  denied:         ["in_review", "closed"],
+  effective:      ["closed"],
+  closed:         [],
+  withdrawn:      [],
+};
+
+const allStatuses = ["intake","prep","submitted","in_review","info_requested","approved","denied","effective","closed","withdrawn"];
+const statusLabel = (k) => k.replace("_"," ").replace(/\b\w/g, c => c.toUpperCase());
+
+// Sub-status options keyed by NEW status
+const subStatusOptions = {
+  prep:           ["CAQH attestation", "Documents collection", "Welcome questionnaire", "Application drafting"],
+  submitted:      ["Acknowledgment pending", "Initial intake by payer"],
+  in_review:      ["Initial review", "Committee review", "Awaiting committee date"],
+  info_requested: ["Malpractice COI", "DEA cert. update", "License copy", "W-9 form", "Hospital privileges", "Specialty board cert.", "Address verification"],
+  approved:       ["Awaiting eff. date", "Welcome packet sent"],
+  effective:      ["—"],
+  denied:         ["Adverse — appealable", "Adverse — non-appealable", "Insufficient experience", "Network closure"],
+  closed:         ["Effective expired", "Provider exit", "Cycle complete"],
+  withdrawn:      ["Provider request", "Client request", "Eligibility issue"],
+};
+
+// Icons
+const Icon = ({ name, size = 16 }) => {
+  const s = { fill:"none", stroke:"currentColor", strokeWidth:1.6, strokeLinecap:"round", strokeLinejoin:"round" };
+  const paths = {
+    x: <><path d="M18 6 6 18M6 6l12 12" {...s}/></>,
+    arrow_right: <><path d="M5 12h14M13 5l7 7-7 7" {...s}/></>,
+    info: <><circle cx="12" cy="12" r="9" {...s}/><path d="M12 8v4M12 16h.01" {...s}/></>,
+    warning: <><path d="M12 3 2 21h20L12 3z" {...s}/><path d="M12 10v5M12 18h.01" {...s}/></>,
+    paperclip: <><path d="m21 12-9 9a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8" {...s}/></>,
+    file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" {...s}/><path d="M14 2v6h6" {...s}/></>,
+    bell: <><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" {...s}/><path d="M14 21a2 2 0 0 1-4 0" {...s}/></>,
+    lock: <><rect x="4" y="11" width="16" height="10" rx="2" {...s}/><path d="M8 11V7a4 4 0 0 1 8 0v4" {...s}/></>,
+    check: <><path d="M5 13l4 4L19 7" {...s}/></>,
+    edit: <><path d="m18 2 4 4-14 14H4v-4z" {...s}/></>,
+    trail: <><circle cx="6" cy="6" r="2" {...s}/><circle cx="18" cy="18" r="2" {...s}/><path d="M6 8v8a2 2 0 0 0 2 2h8" {...s}/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>{paths[name]}</svg>;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Modal
+// ─────────────────────────────────────────────────────────────────────────────
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const currentStatus = t.currentStatus || "in_review";
+  const scenario = t.scenario || "approved";  // shorthand to pre-set the new status
+
+  // Local form state
+  const [open, setOpen] = useState(true);
+  const [newStatus, setNewStatus] = useState(scenario);
+  const [subStatus, setSubStatus] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState("2026-06-01");
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [attachments, setAttachments] = useState([]);
+  const [notifyProvider, setNotifyProvider] = useState(true);
+  const [notifyClient, setNotifyClient] = useState(true);
+  const [notifyAssignee, setNotifyAssignee] = useState(false);
+
+  // Reset newStatus when current changes (validity may shift)
+  React.useEffect(() => {
+    const valid = transitions[currentStatus] || [];
+    if (!valid.includes(newStatus)) {
+      setNewStatus(valid[0] || "");
+    }
+    setSubStatus("");
+  }, [currentStatus]);
+
+  // Apply scenario shortcut
+  React.useEffect(() => {
+    const valid = transitions[currentStatus] || [];
+    if (valid.includes(scenario)) setNewStatus(scenario);
+  }, [scenario, currentStatus]);
+
+  React.useEffect(() => {
+    setSubStatus(subStatusOptions[newStatus]?.[0] || "");
+  }, [newStatus]);
+
+  // Demo enrollment metadata
+  const enrollment = {
+    id: "ENR-104822",
+    provider: "Dr. Imran Khan",
+    client: "Khan Internal Medicine",
+    payer: "Aetna",
+    state: "TX",
+    cycle: 2,
+  };
+
+  const isApproval  = newStatus === "approved" || newStatus === "effective";
+  const isDenial    = newStatus === "denied";
+  const isWithdraw  = newStatus === "withdrawn";
+  const isInfoReq   = newStatus === "info_requested";
+  const isReverse   = newStatus === "in_review" && currentStatus === "info_requested";
+
+  const reasonRequired = isDenial || isWithdraw;
+  const dateRequired   = isApproval;
+  const canSubmit = newStatus && subStatus &&
+                    (!reasonRequired || reason.trim().length >= 8) &&
+                    (!dateRequired   || effectiveDate);
+
+  const onAttach = () => {
+    setAttachments([
+      ...attachments,
+      { name: "approval-letter.pdf", size: "248 KB" },
+    ]);
+  };
+
+  const submitClass = isDenial || isWithdraw
+    ? "btn-primary btn-primary-warn"
+    : isApproval
+    ? "btn-primary btn-primary-ok"
+    : "btn-primary";
+
+  const submitLabel =
+    isApproval  ? `Mark ${statusLabel(newStatus)}` :
+    isDenial    ? "Confirm denial" :
+    isWithdraw  ? "Withdraw enrollment" :
+    isInfoReq   ? "Request info from provider" :
+    isReverse   ? "Re-open review" :
+    `Move to ${statusLabel(newStatus)}`;
+
+  const validNext = transitions[currentStatus] || [];
+
+  return (
+    <>
+      {open && <div className="scrim" onClick={() => setOpen(false)}/>}
+
+      {open && (
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <div className="modal-head">
+            <div>
+              <div className="modal-eyebrow">Transition status</div>
+              <h2 id="modal-title" className="modal-title">Update {enrollment.id}</h2>
+              <div className="modal-sub">
+                <strong>{enrollment.provider}</strong> · {enrollment.payer} · {enrollment.state} · Cycle {enrollment.cycle}
+              </div>
+            </div>
+            <button className="modal-x" onClick={() => setOpen(false)} aria-label="Close">
+              <Icon name="x" size={18}/>
+            </button>
+          </div>
+
+          <div className="modal-body">
+            {/* Current → new visual */}
+            <div className="transition-row">
+              <div className="tr-side">
+                <div className="tr-label">Current</div>
+                <span className={`tr-status st-${currentStatus}`}>
+                  <span className={`tr-dot st-${currentStatus}-dot`}/>
+                  <span>{statusLabel(currentStatus).toUpperCase()}</span>
+                </span>
+              </div>
+              <div className="tr-arrow"><Icon name="arrow_right" size={18}/></div>
+              <div className="tr-side">
+                <div className="tr-label">New</div>
+                {newStatus ? (
+                  <span className={`tr-status st-${newStatus}`}>
+                    <span className={`tr-dot st-${newStatus}-dot`}/>
+                    <span>{statusLabel(newStatus).toUpperCase()}</span>
+                  </span>
+                ) : (
+                  <span className="tr-status-placeholder">
+                    <span className="tr-dot" style={{ background: "var(--grey)" }}/>
+                    <span>Pick below</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Callouts based on transition */}
+            {isDenial && (
+              <div className="callout callout-danger">
+                <Icon name="warning" size={14}/>
+                <span><strong>Denials are billable touchpoints.</strong> A reason note is required and will be visible to the client. The denial reason routes into your appeals workflow if marked appealable.</span>
+              </div>
+            )}
+            {isWithdraw && (
+              <div className="callout callout-warn">
+                <Icon name="warning" size={14}/>
+                <span><strong>Withdrawing closes this cycle.</strong> The provider stays enrolled with other payers. A reason note is required.</span>
+              </div>
+            )}
+            {isApproval && (
+              <div className="callout callout-info">
+                <Icon name="info" size={14}/>
+                <span>Effective date drives the recred clock. The next cycle window will open <strong>12 months</strong> from the effective date.</span>
+              </div>
+            )}
+
+            {/* New status grid */}
+            <div className="section-h">Move to</div>
+            <div className="status-grid">
+              {allStatuses
+                .filter(s => s !== currentStatus)
+                .map(s => {
+                  const allowed = validNext.includes(s);
+                  return (
+                    <button key={s}
+                            className={`status-chip-btn ${newStatus === s ? "is-selected" : ""}`}
+                            onClick={() => setNewStatus(s)}
+                            disabled={!allowed}
+                            title={!allowed ? `Cannot transition from ${statusLabel(currentStatus)} to ${statusLabel(s)}` : ""}>
+                      <span className={`scb-dot st-${s}-dot`}/>
+                      <span className="scb-label">{statusLabel(s)}</span>
+                      {!allowed && <span className="scb-locked"><Icon name="lock" size={10}/></span>}
+                    </button>
+                  );
+                })}
+            </div>
+
+            {/* Sub-status & date */}
+            <div className="field-row" style={{ marginTop: 18 }}>
+              <div>
+                <label className="field-label">Sub-status <span className="field-required">*</span></label>
+                <select className="select" value={subStatus} onChange={(e) => setSubStatus(e.target.value)}>
+                  {(subStatusOptions[newStatus] || []).map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">
+                  {isApproval ? "Effective date" : "Target date"}
+                  {dateRequired ? <span className="field-required">*</span> : <span className="field-optional">· optional</span>}
+                </label>
+                <input type="date" className="input" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)}/>
+              </div>
+            </div>
+
+            {/* Reason — required for denial/withdraw */}
+            {(reasonRequired) && (
+              <div className="field">
+                <label className="field-label">
+                  Reason <span className="field-required">*</span>
+                  <span className="field-optional">· client-visible</span>
+                </label>
+                <textarea className="textarea" rows="3"
+                          placeholder={isDenial
+                            ? "e.g. Specialty board certification expired before submission window. Recommend renewal then re-application."
+                            : "e.g. Provider relocated; cycle no longer needed."}
+                          value={reason} onChange={(e) => setReason(e.target.value)}/>
+                <div style={{ fontSize: 11, color: "rgba(14,20,60,0.55)", marginTop: 4 }}>
+                  {reason.length < 8 ? `Minimum 8 characters · ${reason.length}/8` : `${reason.length} characters · client will see this`}
+                </div>
+              </div>
+            )}
+
+            {/* Internal note (always optional) */}
+            <div className="field">
+              <label className="field-label">Internal note <span className="field-optional">· admin only</span></label>
+              <textarea className="textarea" rows="2"
+                        placeholder="Add context for the team. Not visible to the client."
+                        value={note} onChange={(e) => setNote(e.target.value)}/>
+            </div>
+
+            {/* Attach */}
+            {(isApproval || isDenial || isInfoReq) && (
+              <div className="field">
+                <label className="field-label">Documents <span className="field-optional">· optional</span></label>
+                <div className="attach-zone" onClick={onAttach}>
+                  <Icon name="paperclip" size={16}/>
+                  <span className="attach-zone-l">Attach approval letter, denial doc, or info request</span>
+                  <span className="attach-zone-r">PDF, JPG up to 25 MB</span>
+                </div>
+                {attachments.length > 0 && (
+                  <div className="attach-list">
+                    {attachments.map((a, i) => (
+                      <div key={i} className="attach-item">
+                        <Icon name="file" size={14}/>
+                        <span className="attach-item-name">{a.name}</span>
+                        <span className="attach-item-size">{a.size}</span>
+                        <button className="attach-x" onClick={() => setAttachments(attachments.filter((_, j) => j !== i))} aria-label="Remove">
+                          <Icon name="x" size={14}/>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notify */}
+            <div className="section-h"><Icon name="bell" size={11}/> Notify</div>
+            <div className="notify-list">
+              <label className="notify-row">
+                <input type="checkbox" checked={notifyProvider} onChange={(e) => setNotifyProvider(e.target.checked)}/>
+                <span className="notify-name">{enrollment.provider}</span>
+                <span className="notify-role">Provider</span>
+                <span className="notify-meta">imran.khan@khanmed.com</span>
+              </label>
+              <label className="notify-row">
+                <input type="checkbox" checked={notifyClient} onChange={(e) => setNotifyClient(e.target.checked)}/>
+                <span className="notify-name">{enrollment.client}</span>
+                <span className="notify-role">Client admin</span>
+                <span className="notify-meta">2 admins</span>
+              </label>
+              <label className="notify-row">
+                <input type="checkbox" checked={notifyAssignee} onChange={(e) => setNotifyAssignee(e.target.checked)}/>
+                <span className="notify-name">M. Alvarez</span>
+                <span className="notify-role">Assignee</span>
+                <span className="notify-meta">notifications usually off — they made this change</span>
+              </label>
+            </div>
+
+            {/* Audit preview */}
+            <div className="audit-preview">
+              <div className="audit-preview-head"><Icon name="trail" size={11}/>Audit log entry · preview</div>
+              <div className="audit-preview-line">
+                <span className="ap-key">2026-05-08 14:32 UTC</span> · M. Alvarez ({"<maya@dastify.com>"})
+              </div>
+              <div className="audit-preview-line">
+                {"  "}<span className="ap-key">enrollment</span><span className="ap-arrow">=</span><span className="ap-val">{enrollment.id}</span>
+              </div>
+              <div className="audit-preview-line">
+                {"  "}<span className="ap-key">action</span><span className="ap-arrow">=</span><span className="ap-val">status_transition</span>
+              </div>
+              <div className="audit-preview-line">
+                {"  "}<span className="ap-key">from</span><span className="ap-arrow">=</span><span className="ap-amber">{currentStatus}</span> <span className="ap-arrow">→</span> <span className="ap-key">to</span><span className="ap-arrow">=</span><span className={isDenial || isWithdraw ? "ap-amber" : "ap-green"}>{newStatus || "—"}</span>
+              </div>
+              <div className="audit-preview-line">
+                {"  "}<span className="ap-key">sub_status</span><span className="ap-arrow">=</span><span className="ap-val">"{subStatus}"</span>
+              </div>
+              {dateRequired && (
+                <div className="audit-preview-line">
+                  {"  "}<span className="ap-key">effective_date</span><span className="ap-arrow">=</span><span className="ap-val">{effectiveDate}</span>
+                </div>
+              )}
+              {reasonRequired && reason && (
+                <div className="audit-preview-line">
+                  {"  "}<span className="ap-key">reason</span><span className="ap-arrow">=</span><span className="ap-val">"{reason.slice(0, 60)}{reason.length > 60 ? "…" : ""}"</span>
+                </div>
+              )}
+              <div className="audit-preview-line">
+                {"  "}<span className="ap-key">notify</span><span className="ap-arrow">=</span><span className="ap-val">[{[notifyProvider && "provider", notifyClient && "client", notifyAssignee && "assignee"].filter(Boolean).join(", ") || "—"}]</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-foot">
+            <button className="btn-ghost" onClick={() => setOpen(false)}>Cancel</button>
+            <span className="foot-meta">
+              {!canSubmit && reasonRequired && reason.trim().length < 8 ? (
+                <><Icon name="warning" size={11}/>Reason required ({reason.trim().length}/8)</>
+              ) : !canSubmit && dateRequired && !effectiveDate ? (
+                <><Icon name="warning" size={11}/>Effective date required</>
+              ) : canSubmit ? (
+                <><Icon name="check" size={11}/>Ready · this is logged and irreversible</>
+              ) : (
+                <>Pick a destination status</>
+              )}
+            </span>
+            <button className={submitClass} disabled={!canSubmit}>
+              {submitLabel}<Icon name="arrow_right" size={13}/>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!open && (
+        <button className="relaunch" onClick={() => setOpen(true)}>
+          <Icon name="edit" size={14}/>
+          Re-open transition modal
+        </button>
+      )}
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Current status">
+          <select className="select" value={currentStatus} onChange={(e) => setTweak("currentStatus", e.target.value)}>
+            {allStatuses.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
+          </select>
+          <div style={{ fontSize: 11, color: "rgba(14,20,60,0.55)", marginTop: 8, lineHeight: 1.5 }}>
+            Changes the modal's "from" pill and which destination chips are enabled vs. locked. The DAG enforces only forward-valid transitions.
+          </div>
+        </TweakSection>
+        <TweakSection title="Pre-pick destination">
+          <TweakRadio
+            value={scenario}
+            onChange={(v) => setTweak("scenario", v)}
+            options={[
+              { value: "approved",       label: "Approved" },
+              { value: "info_requested", label: "Info req." },
+              { value: "denied",         label: "Denied" },
+            ]}
+          />
+          <div style={{ fontSize: 11, color: "rgba(14,20,60,0.55)", marginTop: 8, lineHeight: 1.5 }}>
+            Quickly demo each variant — different sub-status options, callouts, required-field rules, and submit-button colors.
+          </div>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Dastify — Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:#0E143C; --teal:#16C1C2; --aqua:#4ECED1; --charcoal:#222;
+  --lightgrey:#F6F7FB; --grey:#C6CCD8; --white:#fff;
+  --red:#B3261E; --green:#2E7D32; --amber:#F4A300;
+  --navy-04:rgba(14,20,60,0.04); --navy-02:rgba(14,20,60,0.02);
+  --teal-12:rgba(22,193,194,0.12); --teal-08:rgba(22,193,194,0.08);
+  --red-08:rgba(179,38,30,0.08); --green-08:rgba(46,125,50,0.08); --amber-08:rgba(244,163,0,0.10);
+  --shadow-xs:0 1px 0 rgba(14,20,60,0.04);
+  --border:rgba(198,204,216,0.55);
+}
+*,*::before,*::after { box-sizing:border-box; }
+html, body { margin:0; padding:0; }
+body {
+  font-family:'Poppins',-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased; color:var(--charcoal); background:var(--lightgrey);
+  font-size:14px; line-height:22px;
+}
+button, input, select { font-family:inherit; }
+button { cursor:pointer; }
+a { color:inherit; text-decoration:none; }
+
+.topbar { height:56px; background:var(--navy); color:white; display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:50; border-bottom:1px solid rgba(255,255,255,0.06); }
+.brand { display:flex; align-items:center; gap:10px; font-weight:600; }
+.brand-mark { width:26px; height:26px; border-radius:6px; background:var(--teal); display:flex; align-items:center; justify-content:center; color:var(--navy); font-size:12px; font-weight:700; }
+.brand-name { font-size:15px; }
+.brand-sep { color:rgba(255,255,255,0.3); margin:0 4px; }
+.brand-page { font-size:13px; color:rgba(255,255,255,0.65); font-weight:400; }
+.topbar-search { display:flex; align-items:center; gap:8px; padding:6px 10px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:rgba(255,255,255,0.65); font-size:12px; min-width:300px; }
+.topbar-search kbd { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; padding:1px 5px; background:rgba(255,255,255,0.1); border-radius:3px; }
+.topbar-actions { display:flex; align-items:center; gap:6px; }
+.topbar-icon-btn { width:34px; height:34px; border-radius:6px; background:none; border:none; color:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; position:relative; }
+.topbar-icon-btn:hover { background:rgba(255,255,255,0.08); color:white; }
+.topbar-icon-btn .ping { position:absolute; top:6px; right:6px; width:8px; height:8px; background:var(--teal); border-radius:50%; box-shadow:0 0 0 2px var(--navy); }
+.avatar { width:30px; height:30px; border-radius:50%; background:var(--teal); color:var(--navy); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+
+.app-body { display:flex; min-height:calc(100vh - 56px); }
+.sidebar { width:240px; flex-shrink:0; background:var(--white); border-right:1px solid var(--border); padding:24px 0; }
+.sidebar-section { padding:0 12px; }
+.sidebar-label { font-size:10px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:rgba(14,20,60,0.45); padding:0 12px 12px; }
+.sidebar-item { display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:6px; color:rgba(14,20,60,0.7); font-size:13px; font-weight:500; position:relative; margin-bottom:1px; transition:all 120ms; }
+.sidebar-item:hover { background:var(--navy-04); color:var(--navy); }
+.sidebar-item.is-active { background:var(--teal-08); color:var(--navy); font-weight:600; }
+.sidebar-item.is-active::before { content:""; position:absolute; left:-12px; top:6px; bottom:6px; width:2px; background:var(--teal); border-radius:0 2px 2px 0; }
+.sidebar-item.is-active svg { color:var(--teal); }
+.sidebar-badge { margin-left:auto; padding:1px 7px; background:var(--amber-08); color:var(--amber); border-radius:9999px; font-size:10px; font-weight:600; }
+.sidebar-divider { margin:16px 24px; height:1px; background:var(--border); }
+
+.main { flex:1; min-width:0; padding:28px 28px 64px; max-width:1600px; }
+.page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:18px; }
+.page-h1 { font-size:24px; font-weight:600; color:var(--navy); margin:0; letter-spacing:-0.005em; }
+.page-sub { font-size:13px; color:rgba(14,20,60,0.6); margin-top:4px; }
+.page-sub strong { color:var(--charcoal); font-weight:600; }
+.page-actions { display:flex; gap:8px; }
+
+.tab-strip { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:16px; }
+.tab { display:inline-flex; align-items:center; gap:8px; padding:10px 14px; background:none; border:none; font-size:13px; font-weight:500; color:rgba(14,20,60,0.6); border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 120ms; }
+.tab:hover { color:var(--navy); }
+.tab.is-active { color:var(--navy); font-weight:600; border-bottom-color:var(--teal); }
+.tab-count { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:18px; padding:0 6px; background:var(--lightgrey); color:rgba(14,20,60,0.6); border-radius:9px; font-size:11px; font-weight:600; }
+.tab.is-active .tab-count { background:var(--teal-12); color:var(--teal); }
+
+.toolbar { display:flex; align-items:center; gap:10px; padding:12px 14px; background:white; border:1px solid var(--border); border-radius:8px 8px 0 0; border-bottom:none; }
+.search-input { flex:1; max-width:340px; display:flex; align-items:center; gap:8px; padding:7px 11px; background:var(--lightgrey); border:1px solid var(--border); border-radius:6px; color:rgba(14,20,60,0.55); font-size:13px; }
+.search-input input { border:none; background:none; outline:none; flex:1; font-size:13px; color:var(--charcoal); }
+.fp { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; background:white; border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:500; color:var(--charcoal); }
+.fp:hover { background:var(--lightgrey); border-color:var(--grey); }
+.fp.active { background:var(--teal-08); border-color:var(--teal-12); color:var(--navy); }
+.toolbar-spacer { flex:1; }
+.toolbar-meta { font-size:12px; color:rgba(14,20,60,0.55); }
+.toolbar-meta strong { color:var(--charcoal); font-weight:600; }
+
+.tbl-wrap { background:white; border:1px solid var(--border); border-radius:0 0 8px 8px; overflow:hidden; box-shadow:var(--shadow-xs); }
+.tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.tbl thead th { text-align:left; padding:9px 16px; font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:rgba(14,20,60,0.6); border-bottom:1px solid var(--border); background:var(--lightgrey); white-space:nowrap; }
+.tbl thead th.right, .tbl tbody td.right { text-align:right; }
+.tbl tbody td { padding:13px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.tbl tbody tr:last-child td { border-bottom:none; }
+.tbl tbody tr:hover { background:var(--navy-02); }
+.tbl-name { font-weight:600; color:var(--navy); font-size:13px; }
+.tbl-sub { font-size:11px; color:rgba(14,20,60,0.55); margin-top:2px; }
+.mono { font-family:'JetBrains Mono', monospace; font-variant-numeric:tabular-nums; font-size:12px; }
+
+.cell-name { display:flex; align-items:center; gap:10px; }
+.doc-icon { width:34px; height:36px; border-radius:5px; background:var(--lightgrey); border:1px solid var(--border); color:rgba(14,20,60,0.6); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; letter-spacing:0.04em; flex-shrink:0; }
+.doc-icon.pdf { background:#FFF1EE; color:var(--red); border-color:rgba(179,38,30,0.2); }
+.doc-icon.png, .doc-icon.jpg { background:#F0F8F1; color:var(--green); border-color:rgba(46,125,50,0.2); }
+.doc-icon.docx { background:#EEF1FA; color:var(--navy); border-color:rgba(14,20,60,0.15); }
+
+.pill { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; line-height:1.4; white-space:nowrap; }
+.pill-warn   { background:var(--amber-08); color:#7a4f00; }
+.pill-danger { background:var(--red-08);   color:var(--red); }
+.pill-ok     { background:var(--green-08); color:#1B5E20; }
+.pill-flat   { background:var(--lightgrey); color:rgba(14,20,60,0.6); }
+.pill-teal   { background:var(--teal-08); color:var(--navy); }
+.pill-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+.btn-primary { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; background:var(--navy); color:white; border:1px solid var(--navy); border-radius:6px; font-size:13px; font-weight:600; }
+.btn-primary:hover { background:#1a2255; }
+.btn-ghost { display:inline-flex; align-items:center; gap:6px; padding:9px 14px; background:white; color:var(--charcoal); border:1px solid var(--border); border-radius:6px; font-size:13px; font-weight:500; }
+.btn-ghost:hover { background:var(--lightgrey); border-color:var(--grey); }
+
+.kpi-strip { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:18px; }
+.kpi-tile { background:white; border:1px solid var(--border); border-radius:8px; padding:16px 18px; }
+.kpi-l { font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:rgba(14,20,60,0.55); margin-bottom:8px; }
+.kpi-v { font-size:26px; font-weight:700; color:var(--navy); font-variant-numeric:tabular-nums; line-height:30px; display:flex; align-items:baseline; gap:4px; }
+.kpi-v small { font-size:13px; color:rgba(14,20,60,0.55); font-weight:500; }
+.kpi-meta { font-size:11px; color:rgba(14,20,60,0.55); margin-top:6px; }
+
+.card { background:white; border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow-xs); overflow:hidden; margin-bottom:18px; }
+.card-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.card-h { font-size:13px; font-weight:600; color:var(--navy); margin:0; }
+.card-sub { font-size:12px; color:rgba(14,20,60,0.55); margin-top:2px; }
+.card-body { padding:18px; }
+.card-body.flush { padding:0; }
+
+.split-2 { display:grid; grid-template-columns:65fr 35fr; gap:18px; }
+@media (max-width:1100px) { .split-2 { grid-template-columns:1fr; } }
+.split-3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+@media (max-width:1100px) { .split-3 { grid-template-columns:1fr; } }
+
+/* Audit log */
+.audit-wrap {
+  background:white; border:1px solid var(--border); border-radius:0 0 8px 8px;
+  border-top:none; padding:0; box-shadow:var(--shadow-xs);
+}
+.audit-row {
+  display:grid; grid-template-columns:130px 28px 1fr auto;
+  gap:14px; padding:14px 18px;
+  border-bottom:1px solid var(--border); align-items:flex-start;
+}
+.audit-row:last-child { border-bottom:none; }
+.audit-row:hover { background:var(--navy-02); }
+.audit-time { font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(14,20,60,0.55); padding-top:4px; }
+.audit-time .date { color:var(--charcoal); font-weight:500; }
+.audit-actor { width:28px; height:28px; border-radius:50%; background:var(--teal-08); color:var(--navy); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; }
+.audit-actor.system { background:var(--lightgrey); color:rgba(14,20,60,0.6); }
+.audit-actor.payer { background:var(--navy); color:white; }
+.audit-msg { font-size:13px; color:var(--charcoal); }
+.audit-msg strong { color:var(--navy); font-weight:600; }
+.audit-msg a { color:var(--teal); font-weight:500; }
+.audit-meta { font-size:11px; color:rgba(14,20,60,0.55); margin-top:3px; }
+.audit-diff {
+  margin-top:8px; padding:10px 12px;
+  background:#0f1430; color:#e8eaf3;
+  border-radius:5px; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.6;
+}
+.audit-diff .field { color:rgba(232,234,243,0.55); }
+.audit-diff .from  { color:#ffba6b; }
+.audit-diff .arrow { color:rgba(232,234,243,0.4); margin:0 6px; }
+.audit-diff .to    { color:#7eddb8; font-weight:500; }
+.audit-tag { padding-top:2px; }
+
+/* Reports — charts */
+.chart-card { background:white; border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow-xs); padding:18px; }
+.chart-h { font-size:13px; font-weight:600; color:var(--navy); margin:0 0 4px; }
+.chart-sub { font-size:11.5px; color:rgba(14,20,60,0.55); margin-bottom:14px; }
+.legend { display:flex; gap:14px; font-size:11px; color:rgba(14,20,60,0.6); margin-bottom:6px; flex-wrap:wrap; }
+.legend-dot { display:inline-flex; align-items:center; gap:5px; }
+.legend-dot::before { content:""; width:8px; height:8px; border-radius:2px; background:currentColor; }
+
+::selection { background:var(--teal-12); color:var(--navy); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const { useState } = React;
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "screen": "documents",
+  "dateRange": "90d"
+}/*EDITMODE-END*/;
+
+const Icon = ({ name, size = 16 }) => {
+  const s = { fill:"none", stroke:"currentColor", strokeWidth:1.6, strokeLinecap:"round", strokeLinejoin:"round" };
+  const p = {
+    inbox:<><path d="M22 12h-6l-2 3h-4l-2-3H2" {...s}/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" {...s}/></>,
+    bell:<><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" {...s}/><path d="M14 21a2 2 0 0 1-4 0" {...s}/></>,
+    search:<><circle cx="11" cy="11" r="7" {...s}/><path d="m21 21-4.3-4.3" {...s}/></>,
+    settings:<><circle cx="12" cy="12" r="3" {...s}/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8" {...s}/></>,
+    dashboard:<><rect x="3" y="3" width="7" height="9" {...s}/><rect x="14" y="3" width="7" height="5" {...s}/><rect x="14" y="12" width="7" height="9" {...s}/><rect x="3" y="16" width="7" height="5" {...s}/></>,
+    clients:<><path d="M3 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" {...s}/><circle cx="10" cy="7" r="4" {...s}/><path d="M19 8a3 3 0 1 0-3-3" {...s}/></>,
+    providers:<><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" {...s}/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" {...s}/><path d="M16 3v3M14.5 4.5h3" {...s}/></>,
+    enrollments:<><rect x="3" y="4" width="18" height="16" rx="1.5" {...s}/><path d="M3 9h18M8 4v16" {...s}/></>,
+    recreds:<><circle cx="12" cy="12" r="9" {...s}/><path d="M12 7v5l3 2" {...s}/></>,
+    payers:<><rect x="3" y="6" width="18" height="13" rx="1.5" {...s}/><path d="M3 10h18M7 15h3" {...s}/></>,
+    documents:<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" {...s}/><path d="M14 2v6h6" {...s}/></>,
+    audit:<><circle cx="6" cy="6" r="2" {...s}/><circle cx="18" cy="18" r="2" {...s}/><path d="M6 8v8a2 2 0 0 0 2 2h8" {...s}/></>,
+    reports:<><path d="M3 3v18h18" {...s}/><path d="m7 14 4-4 4 4 5-5" {...s}/></>,
+    upload:<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" {...s}/></>,
+    download:<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" {...s}/></>,
+    plus:<><path d="M12 5v14M5 12h14" {...s}/></>,
+    chevron:<><path d="M6 9l6 6 6-6" {...s}/></>,
+    open:<><path d="M15 3h6v6M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" {...s}/></>,
+    refresh:<><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" {...s}/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>{p[name]}</svg>;
+};
+
+// ─── Shell ──────────────────────────────────────────────────────────────
+const Sidebar = ({ activeKey }) => {
+  const nav = [
+    { key:"dashboard",   icon:"dashboard",   label:"Dashboard",   href:"Dashboard.html" },
+    { key:"inbox",       icon:"inbox",       label:"Inbox",       badge:6, href:"Inbox.html" },
+    { key:"clients",     icon:"clients",     label:"Clients",     href:"Network.html" },
+    { key:"providers",   icon:"providers",   label:"Providers",   href:"Network.html" },
+    { key:"enrollments", icon:"enrollments", label:"Enrollments", href:"Enrollments.html" },
+    { key:"recreds",     icon:"recreds",     label:"Recreds Queue", badge:12, href:"Recreds Pipeline.html" },
+    { key:"payers",      icon:"payers",      label:"Payers",      href:"Network.html" },
+    { key:"documents",   icon:"documents",   label:"Documents" },
+    { key:"reports",     icon:"reports",     label:"Reports" },
+    { key:"audit",       icon:"audit",       label:"Audit Log" },
+  ];
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-section">
+        <div className="sidebar-label">Workspace</div>
+        {nav.map(item => (
+          <a key={item.key} className={`sidebar-item ${item.key === activeKey ? "is-active" : ""}`} href={item.href || "#"}>
+            <Icon name={item.icon} size={16}/><span>{item.label}</span>
+            {item.badge != null && <span className="sidebar-badge">{item.badge}</span>}
+          </a>
+        ))}
+      </div>
+      <div className="sidebar-divider"/>
+      <div className="sidebar-section">
+        <a className="sidebar-item" href="#"><Icon name="settings" size={16}/><span>Settings</span></a>
+      </div>
+    </aside>
+  );
+};
+
+const TopBar = ({ crumb }) => (
+  <div className="topbar">
+    <div className="brand">
+      <span className="brand-mark">D</span>
+      <span className="brand-name">Dastify</span>
+      <span className="brand-sep">/</span>
+      <span className="brand-page">{crumb}</span>
+    </div>
+    <div className="topbar-search">
+      <Icon name="search" size={14}/><span>Search…</span><kbd>⌘K</kbd>
+    </div>
+    <div className="topbar-actions">
+      <a className="topbar-icon-btn" href="Inbox.html"><Icon name="bell" size={16}/><span className="ping"/></a>
+      <button className="topbar-icon-btn"><Icon name="settings" size={16}/></button>
+      <div className="avatar" style={{ marginLeft:8 }}>MA</div>
+    </div>
+  </div>
+);
+
+// ─── Documents data ─────────────────────────────────────────────────────
+const documents = [
+  { id:"d01", name:"Khan_Imran_Malpractice_COI_2026.pdf", type:"Malpractice COI", provider:"Dr. Imran Khan", uploaded:"2026-04-14", expires:"2026-09-01", status:"current",  size:"412 KB", ext:"pdf" },
+  { id:"d02", name:"Khan_Imran_DEA_BX1234567.pdf",        type:"DEA Registration", provider:"Dr. Imran Khan", uploaded:"2025-12-31", expires:"2026-12-31", status:"current",  size:"118 KB", ext:"pdf" },
+  { id:"d03", name:"Khan_Imran_BoardCert_IM.pdf",         type:"Specialty Board",  provider:"Dr. Imran Khan", uploaded:"2024-04-15", expires:"2026-04-15", status:"expired",  size:"284 KB", ext:"pdf" },
+  { id:"d04", name:"Park_Lina_TX_License_2027.pdf",       type:"State License",    provider:"Dr. Lina Park",  uploaded:"2026-01-30", expires:"2027-01-30", status:"current",  size:"96 KB",  ext:"pdf" },
+  { id:"d05", name:"Park_Lina_CV_Apr2026.docx",           type:"CV",               provider:"Dr. Lina Park",  uploaded:"2026-04-02", expires:null,         status:"current",  size:"62 KB",  ext:"docx" },
+  { id:"d06", name:"Tanaka_Yuki_Headshot.png",            type:"Headshot",         provider:"Dr. Yuki Tanaka",uploaded:"2025-08-19", expires:null,         status:"current",  size:"1.8 MB", ext:"png" },
+  { id:"d07", name:"Velez_Marco_W9_2026.pdf",             type:"W-9",              provider:"Dr. Marco Velez",uploaded:"2026-01-12", expires:null,         status:"current",  size:"42 KB",  ext:"pdf" },
+  { id:"d08", name:"Cruz_Daniela_HospitalPriv_RushU.pdf", type:"Hospital Privileges", provider:"Dr. Daniela Cruz", uploaded:"2026-03-10", expires:"2026-06-30", status:"expiring", size:"218 KB", ext:"pdf" },
+  { id:"d09", name:"Iyer_Priya_BoardCert_Peds.pdf",       type:"Specialty Board",  provider:"Dr. Priya Iyer", uploaded:"2024-11-08", expires:"2027-11-08", status:"current",  size:"302 KB", ext:"pdf" },
+  { id:"d10", name:"Okonkwo_Sam_NV_License.pdf",          type:"State License",    provider:"Dr. Sam Okonkwo",uploaded:"2025-09-01", expires:"2026-08-31", status:"expiring", size:"104 KB", ext:"pdf" },
+];
+
+// ─── Documents screen ───────────────────────────────────────────────────
+const Documents = () => {
+  const [filter, setFilter] = useState("all");
+  const counts = {
+    all:      documents.length,
+    expiring: documents.filter(d => d.status === "expiring").length,
+    expired:  documents.filter(d => d.status === "expired").length,
+    nodate:   documents.filter(d => !d.expires).length,
+  };
+  const filtered = documents.filter(d =>
+    filter === "all"      ? true :
+    filter === "expiring" ? d.status === "expiring" :
+    filter === "expired"  ? d.status === "expired" :
+    filter === "nodate"   ? !d.expires : true);
+
+  return (
+    <>
+      <div className="page-header">
+        <div>
+          <h1 className="page-h1">Documents & CAQH vault</h1>
+          <div className="page-sub"><strong>{documents.length}</strong> files across <strong>{new Set(documents.map(d=>d.provider)).size}</strong> providers · <strong>{counts.expiring}</strong> expiring · <strong>{counts.expired}</strong> expired</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn-ghost"><Icon name="refresh" size={13}/>Sync CAQH</button>
+          <button className="btn-primary"><Icon name="upload" size={13}/>Upload</button>
+        </div>
+      </div>
+
+      <div className="kpi-strip">
+        <div className="kpi-tile"><div className="kpi-l">CAQH coverage</div><div className="kpi-v">7<small>/8</small></div><div className="kpi-meta">All providers re-attested in last 120d</div></div>
+        <div className="kpi-tile"><div className="kpi-l">Expiring &lt; 60d</div><div className="kpi-v" style={{ color:"var(--amber)" }}>{counts.expiring}</div><div className="kpi-meta">Action required before next billing cycle</div></div>
+        <div className="kpi-tile"><div className="kpi-l">Expired</div><div className="kpi-v" style={{ color:"var(--red)" }}>{counts.expired}</div><div className="kpi-meta">Blocking 4 enrollments from progressing</div></div>
+        <div className="kpi-tile"><div className="kpi-l">Total storage</div><div className="kpi-v">3.7<small>GB</small></div><div className="kpi-meta">Encrypted at rest · 7y retention</div></div>
+      </div>
+
+      <div className="tab-strip">
+        <button className={`tab ${filter === "all" ? "is-active" : ""}`}      onClick={() => setFilter("all")}>All <span className="tab-count">{counts.all}</span></button>
+        <button className={`tab ${filter === "expiring" ? "is-active" : ""}`} onClick={() => setFilter("expiring")}>Expiring soon <span className="tab-count">{counts.expiring}</span></button>
+        <button className={`tab ${filter === "expired" ? "is-active" : ""}`}  onClick={() => setFilter("expired")}>Expired <span className="tab-count">{counts.expired}</span></button>
+        <button className={`tab ${filter === "nodate" ? "is-active" : ""}`}   onClick={() => setFilter("nodate")}>No expiry <span className="tab-count">{counts.nodate}</span></button>
+      </div>
+
+      <div className="toolbar">
+        <div className="search-input"><Icon name="search" size={13}/><input placeholder="Search filename, provider, type…"/></div>
+        <button className="fp">Type <Icon name="chevron" size={11}/></button>
+        <button className="fp">Provider <Icon name="chevron" size={11}/></button>
+        <div className="toolbar-spacer"/>
+        <span className="toolbar-meta"><strong>{filtered.length}</strong> files</span>
+      </div>
+      <div className="tbl-wrap">
+        <table className="tbl">
+          <thead><tr>
+            <th>File</th><th>Type</th><th>Provider</th><th>Uploaded</th><th>Expires</th><th>Status</th><th className="right">Size</th><th></th>
+          </tr></thead>
+          <tbody>
+            {filtered.map(d => {
+              const expClass = d.status === "expired" ? "pill-danger" : d.status === "expiring" ? "pill-warn" : "pill-flat";
+              return (
+                <tr key={d.id}>
+                  <td>
+                    <div className="cell-name">
+                      <div className={`doc-icon ${d.ext}`}>{d.ext.toUpperCase()}</div>
+                      <div>
+                        <div className="tbl-name" style={{ fontWeight:500 }}>{d.name}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{d.type}</td>
+                  <td>{d.provider}</td>
+                  <td><span className="mono">{d.uploaded}</span></td>
+                  <td>
+                    {d.expires
+                      ? <span className={`pill ${expClass}`}><span className="pill-dot"/>{d.expires}</span>
+                      : <span style={{ color:"rgba(14,20,60,0.4)", fontSize:11 }}>—</span>}
+                  </td>
+                  <td>
+                    {d.status === "current"  && <span className="pill pill-ok"><span className="pill-dot"/>Current</span>}
+                    {d.status === "expiring" && <span className="pill pill-warn"><span className="pill-dot"/>Expiring &lt; 60d</span>}
+                    {d.status === "expired"  && <span className="pill pill-danger"><span className="pill-dot"/>Expired</span>}
+                  </td>
+                  <td className="right"><span className="mono">{d.size}</span></td>
+                  <td><button className="fp"><Icon name="download" size={12}/></button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+};
+
+// ─── Audit log data ─────────────────────────────────────────────────────
+const auditEvents = [
+  { id:"a01", t:"14:32:08", date:"Today",     actor:"MA", actorName:"Maya Alvarez",   actorKind:"user",   action:"transitioned", entity:"ENR-104822", msg:<>moved <a href="Enrollment Detail.html">ENR-104822</a> · Aetna TX</>, diff:[["status","in_review","info_requested"],["sub_status","—","awaiting malpractice COI"]] },
+  { id:"a02", t:"14:18:42", date:"Today",     actor:"DK", actorName:"David Kowalski", actorKind:"user",   action:"commented",     entity:"ENR-104810", msg:<>commented on <a href="Enrollment Detail.html">ENR-104810</a></> },
+  { id:"a03", t:"14:05:01", date:"Today",     actor:"BC", actorName:"BCBS Texas",     actorKind:"payer",  action:"approved",      entity:"ENR-104810", msg:<>approved <a href="Enrollment Detail.html">ENR-104810</a></>, diff:[["status","in_review","approved"],["effective_date","—","2026-06-01"]] },
+  { id:"a04", t:"13:55:14", date:"Today",     actor:"SY", actorName:"System",         actorKind:"system", action:"requested",     entity:"ENR-104544", msg:<>auto-detected info request from <strong>United HC</strong> via clearinghouse webhook</>, diff:[["status","in_review","info_requested"]] },
+  { id:"a05", t:"13:41:33", date:"Today",     actor:"MA", actorName:"Maya Alvarez",   actorKind:"user",   action:"bulk-transitioned", entity:"8 enrollments", msg:<>moved 8 enrollments to <strong>in_review</strong> after submission batch</> },
+  { id:"a06", t:"11:08:55", date:"Today",     actor:"SK", actorName:"Salma Khan",     actorKind:"user",   action:"uploaded",      entity:"d01", msg:<>uploaded <strong>Khan_Imran_Malpractice_COI_2026.pdf</strong> · attached to ENR-104822</> },
+  { id:"a07", t:"09:22:11", date:"Today",     actor:"SY", actorName:"System",         actorKind:"system", action:"flagged",       entity:"d03", msg:<>marked <strong>Khan_Imran_BoardCert_IM.pdf</strong> as expired (auto-rule)</> },
+  { id:"a08", t:"17:44:09", date:"Yesterday", actor:"MA", actorName:"Maya Alvarez",   actorKind:"user",   action:"reassigned",    entity:"5 enrollments", msg:<>reassigned 5 enrollments from <strong>D. Kowalski</strong> to <strong>self</strong></> },
+  { id:"a09", t:"15:20:48", date:"Yesterday", actor:"AE", actorName:"Aetna",          actorKind:"payer",  action:"acknowledged",  entity:"ENR-104540", msg:<>acknowledged <a href="Enrollment Detail.html">ENR-104540</a> via CAQH ProView</> },
+  { id:"a10", t:"08:12:00", date:"Yesterday", actor:"SY", actorName:"System",         actorKind:"system", action:"opened-recred", entity:"6 cycles",  msg:<>opened recred windows for 6 enrollments due 2026-08</> },
+];
+
+// ─── Audit screen ───────────────────────────────────────────────────────
+const Audit = () => {
+  const [filter, setFilter] = useState("all");
+  const filtered = auditEvents.filter(e =>
+    filter === "all"     ? true :
+    filter === "user"    ? e.actorKind === "user" :
+    filter === "system"  ? e.actorKind === "system" :
+    filter === "payer"   ? e.actorKind === "payer" : true);
+
+  return (
+    <>
+      <div className="page-header">
+        <div>
+          <h1 className="page-h1">Audit log</h1>
+          <div className="page-sub">Immutable, append-only ledger · <strong>RLS-scoped</strong> to your tenant · 7-year retention</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn-ghost"><Icon name="download" size={13}/>Export (CSV)</button>
+        </div>
+      </div>
+
+      <div className="tab-strip">
+        <button className={`tab ${filter === "all" ? "is-active" : ""}`}    onClick={() => setFilter("all")}>All events <span className="tab-count">{auditEvents.length}</span></button>
+        <button className={`tab ${filter === "user" ? "is-active" : ""}`}   onClick={() => setFilter("user")}>People <span className="tab-count">{auditEvents.filter(e=>e.actorKind==="user").length}</span></button>
+        <button className={`tab ${filter === "system" ? "is-active" : ""}`} onClick={() => setFilter("system")}>System <span className="tab-count">{auditEvents.filter(e=>e.actorKind==="system").length}</span></button>
+        <button className={`tab ${filter === "payer" ? "is-active" : ""}`}  onClick={() => setFilter("payer")}>Payer <span className="tab-count">{auditEvents.filter(e=>e.actorKind==="payer").length}</span></button>
+      </div>
+
+      <div className="toolbar">
+        <div className="search-input"><Icon name="search" size={13}/><input placeholder="Search by actor, entity, action…"/></div>
+        <button className="fp">Date range <Icon name="chevron" size={11}/></button>
+        <button className="fp">Action <Icon name="chevron" size={11}/></button>
+        <button className="fp">Entity <Icon name="chevron" size={11}/></button>
+        <div className="toolbar-spacer"/>
+        <span className="toolbar-meta"><strong>{filtered.length}</strong> events</span>
+      </div>
+
+      <div className="audit-wrap">
+        {filtered.map(e => (
+          <div key={e.id} className="audit-row">
+            <div className="audit-time">
+              <div className="date">{e.date}</div>
+              {e.t}
+            </div>
+            <div className={`audit-actor ${e.actorKind === "system" ? "system" : e.actorKind === "payer" ? "payer" : ""}`}>
+              {e.actorKind === "system" ? "SY" : e.actor}
+            </div>
+            <div>
+              <div className="audit-msg">
+                <strong>{e.actorName}</strong> {e.action} {e.msg}
+              </div>
+              <div className="audit-meta">
+                actor.kind=<span className="mono">{e.actorKind}</span> · entity=<span className="mono">{e.entity}</span> · ip=<span className="mono">{e.actorKind === "system" ? "—" : "10.42.18.91"}</span>
+              </div>
+              {e.diff && (
+                <div className="audit-diff">
+                  {e.diff.map(([f, from, to], i) => (
+                    <div key={i}>
+                      <span className="field">{f}:</span> <span className="from">{from}</span><span className="arrow">→</span><span className="to">{to}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="audit-tag">
+              <span className={`pill ${
+                e.action === "approved" ? "pill-ok" :
+                e.action === "requested" || e.action === "flagged" ? "pill-warn" :
+                e.action === "transitioned" || e.action === "bulk-transitioned" ? "pill-teal" :
+                "pill-flat"}`}>
+                <span className="pill-dot"/>{e.action.replace("-"," ")}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+};
+
+// ─── Charts ─────────────────────────────────────────────────────────────
+const BarChart = ({ data, w = 540, h = 220, max = null }) => {
+  const M = max || Math.max(...data.map(d => d.value)) * 1.15;
+  const padL = 32, padB = 28, padT = 12, padR = 12;
+  const cw = w - padL - padR, ch = h - padT - padB;
+  const bw = cw / data.length * 0.62;
+  const gridY = [0, 0.25, 0.5, 0.75, 1].map(p => padT + ch * p);
+  return (
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display:"block" }}>
+      {gridY.map((y, i) => (
+        <line key={i} x1={padL} x2={w - padR} y1={y} y2={y}
+          stroke="rgba(14,20,60,0.08)" strokeDasharray="3 3"/>
+      ))}
+      {gridY.map((y, i) => (
+        <text key={i} x={padL - 8} y={y + 4} textAnchor="end" fontSize="10" fill="rgba(14,20,60,0.5)" fontFamily="JetBrains Mono">
+          {Math.round(M * (1 - i * 0.25))}
+        </text>
+      ))}
+      {data.map((d, i) => {
+        const cx = padL + (cw / data.length) * (i + 0.5);
+        const bh = (d.value / M) * ch;
+        return (
+          <g key={i}>
+            <rect x={cx - bw/2} y={padT + ch - bh} width={bw} height={bh}
+              fill={d.color || "var(--teal)"} rx="2"/>
+            <text x={cx} y={h - padB + 14} textAnchor="middle" fontSize="10" fill="rgba(14,20,60,0.6)">{d.label}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+const LineChart = ({ series, w = 540, h = 220, labels }) => {
+  const padL = 32, padB = 28, padT = 12, padR = 12;
+  const cw = w - padL - padR, ch = h - padT - padB;
+  const all = series.flatMap(s => s.data);
+  const M = Math.max(...all) * 1.15, m = 0;
+  const x = (i) => padL + (cw / (labels.length - 1)) * i;
+  const y = (v) => padT + ch - ((v - m) / (M - m)) * ch;
+  const gridY = [0, 0.25, 0.5, 0.75, 1].map(p => padT + ch * p);
+  return (
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display:"block" }}>
+      {gridY.map((gy, i) => <line key={i} x1={padL} x2={w - padR} y1={gy} y2={gy} stroke="rgba(14,20,60,0.08)" strokeDasharray="3 3"/>)}
+      {gridY.map((gy, i) => (
+        <text key={i} x={padL - 8} y={gy + 4} textAnchor="end" fontSize="10" fill="rgba(14,20,60,0.5)" fontFamily="JetBrains Mono">
+          {Math.round(M * (1 - i * 0.25))}
+        </text>
+      ))}
+      {series.map((s, si) => {
+        const path = s.data.map((v, i) => `${i ? "L" : "M"} ${x(i)} ${y(v)}`).join(" ");
+        return (
+          <g key={si}>
+            <path d={path} fill="none" stroke={s.color} strokeWidth="2"/>
+            {s.data.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="3" fill={s.color}/>)}
+          </g>
+        );
+      })}
+      {labels.map((l, i) => i % Math.ceil(labels.length / 6) === 0 && (
+        <text key={i} x={x(i)} y={h - padB + 14} textAnchor="middle" fontSize="10" fill="rgba(14,20,60,0.6)">{l}</text>
+      ))}
+    </svg>
+  );
+};
+
+const HBarChart = ({ data, w = 540, h = 220 }) => {
+  const M = Math.max(...data.map(d => d.value)) * 1.1;
+  const padL = 110, padR = 50, padT = 4, padB = 4;
+  const cw = w - padL - padR;
+  const rh = (h - padT - padB) / data.length;
+  const bh = rh * 0.6;
+  return (
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display:"block" }}>
+      {data.map((d, i) => {
+        const cy = padT + rh * (i + 0.5);
+        const bw = (d.value / M) * cw;
+        return (
+          <g key={i}>
+            <text x={padL - 8} y={cy + 4} textAnchor="end" fontSize="11" fill="var(--charcoal)" fontWeight="500">{d.label}</text>
+            <rect x={padL} y={cy - bh/2} width={cw} height={bh} fill="var(--lightgrey)" rx="2"/>
+            <rect x={padL} y={cy - bh/2} width={bw} height={bh} fill={d.color || "var(--teal)"} rx="2"/>
+            <text x={padL + bw + 6} y={cy + 4} fontSize="11" fill="var(--navy)" fontWeight="600" fontFamily="JetBrains Mono">{d.display || d.value}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ─── Reports screen ─────────────────────────────────────────────────────
+const Reports = ({ dateRange, setTweak }) => {
+  return (
+    <>
+      <div className="page-header">
+        <div>
+          <h1 className="page-h1">Reports</h1>
+          <div className="page-sub">Operational analytics across all clients · range: <strong>{dateRange === "30d" ? "Last 30 days" : dateRange === "90d" ? "Last 90 days" : dateRange === "ytd" ? "Year-to-date" : "Last 12 months"}</strong></div>
+        </div>
+        <div className="page-actions">
+          <button className={`fp ${dateRange === "30d" ? "active" : ""}`} onClick={() => setTweak("dateRange","30d")}>30d</button>
+          <button className={`fp ${dateRange === "90d" ? "active" : ""}`} onClick={() => setTweak("dateRange","90d")}>90d</button>
+          <button className={`fp ${dateRange === "ytd" ? "active" : ""}`} onClick={() => setTweak("dateRange","ytd")}>YTD</button>
+          <button className={`fp ${dateRange === "12m" ? "active" : ""}`} onClick={() => setTweak("dateRange","12m")}>12m</button>
+          <button className="btn-ghost" style={{ marginLeft:8 }}><Icon name="download" size={13}/>Export</button>
+        </div>
+      </div>
+
+      <div className="kpi-strip">
+        <div className="kpi-tile"><div className="kpi-l">Throughput</div><div className="kpi-v">142</div><div className="kpi-meta">Enrollments completed · +18 vs prior period</div></div>
+        <div className="kpi-tile"><div className="kpi-l">Avg time-to-effective</div><div className="kpi-v">71<small>d</small></div><div className="kpi-meta" style={{ color:"var(--green)" }}>−4d vs prior period</div></div>
+        <div className="kpi-tile"><div className="kpi-l">First-pass approval</div><div className="kpi-v">82<small>%</small></div><div className="kpi-meta">No info requests required</div></div>
+        <div className="kpi-tile"><div className="kpi-l">Biller touches / enrollment</div><div className="kpi-v">3.2</div><div className="kpi-meta">Median across active staff</div></div>
+      </div>
+
+      <div className="split-2">
+        <div className="chart-card" style={{ marginBottom:18 }}>
+          <h3 className="chart-h">Time-to-effective by payer</h3>
+          <p className="chart-sub">Median days from submission → effective_date · last 90d · top 8 payers</p>
+          <HBarChart data={[
+            { label:"Aetna",        value:62, color:"var(--teal)" },
+            { label:"Cigna",        value:55, color:"var(--teal)" },
+            { label:"Humana",       value:68, color:"var(--teal)" },
+            { label:"United HC",    value:71, color:"var(--teal)" },
+            { label:"BCBS Texas",   value:78, color:"var(--aqua)" },
+            { label:"Anthem",       value:81, color:"var(--aqua)" },
+            { label:"Medicaid",     value:96, color:"var(--amber)" },
+            { label:"Medicare",     value:124, color:"var(--amber)" },
+          ]}/>
+          <div style={{ fontSize:11, color:"rgba(14,20,60,0.5)", marginTop:8 }}>Government payers consistently slowest; commercial median 65d.</div>
+        </div>
+        <div className="chart-card" style={{ marginBottom:18 }}>
+          <h3 className="chart-h">Throughput by month</h3>
+          <p className="chart-sub">Submissions vs effective transitions · last 12 months</p>
+          <div className="legend">
+            <span className="legend-dot" style={{ color:"var(--navy)" }}>Submitted</span>
+            <span className="legend-dot" style={{ color:"var(--teal)" }}>Effective</span>
+          </div>
+          <LineChart
+            labels={["Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May"]}
+            series={[
+              { color:"var(--navy)", data:[88, 94, 102, 96, 110, 114, 98, 122, 118, 132, 128, 142] },
+              { color:"var(--teal)", data:[62, 70,  78,  81,  88,  94, 86, 102, 108, 116, 122, 124] },
+            ]}/>
+        </div>
+      </div>
+
+      <div className="split-2">
+        <div className="chart-card" style={{ marginBottom:18 }}>
+          <h3 className="chart-h">Submissions by week</h3>
+          <p className="chart-sub">Enrollment events created · last 12 weeks</p>
+          <BarChart data={[
+            { label:"W1",  value:18, color:"var(--teal)" },
+            { label:"W2",  value:22, color:"var(--teal)" },
+            { label:"W3",  value:16, color:"var(--teal)" },
+            { label:"W4",  value:24, color:"var(--teal)" },
+            { label:"W5",  value:28, color:"var(--teal)" },
+            { label:"W6",  value:21, color:"var(--teal)" },
+            { label:"W7",  value:32, color:"var(--teal)" },
+            { label:"W8",  value:29, color:"var(--teal)" },
+            { label:"W9",  value:34, color:"var(--teal)" },
+            { label:"W10", value:38, color:"var(--teal)" },
+            { label:"W11", value:36, color:"var(--teal)" },
+            { label:"W12", value:42, color:"var(--navy)" },
+          ]}/>
+        </div>
+        <div className="chart-card" style={{ marginBottom:18 }}>
+          <h3 className="chart-h">Biller touches per enrollment</h3>
+          <p className="chart-sub">Distribution across active staff · last 90d</p>
+          <HBarChart data={[
+            { label:"M. Alvarez", value:3.4, display:"3.4 / enr · 41" },
+            { label:"D. Kowalski",value:2.9, display:"2.9 / enr · 38" },
+            { label:"R. Stein",   value:3.8, display:"3.8 / enr · 32", color:"var(--amber)" },
+            { label:"L. Burke",   value:2.6, display:"2.6 / enr · 28" },
+            { label:"S. Patel",   value:3.1, display:"3.1 / enr · 24" },
+          ]}/>
+          <div style={{ fontSize:11, color:"rgba(14,20,60,0.5)", marginTop:8 }}>R. Stein flagged for QA review — sustained 30%+ above team median.</div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-head">
+          <div>
+            <h3 className="card-h">Denial reasons · last 90 days</h3>
+            <div className="card-sub">23 denials total · disclosed only at internal level (not in client view per §C2)</div>
+          </div>
+          <button className="fp"><Icon name="download" size={11}/></button>
+        </div>
+        <div className="card-body flush">
+          <table className="tbl">
+            <thead><tr><th>Reason</th><th>Count</th><th>% of denials</th><th>Top payer</th><th>Resubmission rate</th></tr></thead>
+            <tbody>
+              {[
+                ["Provider not in network direction", 7, 30, "United HC", 86],
+                ["Missing documentation",             6, 26, "Aetna",     100],
+                ["Application timed out (90d)",       4, 17, "Medicaid",  75],
+                ["Specialty mismatch",                3, 13, "BCBS",      67],
+                ["Duplicate provider record",         2, 9,  "Cigna",     50],
+                ["Other / payer discretion",          1, 4,  "Anthem",    0],
+              ].map(([r, c, p, top, re], i) => (
+                <tr key={i}>
+                  <td><span className="tbl-name" style={{ fontWeight:500 }}>{r}</span></td>
+                  <td><span className="mono">{c}</span></td>
+                  <td><span className="mono">{p}%</span></td>
+                  <td>{top}</td>
+                  <td>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <div style={{ width:100, height:5, background:"var(--lightgrey)", borderRadius:3 }}>
+                        <div style={{ width:`${re}%`, height:"100%", background:re >= 75 ? "var(--green)" : re >= 50 ? "var(--teal)" : "var(--amber)", borderRadius:3 }}/>
+                      </div>
+                      <span className="mono" style={{ fontWeight:600 }}>{re}%</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ─── App ────────────────────────────────────────────────────────────────
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  const tabs = [
+    { key:"documents", label:"Documents", count:documents.length, icon:"documents" },
+    { key:"audit",     label:"Audit log", count:auditEvents.length, icon:"audit" },
+    { key:"reports",   label:"Reports",   count:null, icon:"reports" },
+  ];
+
+  const sec = t.screen === "audit" ? "audit" : t.screen === "reports" ? "reports" : "documents";
+  const crumb = t.screen === "audit" ? "Audit log" : t.screen === "reports" ? "Reports" : "Documents";
+
+  return (
+    <>
+      <TopBar crumb={crumb}/>
+      <div className="app-body">
+        <Sidebar activeKey={sec}/>
+        <main className="main">
+          <div className="tab-strip">
+            {tabs.map(tab => (
+              <button key={tab.key} className={`tab ${t.screen === tab.key ? "is-active" : ""}`} onClick={() => setTweak("screen", tab.key)}>
+                <Icon name={tab.icon} size={13}/>{tab.label}
+                {tab.count != null && <span className="tab-count">{tab.count}</span>}
+              </button>
+            ))}
+          </div>
+
+          {t.screen === "documents" && <Documents/>}
+          {t.screen === "audit"     && <Audit/>}
+          {t.screen === "reports"   && <Reports dateRange={t.dateRange} setTweak={setTweak}/>}
+        </main>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Screen">
+          <TweakRadio value={t.screen} onChange={v => setTweak("screen", v)}
+            options={[
+              { value:"documents", label:"Documents" },
+              { value:"audit",     label:"Audit" },
+              { value:"reports",   label:"Reports" },
+            ]}/>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

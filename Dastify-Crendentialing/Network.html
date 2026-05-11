@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Dastify — Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:#0E143C; --teal:#16C1C2; --aqua:#4ECED1; --charcoal:#222;
+  --lightgrey:#F6F7FB; --grey:#C6CCD8; --white:#fff;
+  --red:#B3261E; --green:#2E7D32; --amber:#F4A300;
+  --navy-04:rgba(14,20,60,0.04); --navy-02:rgba(14,20,60,0.02);
+  --teal-12:rgba(22,193,194,0.12); --teal-08:rgba(22,193,194,0.08);
+  --red-08:rgba(179,38,30,0.08); --green-08:rgba(46,125,50,0.08); --amber-08:rgba(244,163,0,0.10);
+  --shadow-xs:0 1px 0 rgba(14,20,60,0.04);
+  --shadow-sm:0 1px 2px rgba(14,20,60,0.06), 0 1px 1px rgba(14,20,60,0.04);
+  --border:rgba(198,204,216,0.55);
+}
+*,*::before,*::after { box-sizing:border-box; }
+html, body { margin:0; padding:0; }
+body {
+  font-family:'Poppins',-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased; color:var(--charcoal); background:var(--lightgrey);
+  font-size:14px; line-height:22px;
+}
+button, input, select { font-family:inherit; }
+button { cursor:pointer; }
+a { color:inherit; text-decoration:none; }
+
+.topbar {
+  height:56px; background:var(--navy); color:white;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px; position:sticky; top:0; z-index:50;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.brand { display:flex; align-items:center; gap:10px; font-weight:600; }
+.brand-mark {
+  width:26px; height:26px; border-radius:6px; background:var(--teal);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--navy); font-size:12px; font-weight:700;
+}
+.brand-name { font-size:15px; }
+.brand-sep { color:rgba(255,255,255,0.3); margin:0 4px; }
+.brand-page { font-size:13px; color:rgba(255,255,255,0.65); font-weight:400; }
+.brand-crumb { font-size:13px; color:white; font-weight:400; }
+.topbar-search {
+  display:flex; align-items:center; gap:8px; padding:6px 10px;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1);
+  border-radius:6px; color:rgba(255,255,255,0.65); font-size:12px; min-width:300px;
+}
+.topbar-search kbd {
+  margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px;
+  padding:1px 5px; background:rgba(255,255,255,0.1); border-radius:3px;
+}
+.topbar-actions { display:flex; align-items:center; gap:6px; }
+.topbar-icon-btn {
+  width:34px; height:34px; border-radius:6px; background:none; border:none;
+  color:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center;
+  position:relative;
+}
+.topbar-icon-btn:hover { background:rgba(255,255,255,0.08); color:white; }
+.topbar-icon-btn .ping {
+  position:absolute; top:6px; right:6px; width:8px; height:8px;
+  background:var(--teal); border-radius:50%; box-shadow:0 0 0 2px var(--navy);
+}
+.avatar {
+  width:30px; height:30px; border-radius:50%;
+  background:var(--teal); color:var(--navy);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:600;
+}
+
+.app-body { display:flex; min-height:calc(100vh - 56px); }
+.sidebar {
+  width:240px; flex-shrink:0; background:var(--white);
+  border-right:1px solid var(--border); padding:24px 0;
+}
+.sidebar-section { padding:0 12px; }
+.sidebar-label {
+  font-size:10px; font-weight:600; letter-spacing:0.14em;
+  text-transform:uppercase; color:rgba(14,20,60,0.45);
+  padding:0 12px 12px;
+}
+.sidebar-item {
+  display:flex; align-items:center; gap:12px; padding:9px 12px;
+  border-radius:6px; color:rgba(14,20,60,0.7);
+  font-size:13px; font-weight:500;
+  position:relative; margin-bottom:1px; transition:all 120ms;
+}
+.sidebar-item:hover { background:var(--navy-04); color:var(--navy); }
+.sidebar-item.is-active { background:var(--teal-08); color:var(--navy); font-weight:600; }
+.sidebar-item.is-active::before {
+  content:""; position:absolute; left:-12px; top:6px; bottom:6px;
+  width:2px; background:var(--teal); border-radius:0 2px 2px 0;
+}
+.sidebar-item.is-active svg { color:var(--teal); }
+.sidebar-badge {
+  margin-left:auto; padding:1px 7px;
+  background:var(--amber-08); color:var(--amber);
+  border-radius:9999px; font-size:10px; font-weight:600;
+}
+.sidebar-divider { margin:16px 24px; height:1px; background:var(--border); }
+
+.main { flex:1; min-width:0; padding:28px 28px 64px; max-width:1600px; }
+.page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:18px; }
+.page-h1 { font-size:24px; font-weight:600; color:var(--navy); margin:0; letter-spacing:-0.005em; }
+.page-sub { font-size:13px; color:rgba(14,20,60,0.6); margin-top:4px; }
+.page-sub strong { color:var(--charcoal); font-weight:600; }
+.page-actions { display:flex; gap:8px; }
+
+.tab-strip {
+  display:flex; gap:2px; border-bottom:1px solid var(--border);
+  margin-bottom:16px;
+}
+.tab {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 14px; background:none; border:none;
+  font-size:13px; font-weight:500; color:rgba(14,20,60,0.6);
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+  transition:all 120ms;
+}
+.tab:hover { color:var(--navy); }
+.tab.is-active { color:var(--navy); font-weight:600; border-bottom-color:var(--teal); }
+.tab-count {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:20px; height:18px; padding:0 6px;
+  background:var(--lightgrey); color:rgba(14,20,60,0.6);
+  border-radius:9px; font-size:11px; font-weight:600;
+}
+.tab.is-active .tab-count { background:var(--teal-12); color:var(--teal); }
+
+.toolbar {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 14px; background:white;
+  border:1px solid var(--border); border-radius:8px 8px 0 0;
+  border-bottom:none;
+}
+.search-input {
+  flex:1; max-width:340px;
+  display:flex; align-items:center; gap:8px;
+  padding:7px 11px; background:var(--lightgrey);
+  border:1px solid var(--border); border-radius:6px;
+  color:rgba(14,20,60,0.55); font-size:13px;
+}
+.search-input input { border:none; background:none; outline:none; flex:1; font-size:13px; color:var(--charcoal); }
+.fp {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 11px; background:white;
+  border:1px solid var(--border); border-radius:6px;
+  font-size:12px; font-weight:500; color:var(--charcoal);
+}
+.fp:hover { background:var(--lightgrey); border-color:var(--grey); }
+.toolbar-spacer { flex:1; }
+.toolbar-meta { font-size:12px; color:rgba(14,20,60,0.55); }
+.toolbar-meta strong { color:var(--charcoal); font-weight:600; }
+
+.tbl-wrap {
+  background:white; border:1px solid var(--border); border-radius:0 0 8px 8px;
+  overflow:hidden; box-shadow:var(--shadow-xs);
+}
+.tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.tbl thead th {
+  text-align:left; padding:9px 16px;
+  font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase;
+  color:rgba(14,20,60,0.6);
+  border-bottom:1px solid var(--border); background:var(--lightgrey);
+  white-space:nowrap;
+}
+.tbl thead th.right, .tbl tbody td.right { text-align:right; }
+.tbl tbody td {
+  padding:13px 16px; border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+.tbl tbody tr:last-child td { border-bottom:none; }
+.tbl tbody tr:hover { background:var(--navy-02); cursor:pointer; }
+.tbl-name { font-weight:600; color:var(--navy); font-size:13px; }
+.tbl-sub { font-size:11px; color:rgba(14,20,60,0.55); margin-top:2px; }
+.mono { font-family:'JetBrains Mono', monospace; font-variant-numeric:tabular-nums; font-size:12px; }
+
+.cell-name { display:flex; align-items:center; gap:10px; }
+.entity-icon {
+  width:32px; height:32px; border-radius:6px;
+  background:var(--teal-08); color:var(--navy);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; flex-shrink:0;
+}
+.entity-icon.payer-icon { background:var(--lightgrey); }
+.entity-icon.client-icon { background:var(--navy); color:white; }
+
+.pill {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:2px 8px; border-radius:4px;
+  font-size:10px; font-weight:600; letter-spacing:0.06em;
+  text-transform:uppercase; line-height:1.4; white-space:nowrap;
+}
+.pill-warn   { background:var(--amber-08); color:#7a4f00; }
+.pill-danger { background:var(--red-08);   color:var(--red); }
+.pill-ok     { background:var(--green-08); color:#1B5E20; }
+.pill-flat   { background:var(--lightgrey); color:rgba(14,20,60,0.6); }
+.pill-teal   { background:var(--teal-08); color:var(--navy); }
+.pill-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+.health-bar {
+  width:140px; height:6px; background:var(--lightgrey);
+  border-radius:3px; overflow:hidden; display:flex;
+}
+.health-bar > span { height:100%; }
+.health-num { font-size:12px; font-weight:600; color:var(--navy); font-variant-numeric:tabular-nums; }
+
+.spark {
+  display:inline-flex; align-items:flex-end; gap:1.5px; height:18px;
+}
+.spark > span {
+  width:3px; background:var(--teal); border-radius:1px; opacity:0.8;
+  display:inline-block;
+}
+
+/* Detail page */
+.detail-back {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; background:white; border:1px solid var(--border);
+  border-radius:6px; font-size:12px; font-weight:500; color:var(--charcoal);
+  margin-bottom:14px;
+}
+.detail-back:hover { background:var(--lightgrey); }
+
+.detail-hero {
+  background:white; border:1px solid var(--border); border-radius:8px;
+  padding:24px; margin-bottom:18px; display:flex; gap:24px;
+  box-shadow:var(--shadow-xs);
+}
+.hero-icon {
+  width:64px; height:64px; border-radius:10px; flex-shrink:0;
+  background:var(--navy); color:white;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:700; letter-spacing:0.04em;
+}
+.hero-icon.payer { background:var(--lightgrey); color:var(--navy); border:1px solid var(--border); }
+.hero-icon.provider { background:var(--teal-08); color:var(--navy); }
+.hero-l { flex:1; min-width:0; }
+.hero-eyebrow {
+  font-size:10px; font-weight:600; letter-spacing:0.14em;
+  text-transform:uppercase; color:rgba(14,20,60,0.55);
+  display:flex; gap:6px; align-items:center; margin-bottom:6px;
+}
+.hero-h1 {
+  font-size:24px; font-weight:600; color:var(--navy);
+  margin:0 0 6px; letter-spacing:-0.005em;
+}
+.hero-meta {
+  font-size:13px; color:rgba(14,20,60,0.6);
+  display:flex; flex-wrap:wrap; gap:6px 16px;
+}
+.hero-meta strong { color:var(--charcoal); font-weight:600; }
+.hero-r { display:flex; align-items:flex-start; gap:8px; flex-shrink:0; }
+
+.kpi-strip {
+  display:grid; grid-template-columns:repeat(4, 1fr);
+  gap:14px; margin-bottom:18px;
+}
+@media (max-width:1100px) { .kpi-strip { grid-template-columns:repeat(2, 1fr); } }
+.kpi-tile {
+  background:white; border:1px solid var(--border); border-radius:8px; padding:16px 18px;
+}
+.kpi-l {
+  font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase;
+  color:rgba(14,20,60,0.55); margin-bottom:8px;
+}
+.kpi-v {
+  font-size:26px; font-weight:700; color:var(--navy);
+  font-variant-numeric:tabular-nums; line-height:30px;
+  display:flex; align-items:baseline; gap:4px;
+}
+.kpi-v small { font-size:13px; color:rgba(14,20,60,0.55); font-weight:500; }
+.kpi-meta { font-size:11px; color:rgba(14,20,60,0.55); margin-top:6px; }
+
+.split-2 { display:grid; grid-template-columns:65fr 35fr; gap:18px; }
+@media (max-width:1100px) { .split-2 { grid-template-columns:1fr; } }
+
+.card {
+  background:white; border:1px solid var(--border); border-radius:8px;
+  box-shadow:var(--shadow-xs); overflow:hidden; margin-bottom:18px;
+}
+.card-head {
+  padding:14px 18px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.card-h { font-size:13px; font-weight:600; color:var(--navy); margin:0; }
+.card-sub { font-size:12px; color:rgba(14,20,60,0.55); margin-top:2px; }
+.card-body { padding:18px; }
+.card-body.flush { padding:0; }
+
+.detail-rows { display:flex; flex-direction:column; gap:0; }
+.detail-row {
+  display:grid; grid-template-columns:130px 1fr;
+  gap:14px; padding:9px 0; border-bottom:1px dashed var(--border);
+  font-size:13px;
+}
+.detail-row:last-child { border-bottom:none; }
+.detail-row dt {
+  font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase;
+  color:rgba(14,20,60,0.55); padding-top:1px;
+}
+.detail-row dd { margin:0; color:var(--charcoal); }
+.detail-row dd a { color:var(--teal); font-weight:500; }
+
+.contact-list { display:flex; flex-direction:column; gap:8px; }
+.contact-row {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; background:var(--lightgrey);
+  border-radius:6px;
+}
+.contact-row .avatar { width:34px; height:34px; font-size:12px; }
+.contact-l { flex:1; min-width:0; }
+.contact-name { font-size:13px; font-weight:600; color:var(--navy); }
+.contact-meta { font-size:11px; color:rgba(14,20,60,0.55); }
+.contact-role {
+  font-size:10px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
+  padding:2px 7px; background:white; border-radius:3px;
+  color:rgba(14,20,60,0.6); border:1px solid var(--border);
+}
+
+/* license/state grid for provider */
+.state-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(78px, 1fr));
+  gap:6px;
+}
+.state-cell {
+  padding:8px 6px; text-align:center;
+  background:var(--lightgrey); border-radius:6px;
+  border:1px solid var(--border);
+  font-size:11px;
+}
+.state-cell.is-licensed { background:var(--teal-08); border-color:var(--teal-12); }
+.state-cell-code { font-weight:700; color:var(--navy); font-size:14px; line-height:18px; }
+.state-cell-meta { font-size:10px; color:rgba(14,20,60,0.55); margin-top:2px; }
+
+/* btns */
+.btn-primary {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 16px; background:var(--navy); color:white;
+  border:1px solid var(--navy); border-radius:6px;
+  font-size:13px; font-weight:600;
+}
+.btn-primary:hover { background:#1a2255; }
+.btn-ghost {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 14px; background:white; color:var(--charcoal);
+  border:1px solid var(--border); border-radius:6px;
+  font-size:13px; font-weight:500;
+}
+.btn-ghost:hover { background:var(--lightgrey); border-color:var(--grey); }
+
+::selection { background:var(--teal-12); color:var(--navy); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+/* global React, ReactDOM, TweaksPanel, useTweaks, TweakSection, TweakRadio */
+const { useState, useMemo } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "screen": "clients_list"
+}/*EDITMODE-END*/;
+
+const Icon = ({ name, size = 16 }) => {
+  const s = { fill:"none", stroke:"currentColor", strokeWidth:1.6, strokeLinecap:"round", strokeLinejoin:"round" };
+  const p = {
+    inbox:<><path d="M22 12h-6l-2 3h-4l-2-3H2" {...s}/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" {...s}/></>,
+    bell:<><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" {...s}/><path d="M14 21a2 2 0 0 1-4 0" {...s}/></>,
+    search:<><circle cx="11" cy="11" r="7" {...s}/><path d="m21 21-4.3-4.3" {...s}/></>,
+    settings:<><circle cx="12" cy="12" r="3" {...s}/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8" {...s}/></>,
+    dashboard:<><rect x="3" y="3" width="7" height="9" {...s}/><rect x="14" y="3" width="7" height="5" {...s}/><rect x="14" y="12" width="7" height="9" {...s}/><rect x="3" y="16" width="7" height="5" {...s}/></>,
+    clients:<><path d="M3 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" {...s}/><circle cx="10" cy="7" r="4" {...s}/><path d="M19 8a3 3 0 1 0-3-3" {...s}/></>,
+    providers:<><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" {...s}/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" {...s}/><path d="M16 3v3M14.5 4.5h3" {...s}/></>,
+    enrollments:<><rect x="3" y="4" width="18" height="16" rx="1.5" {...s}/><path d="M3 9h18M8 4v16" {...s}/></>,
+    recreds:<><circle cx="12" cy="12" r="9" {...s}/><path d="M12 7v5l3 2" {...s}/></>,
+    payers:<><rect x="3" y="6" width="18" height="13" rx="1.5" {...s}/><path d="M3 10h18M7 15h3" {...s}/></>,
+    documents:<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" {...s}/><path d="M14 2v6h6" {...s}/></>,
+    audit:<><circle cx="6" cy="6" r="2" {...s}/><circle cx="18" cy="18" r="2" {...s}/><path d="M6 8v8a2 2 0 0 0 2 2h8" {...s}/></>,
+    plus:<><path d="M12 5v14M5 12h14" {...s}/></>,
+    download:<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" {...s}/></>,
+    arrow_back:<><path d="M19 12H5M12 19l-7-7 7-7" {...s}/></>,
+    arrow:<><path d="M5 12h14M13 5l7 7-7 7" {...s}/></>,
+    chevron:<><path d="M6 9l6 6 6-6" {...s}/></>,
+    open:<><path d="M15 3h6v6M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" {...s}/></>,
+    edit:<><path d="m18 2 4 4-14 14H4v-4z" {...s}/></>,
+    mail:<><rect x="2" y="4" width="20" height="16" rx="2" {...s}/><path d="m22 7-10 6L2 7" {...s}/></>,
+    phone:<><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.91.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" {...s}/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>{p[name]}</svg>;
+};
+
+// ─── Data ───────────────────────────────────────────────────────────────
+const clients = [
+  { id:"khan",     name:"Khan Internal Medicine",  city:"Houston, TX", providers:1,  enrollments:38, open:14, mrr:1200, contractStart:"2024-09-01", health:88, spark:[3,4,3,5,4,5,6,5,6,7,8,8] },
+  { id:"northbay", name:"North Bay Cardiology",    city:"Phoenix, AZ", providers:3,  enrollments:62, open:9,  mrr:3600, contractStart:"2024-04-15", health:74, spark:[5,6,7,6,8,7,8,9,7,8,9,10] },
+  { id:"sierra",   name:"Sierra Family Health",    city:"Reno, NV",    providers:6,  enrollments:108, open:21, mrr:7200, contractStart:"2023-11-08", health:92, spark:[2,4,3,5,5,7,6,8,9,9,10,11] },
+  { id:"cascade",  name:"Cascade Pediatrics",      city:"Seattle, WA", providers:4,  enrollments:71, open:6,  mrr:4800, contractStart:"2024-01-22", health:81, spark:[6,5,7,6,7,8,9,8,10,11,10,12] },
+  { id:"lakeshore",name:"Lakeshore Surgery Group", city:"Chicago, IL", providers:8,  enrollments:144, open:32, mrr:9600, contractStart:"2023-06-30", health:67, spark:[8,7,9,8,10,9,11,12,11,13,14,13] },
+  { id:"horizon",  name:"Horizon Women's Care",    city:"Denver, CO",  providers:2,  enrollments:24, open:3,  mrr:2400, contractStart:"2025-02-14", health:95, spark:[1,2,2,3,3,4,4,5,5,6,6,7] },
+];
+
+const providers = [
+  { id:"khan_imran", name:"Dr. Imran Khan",     specialty:"Internal Medicine", npi:"1234567890", caqh:"12345678", clientId:"khan",      states:["TX","CA","FL"],           enrollments:38, open:14, status:"active" },
+  { id:"park_lina",  name:"Dr. Lina Park",      specialty:"Cardiology",        npi:"2345678901", caqh:"23456789", clientId:"northbay",  states:["AZ","NV"],                enrollments:24, open:5,  status:"active" },
+  { id:"velez_marco",name:"Dr. Marco Velez",    specialty:"Cardiology",        npi:"3456789012", caqh:"34567890", clientId:"northbay",  states:["AZ"],                     enrollments:18, open:4,  status:"active" },
+  { id:"tanaka_yuki",name:"Dr. Yuki Tanaka",    specialty:"Family Medicine",   npi:"4567890123", caqh:"45678901", clientId:"sierra",    states:["NV","CA"],                enrollments:22, open:3,  status:"active" },
+  { id:"okonkwo_sam",name:"Dr. Sam Okonkwo",    specialty:"Family Medicine",   npi:"5678901234", caqh:"56789012", clientId:"sierra",    states:["NV"],                     enrollments:16, open:2,  status:"active" },
+  { id:"iyer_priya", name:"Dr. Priya Iyer",     specialty:"Pediatrics",        npi:"6789012345", caqh:"67890123", clientId:"cascade",   states:["WA","OR"],                enrollments:28, open:1,  status:"active" },
+  { id:"nguyen_anh", name:"Dr. Anh Nguyen",     specialty:"Pediatrics",        npi:"7890123456", caqh:"78901234", clientId:"cascade",   states:["WA"],                     enrollments:14, open:0,  status:"effective" },
+  { id:"cruz_dani",  name:"Dr. Daniela Cruz",   specialty:"General Surgery",   npi:"8901234567", caqh:"89012345", clientId:"lakeshore", states:["IL","WI","IN"],           enrollments:34, open:8,  status:"active" },
+];
+
+const payers = [
+  { id:"aetna",   name:"Aetna",          type:"Commercial", states:48, providers:124, enrollments:412, avgDays:62, denialRate:8.4,  caqh:true,  spark:[60,58,62,65,61,59,62,63,60,62,64,62] },
+  { id:"bcbs_tx", name:"BCBS Texas",     type:"Blues",      states:1,  providers:42,  enrollments:88,  avgDays:78, denialRate:6.1,  caqh:true,  spark:[80,82,76,78,80,76,78,79,77,78,80,78] },
+  { id:"unitedhc",name:"United HealthCare", type:"Commercial", states:50, providers:118, enrollments:388, avgDays:71, denialRate:11.2, caqh:true,  spark:[68,70,72,71,69,71,73,70,72,71,69,71] },
+  { id:"cigna",   name:"Cigna",          type:"Commercial", states:40, providers:62,  enrollments:156, avgDays:55, denialRate:9.8,  caqh:true,  spark:[52,54,56,53,55,57,54,55,56,55,53,55] },
+  { id:"humana",  name:"Humana",         type:"Commercial", states:35, providers:48,  enrollments:114, avgDays:68, denialRate:7.9,  caqh:true,  spark:[64,66,68,70,67,68,69,68,70,68,67,68] },
+  { id:"medicare",name:"Medicare",       type:"Government", states:50, providers:142, enrollments:512, avgDays:124,denialRate:4.2,  caqh:false, spark:[120,122,118,124,126,124,128,124,122,124,126,124] },
+  { id:"medicaid",name:"Medicaid",       type:"Government", states:50, providers:108, enrollments:388, avgDays:96, denialRate:5.8,  caqh:false, spark:[94,96,98,95,97,98,96,97,99,96,98,96] },
+  { id:"anthem",  name:"Anthem",         type:"Blues",      states:14, providers:38,  enrollments:96,  avgDays:81, denialRate:7.2,  caqh:true,  spark:[78,80,82,79,81,83,80,82,81,80,82,81] },
+];
+
+const allStates = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
+
+// ─── Sidebar ────────────────────────────────────────────────────────────
+const Sidebar = ({ activeKey }) => {
+  const nav = [
+    { key:"dashboard",   icon:"dashboard",   label:"Dashboard",   href:"Dashboard.html" },
+    { key:"inbox",       icon:"inbox",       label:"Inbox",       badge:6, href:"Inbox.html" },
+    { key:"clients",     icon:"clients",     label:"Clients" },
+    { key:"providers",   icon:"providers",   label:"Providers" },
+    { key:"enrollments", icon:"enrollments", label:"Enrollments", href:"Enrollments.html" },
+    { key:"recreds",     icon:"recreds",     label:"Recreds Queue", badge:12, href:"Recreds Pipeline.html" },
+    { key:"payers",      icon:"payers",      label:"Payers" },
+    { key:"documents",   icon:"documents",   label:"Documents" },
+    { key:"audit",       icon:"audit",       label:"Audit Log" },
+  ];
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-section">
+        <div className="sidebar-label">Workspace</div>
+        {nav.map(item => (
+          <a key={item.key} className={`sidebar-item ${item.key === activeKey ? "is-active" : ""}`} href={item.href || "#"}>
+            <Icon name={item.icon} size={16}/><span>{item.label}</span>
+            {item.badge != null && <span className="sidebar-badge">{item.badge}</span>}
+          </a>
+        ))}
+      </div>
+      <div className="sidebar-divider"/>
+      <div className="sidebar-section">
+        <a className="sidebar-item" href="#"><Icon name="settings" size={16}/><span>Settings</span></a>
+      </div>
+    </aside>
+  );
+};
+
+const TopBar = ({ crumbs }) => (
+  <div className="topbar">
+    <div className="brand">
+      <span className="brand-mark">D</span>
+      <span className="brand-name">Dastify</span>
+      {crumbs.map((c, i) => (
+        <React.Fragment key={i}>
+          <span className="brand-sep">/</span>
+          {c.href ? <a className="brand-page" href={c.href} onClick={c.onClick} style={{ color:"rgba(255,255,255,0.65)" }}>{c.label}</a> : <span className={i === crumbs.length-1 ? "brand-crumb" : "brand-page"}>{c.label}</span>}
+        </React.Fragment>
+      ))}
+    </div>
+    <div className="topbar-search">
+      <Icon name="search" size={14}/>
+      <span>Search providers, clients, payers…</span>
+      <kbd>⌘K</kbd>
+    </div>
+    <div className="topbar-actions">
+      <a className="topbar-icon-btn" href="Inbox.html"><Icon name="bell" size={16}/><span className="ping"/></a>
+      <button className="topbar-icon-btn"><Icon name="settings" size={16}/></button>
+      <div className="avatar" style={{ marginLeft:8 }}>MA</div>
+    </div>
+  </div>
+);
+
+// ─── Sparkline ──────────────────────────────────────────────────────────
+const Spark = ({ data, color = "var(--teal)" }) => {
+  const max = Math.max(...data);
+  return (
+    <span className="spark">
+      {data.map((v, i) => <span key={i} style={{ height:`${(v/max)*100}%`, background:color }}/>)}
+    </span>
+  );
+};
+
+// ─── Health bar ─────────────────────────────────────────────────────────
+const Health = ({ score }) => {
+  const color = score >= 85 ? "var(--green)" : score >= 70 ? "var(--teal)" : score >= 55 ? "var(--amber)" : "var(--red)";
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+      <div className="health-bar">
+        <span style={{ width:`${score}%`, background:color }}/>
+      </div>
+      <span className="health-num">{score}</span>
+    </div>
+  );
+};
+
+// ─── Initials helper ────────────────────────────────────────────────────
+const initials = (name) => name.split(/\s+/).filter(w => w !== "Dr.").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+
+// ─── Clients list ───────────────────────────────────────────────────────
+const ClientsList = ({ go }) => (
+  <>
+    <div className="page-header">
+      <div>
+        <h1 className="page-h1">Clients</h1>
+        <div className="page-sub"><strong>{clients.length}</strong> active clients · <strong>${clients.reduce((s,c)=>s+c.mrr,0).toLocaleString()}</strong> MRR · <strong>{clients.reduce((s,c)=>s+c.providers,0)}</strong> providers</div>
+      </div>
+      <div className="page-actions">
+        <button className="btn-ghost"><Icon name="download" size={13}/>Export</button>
+        <button className="btn-primary"><Icon name="plus" size={13}/>New client</button>
+      </div>
+    </div>
+    <div className="toolbar">
+      <div className="search-input"><Icon name="search" size={13}/><input placeholder="Search clients…"/></div>
+      <button className="fp">Health <Icon name="chevron" size={11}/></button>
+      <button className="fp">Tier <Icon name="chevron" size={11}/></button>
+      <div className="toolbar-spacer"/>
+      <span className="toolbar-meta"><strong>{clients.length}</strong> clients</span>
+    </div>
+    <div className="tbl-wrap">
+      <table className="tbl">
+        <thead><tr>
+          <th>Client</th><th>Providers</th><th>Enrollments</th><th>Open</th><th>Health</th><th className="right">MRR</th><th>12-mo trend</th>
+        </tr></thead>
+        <tbody>
+          {clients.map(c => (
+            <tr key={c.id} onClick={() => go("client_detail", { id:c.id })}>
+              <td>
+                <div className="cell-name">
+                  <div className="entity-icon client-icon">{initials(c.name)}</div>
+                  <div>
+                    <div className="tbl-name">{c.name}</div>
+                    <div className="tbl-sub">{c.city} · since {c.contractStart}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span className="mono">{c.providers}</span></td>
+              <td><span className="mono">{c.enrollments}</span></td>
+              <td>{c.open > 10 ? <span className="pill pill-warn"><span className="pill-dot"/>{c.open}</span> : <span className="mono">{c.open}</span>}</td>
+              <td><Health score={c.health}/></td>
+              <td className="right"><span className="mono" style={{ color:"var(--navy)", fontWeight:600 }}>${c.mrr.toLocaleString()}</span></td>
+              <td><Spark data={c.spark}/></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </>
+);
+
+// ─── Client detail ──────────────────────────────────────────────────────
+const ClientDetail = ({ id, go }) => {
+  const c = clients.find(x => x.id === id) || clients[0];
+  const myProviders = providers.filter(p => p.clientId === c.id);
+  return (
+    <>
+      <button className="detail-back" onClick={() => go("clients_list")}><Icon name="arrow_back" size={12}/>All clients</button>
+      <div className="detail-hero">
+        <div className="hero-icon">{initials(c.name)}</div>
+        <div className="hero-l">
+          <div className="hero-eyebrow">CLIENT · {c.id.toUpperCase()}</div>
+          <h1 className="hero-h1">{c.name}</h1>
+          <div className="hero-meta">
+            <span><strong>{c.city}</strong></span>
+            <span>Contract since <strong>{c.contractStart}</strong></span>
+            <span>Net 30</span>
+            <span><span className="pill pill-ok"><span className="pill-dot"/>Active</span></span>
+          </div>
+        </div>
+        <div className="hero-r">
+          <button className="btn-ghost"><Icon name="edit" size={13}/>Edit</button>
+          <button className="btn-primary"><Icon name="plus" size={13}/>New enrollment</button>
+        </div>
+      </div>
+      <div className="kpi-strip">
+        <div className="kpi-tile"><div className="kpi-l">Providers</div><div className="kpi-v">{c.providers}</div><div className="kpi-meta">All active</div></div>
+        <div className="kpi-tile"><div className="kpi-l">Enrollments</div><div className="kpi-v">{c.enrollments}</div><div className="kpi-meta">{c.open} open · {c.enrollments - c.open} effective</div></div>
+        <div className="kpi-tile"><div className="kpi-l">Account health</div><div className="kpi-v" style={{ color:c.health >= 85 ? "var(--green)" : c.health >= 70 ? "var(--teal)" : "var(--amber)" }}>{c.health}</div><div className="kpi-meta">Composite of SLA, denial rate, time-to-effective</div></div>
+        <div className="kpi-tile"><div className="kpi-l">MRR</div><div className="kpi-v">${c.mrr.toLocaleString()}</div><div className="kpi-meta">{c.providers > 0 ? `$${Math.round(c.mrr/c.providers)}/provider` : ""}</div></div>
+      </div>
+      <div className="split-2">
+        <div>
+          <div className="card">
+            <div className="card-head"><div><h3 className="card-h">Providers ({myProviders.length})</h3><div className="card-sub">Click to open provider detail.</div></div></div>
+            <div className="card-body flush">
+              <table className="tbl">
+                <thead><tr><th>Provider</th><th>Specialty</th><th>States</th><th>Open</th><th>Status</th></tr></thead>
+                <tbody>
+                  {myProviders.map(p => (
+                    <tr key={p.id} onClick={() => go("provider_detail", { id:p.id })}>
+                      <td><div className="cell-name"><div className="entity-icon provider">{initials(p.name)}</div><div className="tbl-name">{p.name}</div></div></td>
+                      <td>{p.specialty}</td>
+                      <td><span className="mono">{p.states.join(", ")}</span></td>
+                      <td>{p.open > 0 ? <span className="pill pill-warn"><span className="pill-dot"/>{p.open}</span> : <span className="mono">0</span>}</td>
+                      <td><span className={`pill ${p.status === "effective" ? "pill-ok" : "pill-teal"}`}><span className="pill-dot"/>{p.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-head"><div><h3 className="card-h">Recent activity</h3><div className="card-sub">Last 5 transitions and comments.</div></div></div>
+            <div className="card-body">
+              <div style={{ fontSize:12, color:"rgba(14,20,60,0.55)", display:"flex", flexDirection:"column", gap:8 }}>
+                {[
+                  ["2h",   <><strong style={{ color:"var(--navy)" }}>Dr. Imran Khan</strong> · Aetna TX moved <span className="pill pill-warn" style={{ marginLeft:4 }}><span className="pill-dot"/>info_requested</span></>],
+                  ["6h",   <><strong style={{ color:"var(--navy)" }}>Maya Alvarez</strong> commented on ENR-104822</>],
+                  ["1d",   <><strong style={{ color:"var(--navy)" }}>BCBS TX</strong> approved ENR-104810 · effective 2026-06-01</>],
+                  ["2d",   <>Documents reattached on ENR-104540 · COI updated</>],
+                  ["3d",   <>Recred window opens for ENR-104544 · United HC FL</>],
+                ].map(([t, msg], i) => (
+                  <div key={i} style={{ display:"grid", gridTemplateColumns:"40px 1fr", gap:12, padding:"6px 0", borderBottom:i < 4 ? "1px dashed var(--border)" : "none" }}>
+                    <span className="mono" style={{ color:"rgba(14,20,60,0.5)" }}>{t}</span>
+                    <span style={{ color:"var(--charcoal)" }}>{msg}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="card">
+            <div className="card-head"><h3 className="card-h">Contacts</h3></div>
+            <div className="card-body">
+              <div className="contact-list">
+                {[
+                  { name:"Salma Khan",     role:"Practice Admin", meta:"salma@khanmed.com · primary" },
+                  { name:"Imran Khan",     role:"Owner / MD",     meta:"imran.khan@khanmed.com" },
+                  { name:"Billing Office", role:"Billing",        meta:"billing@khanmed.com" },
+                ].map((u, i) => (
+                  <div key={i} className="contact-row">
+                    <div className="avatar">{initials(u.name)}</div>
+                    <div className="contact-l">
+                      <div className="contact-name">{u.name}</div>
+                      <div className="contact-meta">{u.meta}</div>
+                    </div>
+                    <span className="contact-role">{u.role}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-head"><h3 className="card-h">Contract</h3></div>
+            <div className="card-body">
+              <dl className="detail-rows">
+                <div className="detail-row"><dt>Plan</dt><dd>Standard · per-provider</dd></div>
+                <div className="detail-row"><dt>Started</dt><dd>{c.contractStart}</dd></div>
+                <div className="detail-row"><dt>Renewal</dt><dd>Auto · 12-mo</dd></div>
+                <div className="detail-row"><dt>MRR</dt><dd>${c.mrr.toLocaleString()}</dd></div>
+                <div className="detail-row"><dt>Net</dt><dd>30 days</dd></div>
+                <div className="detail-row"><dt>RLS scope</dt><dd><span className="mono">tenant_id = "{c.id}"</span></dd></div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ─── Providers list ─────────────────────────────────────────────────────
+const ProvidersList = ({ go }) => (
+  <>
+    <div className="page-header">
+      <div>
+        <h1 className="page-h1">Providers</h1>
+        <div className="page-sub"><strong>{providers.length}</strong> providers across <strong>{new Set(providers.map(p=>p.clientId)).size}</strong> clients</div>
+      </div>
+      <div className="page-actions">
+        <button className="btn-ghost"><Icon name="download" size={13}/>Export</button>
+        <button className="btn-primary"><Icon name="plus" size={13}/>Add provider</button>
+      </div>
+    </div>
+    <div className="toolbar">
+      <div className="search-input"><Icon name="search" size={13}/><input placeholder="Search by name, NPI, CAQH…"/></div>
+      <button className="fp">Specialty <Icon name="chevron" size={11}/></button>
+      <button className="fp">Client <Icon name="chevron" size={11}/></button>
+      <button className="fp">State <Icon name="chevron" size={11}/></button>
+      <div className="toolbar-spacer"/>
+      <span className="toolbar-meta"><strong>{providers.length}</strong> providers</span>
+    </div>
+    <div className="tbl-wrap">
+      <table className="tbl">
+        <thead><tr>
+          <th>Provider</th><th>Specialty</th><th>NPI / CAQH</th><th>Client</th><th>States</th><th>Enrollments</th><th>Open</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+          {providers.map(p => {
+            const c = clients.find(c => c.id === p.clientId);
+            return (
+              <tr key={p.id} onClick={() => go("provider_detail", { id:p.id })}>
+                <td>
+                  <div className="cell-name">
+                    <div className="entity-icon provider">{initials(p.name)}</div>
+                    <div className="tbl-name">{p.name}</div>
+                  </div>
+                </td>
+                <td>{p.specialty}</td>
+                <td>
+                  <div className="mono" style={{ color:"var(--navy)" }}>{p.npi}</div>
+                  <div className="tbl-sub mono">CAQH {p.caqh}</div>
+                </td>
+                <td>{c?.name}</td>
+                <td><span className="mono">{p.states.join(", ")}</span></td>
+                <td><span className="mono">{p.enrollments}</span></td>
+                <td>{p.open > 5 ? <span className="pill pill-warn"><span className="pill-dot"/>{p.open}</span> : <span className="mono">{p.open}</span>}</td>
+                <td><span className={`pill ${p.status === "effective" ? "pill-ok" : "pill-teal"}`}><span className="pill-dot"/>{p.status}</span></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </>
+);
+
+// ─── Provider detail ────────────────────────────────────────────────────
+const ProviderDetail = ({ id, go }) => {
+  const p = providers.find(x => x.id === id) || providers[0];
+  const c = clients.find(x => x.id === p.clientId);
+  return (
+    <>
+      <button className="detail-back" onClick={() => go("providers_list")}><Icon name="arrow_back" size={12}/>All providers</button>
+      <div className="detail-hero">
+        <div className="hero-icon provider">{initials(p.name)}</div>
+        <div className="hero-l">
+          <div className="hero-eyebrow">PROVIDER · NPI <span className="mono">{p.npi}</span></div>
+          <h1 className="hero-h1">{p.name}</h1>
+          <div className="hero-meta">
+            <span><strong>{p.specialty}</strong></span>
+            <span>{c?.name}</span>
+            <span>CAQH <span className="mono">{p.caqh}</span></span>
+            <span><span className="pill pill-ok"><span className="pill-dot"/>{p.status}</span></span>
+          </div>
+        </div>
+        <div className="hero-r">
+          <button className="btn-ghost"><Icon name="edit" size={13}/>Edit</button>
+          <button className="btn-primary"><Icon name="plus" size={13}/>New enrollment</button>
+        </div>
+      </div>
+      <div className="kpi-strip">
+        <div className="kpi-tile"><div className="kpi-l">Enrollments</div><div className="kpi-v">{p.enrollments}</div><div className="kpi-meta">{p.open} open · {p.enrollments - p.open} effective</div></div>
+        <div className="kpi-tile"><div className="kpi-l">States licensed</div><div className="kpi-v">{p.states.length}</div><div className="kpi-meta">{p.states.join(", ")}</div></div>
+        <div className="kpi-tile"><div className="kpi-l">CAQH</div><div className="kpi-v" style={{ fontSize:18, lineHeight:"30px" }}>Re-attested</div><div className="kpi-meta">2026-04-12 · next due Oct</div></div>
+        <div className="kpi-tile"><div className="kpi-l">Avg time-to-effective</div><div className="kpi-v">68<small>d</small></div><div className="kpi-meta">vs payer median 75d</div></div>
+      </div>
+      <div className="split-2">
+        <div>
+          <div className="card">
+            <div className="card-head"><div><h3 className="card-h">Active enrollments</h3><div className="card-sub">Across all licensed states.</div></div></div>
+            <div className="card-body flush">
+              <table className="tbl">
+                <thead><tr><th>Enrollment</th><th>Payer</th><th>State</th><th>Status</th><th>Idle</th></tr></thead>
+                <tbody>
+                  {[
+                    { id:"ENR-104822", payer:"Aetna",     state:"TX", status:"info_requested", idle:9 },
+                    { id:"ENR-104810", payer:"BCBS TX",   state:"TX", status:"approved",       idle:1 },
+                    { id:"ENR-104544", payer:"United HC", state:"FL", status:"in_review",      idle:6 },
+                    { id:"ENR-104540", payer:"Aetna",     state:"CA", status:"in_review",      idle:11 },
+                  ].map(e => (
+                    <tr key={e.id} onClick={() => location.href = "Enrollment Detail.html"}>
+                      <td><span className="mono" style={{ color:"var(--navy)", fontWeight:600 }}>{e.id}</span></td>
+                      <td>{e.payer}</td>
+                      <td><span className="mono">{e.state}</span></td>
+                      <td><span className={`pill ${e.status === "info_requested" ? "pill-warn" : e.status === "approved" ? "pill-ok" : "pill-teal"}`}><span className="pill-dot"/>{e.status}</span></td>
+                      <td><span className="mono" style={{ color:e.idle >= 7 ? "var(--amber)" : "rgba(14,20,60,0.55)" }}>{e.idle}d</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-head"><div><h3 className="card-h">Licensed states</h3><div className="card-sub">Click to view that state's enrollments.</div></div></div>
+            <div className="card-body">
+              <div className="state-grid">
+                {allStates.map(st => {
+                  const lic = p.states.includes(st);
+                  return (
+                    <div key={st} className={`state-cell ${lic ? "is-licensed" : ""}`}>
+                      <div className="state-cell-code">{st}</div>
+                      <div className="state-cell-meta">{lic ? `${Math.floor(Math.random()*4)+1} active` : "—"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="card">
+            <div className="card-head"><h3 className="card-h">Identity</h3></div>
+            <div className="card-body">
+              <dl className="detail-rows">
+                <div className="detail-row"><dt>NPI</dt><dd className="mono">{p.npi}</dd></div>
+                <div className="detail-row"><dt>CAQH</dt><dd className="mono">{p.caqh}</dd></div>
+                <div className="detail-row"><dt>DEA</dt><dd className="mono">BX1234567</dd></div>
+                <div className="detail-row"><dt>Tax ID</dt><dd className="mono">XX-XXXXXXX</dd></div>
+                <div className="detail-row"><dt>Born</dt><dd>1978-03-14</dd></div>
+                <div className="detail-row"><dt>Specialty</dt><dd>{p.specialty}</dd></div>
+                <div className="detail-row"><dt>Sub-specialty</dt><dd>—</dd></div>
+                <div className="detail-row"><dt>Languages</dt><dd>English, Urdu</dd></div>
+              </dl>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-head"><h3 className="card-h">Documents on file</h3></div>
+            <div className="card-body">
+              <div style={{ display:"flex", flexDirection:"column", gap:6, fontSize:12 }}>
+                {[
+                  ["Malpractice COI",    "Current",   "exp 2026-09-01", "ok"],
+                  ["DEA Registration",   "Current",   "exp 2026-12-31", "ok"],
+                  ["Specialty Board",    "Expired",   "exp 2026-04-15", "danger"],
+                  ["State License — TX", "Current",   "exp 2027-01-30", "ok"],
+                  ["Hospital Privileges","Current",   "letter 2026-03-10", "ok"],
+                  ["W-9",                "Current",   "—", "ok"],
+                ].map(([n, s, m, k], i) => (
+                  <div key={i} style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:10, padding:"7px 10px", background:k === "danger" ? "var(--red-08)" : "var(--lightgrey)", borderRadius:5 }}>
+                    <div>
+                      <div style={{ fontWeight:600, color:"var(--navy)", fontSize:12.5 }}>{n}</div>
+                      <div style={{ fontSize:10.5, color:"rgba(14,20,60,0.55)" }}>{m}</div>
+                    </div>
+                    <span className={`pill ${k === "danger" ? "pill-danger" : "pill-ok"}`}><span className="pill-dot"/>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ─── Payers list ────────────────────────────────────────────────────────
+const PayersList = ({ go }) => (
+  <>
+    <div className="page-header">
+      <div>
+        <h1 className="page-h1">Payers</h1>
+        <div className="page-sub">Network library · <strong>{payers.length}</strong> payers · <strong>{payers.reduce((s,p)=>s+p.enrollments,0)}</strong> active enrollments</div>
+      </div>
+      <div className="page-actions">
+        <button className="btn-ghost"><Icon name="download" size={13}/>Export</button>
+        <button className="btn-primary"><Icon name="plus" size={13}/>Add payer</button>
+      </div>
+    </div>
+    <div className="toolbar">
+      <div className="search-input"><Icon name="search" size={13}/><input placeholder="Search payers…"/></div>
+      <button className="fp">Type <Icon name="chevron" size={11}/></button>
+      <button className="fp">CAQH <Icon name="chevron" size={11}/></button>
+      <button className="fp">State <Icon name="chevron" size={11}/></button>
+      <div className="toolbar-spacer"/>
+      <span className="toolbar-meta"><strong>{payers.length}</strong> payers</span>
+    </div>
+    <div className="tbl-wrap">
+      <table className="tbl">
+        <thead><tr>
+          <th>Payer</th><th>Type</th><th>States</th><th>Providers</th><th>Enrollments</th><th>Avg days</th><th>Denial rate</th><th>CAQH</th>
+        </tr></thead>
+        <tbody>
+          {payers.map(p => (
+            <tr key={p.id} onClick={() => alert(`${p.name} detail — payer profile not yet built`)}>
+              <td>
+                <div className="cell-name">
+                  <div className="entity-icon payer-icon" style={{ background:"var(--lightgrey)", color:"var(--navy)" }}>{p.name.slice(0,2).toUpperCase()}</div>
+                  <div className="tbl-name">{p.name}</div>
+                </div>
+              </td>
+              <td>{p.type}</td>
+              <td><span className="mono">{p.states}</span></td>
+              <td><span className="mono">{p.providers}</span></td>
+              <td><span className="mono">{p.enrollments}</span></td>
+              <td>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span className="mono">{p.avgDays}d</span>
+                  <Spark data={p.spark} color={p.avgDays > 90 ? "var(--amber)" : "var(--teal)"}/>
+                </div>
+              </td>
+              <td>
+                {p.denialRate >= 10 ? <span className="pill pill-warn"><span className="pill-dot"/>{p.denialRate}%</span>
+                : p.denialRate >= 7 ? <span className="pill pill-flat"><span className="pill-dot"/>{p.denialRate}%</span>
+                : <span className="pill pill-ok"><span className="pill-dot"/>{p.denialRate}%</span>}
+              </td>
+              <td>{p.caqh ? <span className="pill pill-teal"><span className="pill-dot"/>Yes</span> : <span className="pill pill-flat">—</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </>
+);
+
+// ─── App ────────────────────────────────────────────────────────────────
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [route, setRoute] = useState({ screen: t.screen || "clients_list", params: {} });
+  const go = (screen, params = {}) => {
+    setRoute({ screen, params });
+    if (["clients_list","providers_list","payers_list","client_detail","provider_detail"].includes(screen)) {
+      setTweak("screen", screen);
+    }
+  };
+
+  // Sync route from tweaks if changed via panel
+  React.useEffect(() => {
+    if (t.screen && t.screen !== route.screen && !route.params.id) {
+      setRoute({ screen: t.screen, params: {} });
+    }
+  }, [t.screen]);
+
+  const sec =
+    route.screen === "clients_list"   ? "clients" :
+    route.screen === "client_detail"  ? "clients" :
+    route.screen === "providers_list" ? "providers" :
+    route.screen === "provider_detail"? "providers" :
+                                        "payers";
+
+  const crumbs = useMemo(() => {
+    if (route.screen === "clients_list")    return [{ label:"Clients" }];
+    if (route.screen === "providers_list")  return [{ label:"Providers" }];
+    if (route.screen === "payers_list")     return [{ label:"Payers" }];
+    if (route.screen === "client_detail") {
+      const c = clients.find(x => x.id === route.params.id) || clients[0];
+      return [{ label:"Clients", href:"#", onClick:(e) => { e.preventDefault(); go("clients_list"); } }, { label:c.name }];
+    }
+    if (route.screen === "provider_detail") {
+      const p = providers.find(x => x.id === route.params.id) || providers[0];
+      return [{ label:"Providers", href:"#", onClick:(e) => { e.preventDefault(); go("providers_list"); } }, { label:p.name }];
+    }
+    return [];
+  }, [route]);
+
+  return (
+    <>
+      <TopBar crumbs={crumbs}/>
+      <div className="app-body">
+        <Sidebar activeKey={sec}/>
+        <main className="main">
+          {/* Top tab strip — visible on list screens to switch between Clients/Providers/Payers */}
+          {(route.screen.endsWith("_list")) && (
+            <div className="tab-strip">
+              <button className={`tab ${route.screen === "clients_list" ? "is-active" : ""}`} onClick={() => go("clients_list")}>Clients <span className="tab-count">{clients.length}</span></button>
+              <button className={`tab ${route.screen === "providers_list" ? "is-active" : ""}`} onClick={() => go("providers_list")}>Providers <span className="tab-count">{providers.length}</span></button>
+              <button className={`tab ${route.screen === "payers_list" ? "is-active" : ""}`} onClick={() => go("payers_list")}>Payers <span className="tab-count">{payers.length}</span></button>
+            </div>
+          )}
+
+          {route.screen === "clients_list"    && <ClientsList   go={go}/>}
+          {route.screen === "client_detail"   && <ClientDetail   id={route.params.id} go={go}/>}
+          {route.screen === "providers_list"  && <ProvidersList go={go}/>}
+          {route.screen === "provider_detail" && <ProviderDetail id={route.params.id} go={go}/>}
+          {route.screen === "payers_list"     && <PayersList    go={go}/>}
+        </main>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Jump to screen">
+          <TweakRadio
+            value={route.screen.endsWith("_detail") ? route.screen.replace("_detail","_list") : route.screen}
+            onChange={v => go(v)}
+            options={[
+              { value:"clients_list",   label:"Clients" },
+              { value:"providers_list", label:"Providers" },
+              { value:"payers_list",    label:"Payers" },
+            ]}
+          />
+          <div style={{ fontSize:11, color:"rgba(14,20,60,0.55)", marginTop:8, lineHeight:1.5 }}>
+            Click any row in a list to drill into the detail page. Use the back button or breadcrumb to return.
+          </div>
+        </TweakSection>
+        <TweakSection title="Quick detail">
+          <button className="btn-ghost" style={{ width:"100%", justifyContent:"center", marginBottom:6 }} onClick={() => go("client_detail", { id:"khan" })}>Khan client detail →</button>
+          <button className="btn-ghost" style={{ width:"100%", justifyContent:"center" }} onClick={() => go("provider_detail", { id:"khan_imran" })}>Dr. Khan provider detail →</button>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

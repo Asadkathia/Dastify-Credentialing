@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dastify Solutions — Brand & Design Playbook</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0E143C;
+  --navy-rgb: 14, 20, 60;
+  --charcoal: #222222;
+  --grey: #C6CCD8;
+  --grey-rgb: 198, 204, 216;
+  --lightgrey: #F6F7FB;
+  --teal: #16C1C2;
+  --teal-rgb: 22, 193, 194;
+  --aqua: #4ECED1;
+  --aqua-rgb: 78, 206, 209;
+  --red: #B3261E;
+  --green: #2E7D32;
+  --amber: #F4A300;
+  --white: #FFFFFF;
+  --font: 'Poppins', -apple-system, sans-serif;
+  --section-pad: clamp(80px, 10vw, 140px);
+  --side-pad: clamp(24px, 5vw, 80px);
+  --max-w: 1200px;
+  --card-radius: 16px;
+  --transition: cubic-bezier(0.4, 0, 0.2, 1);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { font-family:var(--font); color:var(--charcoal); background:var(--white); overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+
+/* === SECTION BG DECORATIONS — EITHER letters OR shapes per section, 1-5% opacity === */
+.sec-bg { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+.sec-bg .bg-l { position:absolute; font-family:var(--font); font-weight:700; line-height:1; user-select:none; }
+.sec-bg .bg-s { position:absolute; pointer-events:none; }
+
+/* Float animation for shapes */
+@keyframes shapeFloat { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-12px) rotate(1deg)} }
+
+/* === NAV === */
+.nav { position:fixed; top:0; left:0; right:0; z-index:1000; padding:16px var(--side-pad); display:flex; align-items:center; justify-content:space-between; transition:all 0.4s var(--transition); }
+.nav.scrolled { background:rgba(255,255,255,0.94); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); box-shadow:0 1px 0 rgba(var(--grey-rgb),0.5); padding-top:10px; padding-bottom:10px; }
+.nav-logo { display:flex; align-items:center; gap:12px; text-decoration:none; }
+.nav-logo img { height:42px; width:auto; }
+.nav-links { display:flex; align-items:center; gap:10px; list-style:none; }
+.nav-links a { font-size:11px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; color:rgba(var(--navy-rgb),0.55); text-decoration:none; padding:8px 14px; border-radius:4px; transition:all 0.3s; }
+.nav-links a:hover { color:var(--navy); background:rgba(var(--navy-rgb),0.04); }
+.nav-links .nav-cta { background:var(--navy); color:var(--white)!important; padding:10px 24px; margin-left:8px; letter-spacing:2px; }
+.nav-links .nav-cta:hover { background:var(--teal); color:var(--navy)!important; }
+.nav-toggle { display:none; background:none; border:none; cursor:pointer; padding:8px; }
+.nav-toggle span { display:block; width:22px; height:2px; background:var(--navy); margin:5px 0; transition:all 0.3s; }
+
+/* === SECTION FRAMEWORK === */
+.section { position:relative; z-index:1; padding:var(--section-pad) var(--side-pad); overflow:hidden; }
+.section-inner { max-width:var(--max-w); margin:0 auto; position:relative; z-index:2; }
+.section-num { font-size:11px; font-weight:600; letter-spacing:5px; text-transform:uppercase; color:var(--teal); margin-bottom:12px; opacity:0; transform:translateY(20px); }
+.section-title { font-size:clamp(32px,4.5vw,52px); font-weight:700; color:var(--navy); line-height:1.15; margin-bottom:8px; opacity:0; transform:translateY(24px); }
+.section-title em { font-style:italic; color:var(--teal); }
+.section-subtitle { font-size:clamp(16px,2vw,22px); font-weight:400; font-style:italic; color:rgba(var(--teal-rgb),0.8); margin-bottom:12px; opacity:0; transform:translateY(20px); }
+.section-divider { width:60px; height:2px; background:var(--teal); margin-bottom:48px; opacity:0; transform:scaleX(0); transform-origin:left; }
+.section-desc { font-size:16px; font-weight:300; color:rgba(var(--navy-rgb),0.65); line-height:1.75; max-width:720px; margin-bottom:48px; opacity:0; transform:translateY(20px); }
+
+.in-view .section-num { opacity:1; transform:translateY(0); transition:all 0.6s var(--transition) 0.1s; }
+.in-view .section-title { opacity:1; transform:translateY(0); transition:all 0.6s var(--transition) 0.2s; }
+.in-view .section-subtitle { opacity:1; transform:translateY(0); transition:all 0.6s var(--transition) 0.25s; }
+.in-view .section-divider { opacity:1; transform:scaleX(1); transition:all 0.5s var(--transition) 0.35s; }
+.in-view .section-desc { opacity:1; transform:translateY(0); transition:all 0.6s var(--transition) 0.4s; }
+
+.reveal { opacity:0; transform:translateY(30px); transition:all 0.7s var(--transition); }
+.reveal.vis { opacity:1; transform:translateY(0); }
+.reveal-d1 { transition-delay:0.1s; } .reveal-d2 { transition-delay:0.2s; } .reveal-d3 { transition-delay:0.3s; }
+.reveal-d4 { transition-delay:0.4s; } .reveal-d5 { transition-delay:0.5s; } .reveal-d6 { transition-delay:0.6s; }
+
+.sub-h { font-size:22px; font-weight:600; color:var(--navy); margin-bottom:20px; }
+
+/* === HERO === */
+.hero { position:relative; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:140px var(--side-pad) 60px; z-index:1; overflow:hidden; }
+.hero-inner { max-width:880px; text-align:center; position:relative; z-index:2; }
+.hero-logo { height:80px; width:auto; margin-bottom:32px; opacity:0; animation:fadeUp 0.8s ease forwards 0.3s; }
+.hero-label { font-size:11px; font-weight:600; letter-spacing:6px; text-transform:uppercase; color:var(--teal); margin-bottom:32px; opacity:0; animation:fadeUp 0.8s ease forwards 0.5s; }
+.hero-title { font-size:clamp(40px,6vw,68px); font-weight:700; color:var(--navy); line-height:1.08; margin-bottom:24px; opacity:0; animation:fadeUp 0.8s ease forwards 0.6s; }
+.hero-title em { font-style:italic; color:var(--teal); }
+.hero-line { width:60px; height:2px; background:var(--teal); margin:0 auto 32px; opacity:0; animation:fadeUp 0.8s ease forwards 0.7s; }
+.hero-desc { font-size:17px; font-weight:300; color:rgba(var(--navy-rgb),0.6); line-height:1.75; max-width:600px; margin:0 auto 48px; opacity:0; animation:fadeUp 0.8s ease forwards 0.8s; }
+.hero-tags { display:flex; justify-content:center; gap:24px; flex-wrap:wrap; opacity:0; animation:fadeUp 0.8s ease forwards 1s; }
+.hero-tag { font-size:10px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:rgba(var(--navy-rgb),0.35); padding:6px 0; border-bottom:1px solid rgba(var(--teal-rgb),0.25); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+.scroll-cue { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:8px; opacity:0; animation:fadeUp 0.8s ease forwards 1.3s; }
+.scroll-cue span { font-size:9px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:rgba(var(--navy-rgb),0.25); }
+.scroll-cue .scroll-line { width:1px; height:40px; background:linear-gradient(to bottom,var(--teal),transparent); animation:scrollPulse 2s ease-in-out infinite; }
+@keyframes scrollPulse { 0%,100%{opacity:0.3;transform:scaleY(0.7)} 50%{opacity:1;transform:scaleY(1)} }
+
+/* === TOC === */
+.toc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:2px; }
+.toc-item { display:flex; align-items:center; gap:16px; padding:18px 24px; background:var(--white); border:1px solid rgba(var(--grey-rgb),0.3); cursor:pointer; transition:all 0.3s var(--transition); text-decoration:none; }
+.toc-item:hover { background:var(--navy); }
+.toc-item:hover .toc-num, .toc-item:hover .toc-text { color:var(--white); }
+.toc-item:hover .toc-num { color:var(--teal); }
+.toc-num { font-size:22px; font-weight:700; color:var(--teal); min-width:32px; transition:color 0.3s; }
+.toc-text { font-size:13px; font-weight:500; color:var(--navy); letter-spacing:0.5px; transition:color 0.3s; }
+
+/* === VALUES + METRICS === */
+.values-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:2px; margin-bottom:48px; }
+.value-card { background:var(--navy); padding:32px 24px; text-align:center; transition:all 0.4s var(--transition); }
+.value-card:hover { background:var(--teal); }
+.value-card:hover .value-name { color:var(--navy); }
+.value-name { font-size:20px; font-weight:600; color:var(--white); transition:color 0.3s; }
+.metrics-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:32px; margin-bottom:48px; }
+.metric-card { position:relative; padding:40px 32px; border-left:2px solid rgba(var(--teal-rgb),0.3); overflow:hidden; }
+.metric-value { font-size:42px; font-weight:700; color:var(--teal); margin-bottom:4px; }
+.metric-label { font-size:12px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:rgba(var(--navy-rgb),0.4); }
+.keywords-row { display:flex; flex-wrap:wrap; gap:8px; }
+.keyword { padding:8px 20px; background:var(--lightgrey); border-radius:4px; font-size:12px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--navy); }
+
+/* === DESIGN PHILOSOPHY === */
+.quote-block { position:relative; padding:40px 48px; background:var(--white); border-left:4px solid var(--teal); margin-bottom:48px; }
+.quote-block p { font-size:20px; font-style:italic; font-weight:400; color:var(--navy); line-height:1.6; }
+.principles-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:24px; margin-bottom:48px; }
+.principle-card { position:relative; padding:36px 32px; border:1px solid rgba(var(--grey-rgb),0.3); border-radius:var(--card-radius); overflow:hidden; transition:all 0.4s var(--transition); }
+.principle-card::before { content:attr(data-num); position:absolute; top:8px; right:12px; font-size:80px; font-weight:700; color:var(--navy); opacity:0.03; line-height:1; }
+.principle-card:hover { border-color:rgba(var(--teal-rgb),0.4); box-shadow:0 12px 40px rgba(var(--navy-rgb),0.06); transform:translateY(-4px); }
+.principle-title { font-size:16px; font-weight:600; color:var(--navy); margin-bottom:8px; }
+.principle-desc { font-size:14px; font-weight:300; color:rgba(var(--navy-rgb),0.6); line-height:1.7; }
+.dna-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:2px; }
+.dna-card { padding:28px 16px; background:var(--white); text-align:center; transition:all 0.3s var(--transition); }
+.dna-card:hover { background:var(--navy); }
+.dna-card:hover .dna-word { color:var(--white); }
+.dna-card:hover .dna-sub { color:rgba(255,255,255,0.5); }
+.dna-word { font-size:14px; font-weight:600; color:var(--navy); margin-bottom:4px; transition:color 0.3s; }
+.dna-sub { font-size:11px; font-weight:300; color:rgba(var(--navy-rgb),0.45); transition:color 0.3s; }
+
+/* === COLOR SYSTEM === */
+.color-group { margin-bottom:40px; }
+.color-group-label { font-size:11px; font-weight:600; letter-spacing:4px; text-transform:uppercase; color:rgba(var(--navy-rgb),0.35); margin-bottom:16px; }
+.color-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:16px; }
+.color-swatch { border-radius:12px; overflow:hidden; border:1px solid rgba(var(--grey-rgb),0.2); transition:transform 0.3s var(--transition); }
+.color-swatch:hover { transform:translateY(-4px); }
+.color-swatch-fill { height:80px; display:flex; align-items:flex-end; justify-content:flex-start; padding:10px 14px; }
+.color-swatch-fill span { font-size:11px; font-weight:600; letter-spacing:1px; opacity:0.8; }
+.color-swatch-info { padding:14px; }
+.color-swatch-name { font-size:13px; font-weight:600; color:var(--navy); margin-bottom:2px; }
+.color-swatch-use { font-size:11px; font-weight:300; color:rgba(var(--navy-rgb),0.5); }
+.ratio-bar { display:flex; border-radius:8px; overflow:hidden; height:12px; margin-bottom:20px; }
+.ratio-bar div { height:100%; }
+.ratio-legend { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+.ratio-item-pct { font-size:22px; font-weight:700; color:var(--teal); }
+.ratio-item-label { font-size:12px; font-weight:300; color:rgba(var(--navy-rgb),0.5); margin-top:2px; }
+
+/* === TYPOGRAPHY === */
+.type-row { display:flex; align-items:baseline; gap:24px; padding:20px 0; border-bottom:1px solid rgba(var(--grey-rgb),0.2); }
+.type-sample { flex:1; }
+.type-meta { min-width:200px; text-align:right; }
+.type-meta-size { font-size:12px; font-weight:500; color:var(--teal); }
+.type-meta-weight { font-size:11px; font-weight:300; color:rgba(var(--navy-rgb),0.4); }
+.type-meta-use { font-size:11px; font-weight:300; color:rgba(var(--navy-rgb),0.35); margin-top:2px; }
+
+/* === RCM CARDS === */
+.rcm-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; margin-bottom:48px; }
+.rcm-card { position:relative; background:var(--white); border:1px solid rgba(var(--grey-rgb),0.35); border-radius:var(--card-radius); padding:48px 36px 44px; text-align:center; overflow:hidden; transition:all 0.5s var(--transition); }
+.rcm-card:hover { transform:translateY(-6px); box-shadow:0 20px 60px rgba(var(--navy-rgb),0.08),0 4px 16px rgba(var(--teal-rgb),0.06); border-color:rgba(var(--teal-rgb),0.35); }
+.rcm-card-bg { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:700; font-size:240px; line-height:1; color:var(--navy); opacity:0.03; user-select:none; transition:all 0.5s ease; }
+.rcm-card:hover .rcm-card-bg { opacity:0.05; transform:translate(-50%,-50%) scale(1.05); }
+.rcm-card-icon { display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:var(--navy); margin-bottom:24px; position:relative; z-index:1; transition:all 0.4s ease; }
+.rcm-card:hover .rcm-card-icon { background:var(--teal); transform:scale(1.06); }
+.rcm-card-icon span { font-size:28px; font-weight:700; color:var(--white); }
+.rcm-card-title { font-size:22px; font-weight:600; color:var(--navy); margin-bottom:6px; position:relative; z-index:1; }
+.rcm-card-full { font-size:11px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--teal); margin-bottom:16px; position:relative; z-index:1; }
+.rcm-card-line { width:36px; height:1.5px; background:rgba(var(--teal-rgb),0.35); margin:0 auto 16px; position:relative; z-index:1; transition:all 0.4s ease; }
+.rcm-card:hover .rcm-card-line { width:60px; background:var(--teal); }
+.rcm-card-desc { font-size:14px; font-weight:300; color:rgba(var(--navy-rgb),0.6); line-height:1.7; position:relative; z-index:1; }
+.rcm-card-metric { margin-top:24px; padding-top:20px; border-top:1px solid rgba(var(--grey-rgb),0.3); position:relative; z-index:1; }
+.rcm-card-metric-val { font-size:34px; font-weight:700; color:var(--teal); }
+.rcm-card-metric-lbl { font-size:10px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:rgba(var(--navy-rgb),0.35); margin-top:4px; }
+
+/* === LAYOUT / GRID === */
+.spacing-tokens { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; margin-bottom:40px; }
+.spacing-token { padding:16px 12px; background:var(--lightgrey); border-radius:8px; text-align:center; }
+.spacing-token-val { font-size:18px; font-weight:700; color:var(--navy); }
+.spacing-token-name { font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--teal); margin-top:2px; }
+.spacing-token-use { font-size:10px; font-weight:300; color:rgba(var(--navy-rgb),0.4); margin-top:4px; }
+.grid-demo { display:grid; grid-template-columns:repeat(12,1fr); gap:4px; margin-bottom:24px; }
+.grid-col { height:48px; background:rgba(var(--teal-rgb),0.08); border:1px solid rgba(var(--teal-rgb),0.15); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; color:rgba(var(--teal-rgb),0.6); }
+.spec-table { width:100%; border-collapse:collapse; margin-bottom:32px; }
+.spec-table th { text-align:left; font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--white); background:var(--navy); padding:14px 20px; }
+.spec-table td { font-size:14px; font-weight:400; color:var(--charcoal); padding:14px 20px; border-bottom:1px solid rgba(var(--grey-rgb),0.25); }
+.spec-table tr:nth-child(even) td { background:var(--lightgrey); }
+.spec-table .highlight { font-weight:600; color:var(--navy); }
+
+/* === IMAGERY RULES === */
+.rules-grid { display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-bottom:32px; }
+.rule-block-label { font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; margin-bottom:16px; }
+.rule-block-label.allowed { color:var(--green); }
+.rule-block-label.forbidden { color:var(--red); }
+.rule-item { display:flex; align-items:flex-start; gap:10px; padding:8px 0; font-size:14px; font-weight:300; color:rgba(var(--navy-rgb),0.65); line-height:1.5; }
+.rule-icon { font-size:14px; flex-shrink:0; margin-top:2px; }
+.rule-icon.check { color:var(--green); }
+.rule-icon.cross { color:var(--red); }
+
+/* === TONE === */
+.tone-example { padding:32px 40px; margin-bottom:20px; border-radius:12px; }
+.tone-example.correct { background:rgba(46,125,50,0.04); border-left:4px solid var(--green); }
+.tone-example.incorrect { background:rgba(179,38,30,0.04); border-left:4px solid var(--red); }
+.tone-example-label { font-size:10px; font-weight:600; letter-spacing:3px; text-transform:uppercase; margin-bottom:8px; }
+.tone-example-label.g { color:var(--green); }
+.tone-example-label.r { color:var(--red); }
+.tone-example-text { font-size:17px; font-style:italic; font-weight:400; color:var(--navy); line-height:1.6; }
+.qa-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid rgba(var(--grey-rgb),0.3); border-radius:12px; overflow:hidden; }
+.qa-col-header { padding:16px 24px; background:var(--navy); font-size:13px; font-weight:600; color:var(--white); }
+.qa-col-body { padding:20px 24px; }
+.qa-item { display:flex; align-items:flex-start; gap:8px; padding:6px 0; font-size:13px; font-weight:400; color:rgba(var(--navy-rgb),0.65); }
+.qa-check { color:var(--green); font-size:13px; flex-shrink:0; }
+
+/* === AI PROMPT BLOCKS === */
+.prompt-block { position:relative; margin-bottom:48px; border-radius:var(--card-radius); overflow:hidden; border:1px solid rgba(var(--grey-rgb),0.2); background:var(--white); }
+.prompt-header { background:var(--navy); padding:24px 32px; display:flex; align-items:center; justify-content:space-between; }
+.prompt-header-title { font-size:16px; font-weight:600; color:var(--white); letter-spacing:1px; }
+.prompt-header-badge { font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--teal); padding:4px 12px; border:1px solid rgba(var(--teal-rgb),0.3); border-radius:4px; }
+.prompt-role { padding:20px 32px; background:var(--lightgrey); border-bottom:1px solid rgba(var(--grey-rgb),0.2); }
+.prompt-role span { font-size:13px; font-weight:600; color:var(--teal); }
+.prompt-role em { font-size:13px; font-weight:400; font-style:italic; color:var(--charcoal); }
+.prompt-body { padding:32px; }
+.prompt-section-title { font-size:14px; font-weight:600; color:var(--navy); margin-bottom:12px; margin-top:20px; }
+.prompt-section-title:first-child { margin-top:0; }
+.prompt-item { display:flex; align-items:flex-start; gap:10px; padding:6px 0 6px 16px; font-size:14px; font-weight:300; color:rgba(var(--navy-rgb),0.65); line-height:1.6; }
+.prompt-bullet { color:var(--teal); font-size:14px; flex-shrink:0; }
+.reject-block { margin:0 32px 32px; padding:20px 24px; background:rgba(179,38,30,0.04); border-left:3px solid var(--red); border-radius:0 8px 8px 0; }
+.reject-title { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--red); margin-bottom:10px; }
+.reject-item { display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13px; font-weight:400; color:rgba(var(--navy-rgb),0.55); }
+.reject-x { color:var(--red); font-size:13px; }
+
+/* === QUALITY GATE === */
+.gate-table { width:100%; border-collapse:collapse; margin-bottom:40px; border-radius:12px; overflow:hidden; }
+.gate-table th { text-align:left; font-size:12px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--white); background:var(--navy); padding:16px 24px; }
+.gate-table td { font-size:14px; padding:16px 24px; border-bottom:1px solid rgba(var(--grey-rgb),0.2); }
+.gate-table td:first-child { font-weight:500; color:var(--navy); }
+.gate-table td:last-child { font-weight:400; color:var(--red); font-style:italic; }
+.gate-table tr:nth-child(even) td { background:var(--lightgrey); }
+.gate-callout { padding:36px 40px; background:rgba(244,163,0,0.06); border-left:4px solid var(--amber); border-radius:0 12px 12px 0; }
+.gate-callout-title { font-size:17px; font-weight:600; color:var(--navy); margin-bottom:8px; }
+.gate-callout-desc { font-size:14px; font-weight:300; color:rgba(var(--navy-rgb),0.6); line-height:1.7; }
+
+/* === ROADMAP === */
+.roadmap-timeline { position:relative; padding-left:48px; }
+.roadmap-timeline::before { content:''; position:absolute; left:18px; top:0; bottom:0; width:2px; background:linear-gradient(to bottom,var(--teal),rgba(var(--teal-rgb),0.1)); }
+.roadmap-item { position:relative; padding:0 0 48px 32px; }
+.roadmap-item::before { content:''; position:absolute; left:-39px; top:6px; width:14px; height:14px; border-radius:50%; background:var(--white); border:3px solid var(--teal); }
+.roadmap-phase { font-size:11px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--teal); margin-bottom:6px; }
+.roadmap-title { font-size:20px; font-weight:600; color:var(--navy); margin-bottom:8px; }
+.roadmap-desc { font-size:14px; font-weight:300; color:rgba(var(--navy-rgb),0.6); line-height:1.7; max-width:600px; }
+
+/* === DARK SECTIONS === */
+.section.dark { background:var(--navy); }
+.section.dark .section-num { color:var(--teal); }
+.section.dark .section-title { color:var(--white); }
+.section.dark .section-subtitle { color:rgba(var(--teal-rgb),0.7); }
+.section.dark .section-desc { color:rgba(255,255,255,0.45); }
+.section.dark .section-divider { background:var(--teal); }
+
+/* === CTA === */
+.cta-btn { display:inline-flex; align-items:center; gap:10px; padding:14px 36px; background:var(--teal); color:var(--navy); font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; text-decoration:none; border-radius:4px; transition:all 0.3s var(--transition); }
+.cta-btn:hover { background:var(--white); transform:translateY(-2px); box-shadow:0 12px 36px rgba(var(--teal-rgb),0.25); }
+.cta-btn svg { width:14px; height:14px; stroke:currentColor; stroke-width:2; fill:none; }
+
+/* === FOOTER === */
+.footer-bar { position:relative; z-index:1; padding:40px var(--side-pad); border-top:1px solid rgba(var(--grey-rgb),0.3); display:flex; align-items:center; justify-content:space-between; }
+.footer-left { font-size:11px; color:rgba(var(--navy-rgb),0.35); }
+.footer-right { display:flex; gap:28px; }
+.footer-right a { font-size:11px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; color:rgba(var(--navy-rgb),0.35); text-decoration:none; transition:color 0.3s; }
+.footer-right a:hover { color:var(--teal); }
+
+/* === RESPONSIVE === */
+@media (max-width:1024px) {
+  .rcm-cards { grid-template-columns:1fr; max-width:440px; margin-left:auto; margin-right:auto; }
+  .principles-grid { grid-template-columns:1fr; }
+  .values-grid { grid-template-columns:repeat(2,1fr); }
+  .metrics-grid { grid-template-columns:1fr; }
+  .dna-grid { grid-template-columns:repeat(3,1fr); }
+  .rules-grid { grid-template-columns:1fr; }
+  .qa-grid { grid-template-columns:1fr; }
+  .ratio-legend { grid-template-columns:repeat(2,1fr); }
+  .toc-grid { grid-template-columns:1fr; }
+  .nav-links { display:none; }
+  .nav-toggle { display:block; }
+  .type-row { flex-direction:column; gap:8px; }
+  .type-meta { text-align:left; min-width:unset; }
+}
+@media (max-width:600px) {
+  .color-row { grid-template-columns:1fr 1fr; }
+  .spacing-tokens { grid-template-columns:repeat(3,1fr); }
+  .grid-demo { grid-template-columns:repeat(4,1fr); }
+  .footer-bar { flex-direction:column; gap:16px; text-align:center; }
+  .dna-grid { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV — Actual logo image ============ -->
+<nav class="nav" id="nav">
+  <a href="#" class="nav-logo">
+    <img src="dastifysolutionslogo.webp" alt="Dastify Solutions">
+  </a>
+  <ul class="nav-links">
+    <li><a href="#s01">Brand</a></li>
+    <li><a href="#s02">Design</a></li>
+    <li><a href="#s03">Colors</a></li>
+    <li><a href="#s04">Type</a></li>
+    <li><a href="#s09">Content</a></li>
+    <li><a href="#" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')"><span></span><span></span><span></span></button>
+</nav>
+
+<!-- ============ HERO — BG: SHAPES only, 2% opacity on white ============ -->
+<section class="hero" id="top">
+  <div class="sec-bg">
+    <!-- Medical shapes only — no letters -->
+    <div class="bg-s" style="top:8%;left:5%;width:140px;height:140px;opacity:0.02;animation:shapeFloat 22s ease-in-out infinite;">
+      <svg viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="55" stroke="#0E143C" stroke-width="1.2" stroke-dasharray="4 6"/><path d="M28 60 L42 60 L48 38 L54 82 L60 53 L66 67 L72 60 L92 60" stroke="#16C1C2" stroke-width="1.2" fill="none"/></svg>
+    </div>
+    <div class="bg-s" style="top:20%;right:7%;width:90px;height:90px;opacity:0.02;animation:shapeFloat 18s ease-in-out infinite 3s;">
+      <svg viewBox="0 0 80 80" fill="none"><rect x="28" y="8" width="24" height="64" rx="4" stroke="#0E143C" stroke-width="1"/><rect x="8" y="28" width="64" height="24" rx="4" stroke="#0E143C" stroke-width="1"/></svg>
+    </div>
+    <div class="bg-s" style="bottom:15%;left:8%;width:100px;height:120px;opacity:0.02;animation:shapeFloat 20s ease-in-out infinite 6s;">
+      <svg viewBox="0 0 80 100" fill="none"><path d="M40 8 L72 24 L72 52 C72 72 56 88 40 94 C24 88 8 72 8 52 L8 24 Z" stroke="#0E143C" stroke-width="1"/><path d="M28 50 L36 58 L54 40" stroke="#16C1C2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="bg-s" style="bottom:25%;right:5%;width:70px;height:180px;opacity:0.015;animation:shapeFloat 24s ease-in-out infinite 9s;">
+      <svg viewBox="0 0 60 160" fill="none"><path d="M15 10 C15 30 45 30 45 50 C45 70 15 70 15 90 C15 110 45 110 45 130 C45 150 15 150 15 150" stroke="#0E143C" stroke-width="0.8"/><path d="M45 10 C45 30 15 30 15 50 C15 70 45 70 45 90 C45 110 15 110 15 130 C15 150 45 150 45 150" stroke="#16C1C2" stroke-width="0.8"/></svg>
+    </div>
+  </div>
+  <div class="hero-inner">
+    <img class="hero-logo" src="dastifysolutionslogo.webp" alt="Dastify Solutions">
+    <p class="hero-label">Brand & Design Playbook</p>
+    <h1 class="hero-title">Precision Billing.<br><em>Enterprise</em> Design.</h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">A complete brand governance system, design philosophy, content integrity standards, and psychology-driven design framework for healthcare Revenue Cycle Management.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Brand Guidelines 2025</span>
+      <span class="hero-tag">Editorial Minimalism</span>
+      <span class="hero-tag">Content Integrity</span>
+      <span class="hero-tag">Psychology-Driven Design</span>
+    </div>
+  </div>
+  <div class="scroll-cue"><span>Scroll</span><div class="scroll-line"></div></div>
+</section>
+
+<!-- ============ TOC — BG: LETTERS only, 2% on lightgrey ============ -->
+<section class="section" id="toc" style="background:var(--lightgrey);">
+  <div class="sec-bg">
+    <div class="bg-l" style="font-size:50vw;top:-12%;left:-8%;color:var(--navy);opacity:0.02;">T</div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Contents</p>
+    <h2 class="section-title">Table of Contents</h2>
+    <div class="section-divider"></div>
+    <div class="toc-grid reveal">
+      <a class="toc-item" href="#s01"><span class="toc-num">01</span><span class="toc-text">Brand Essence & Position</span></a>
+      <a class="toc-item" href="#s02"><span class="toc-num">02</span><span class="toc-text">Design Philosophy</span></a>
+      <a class="toc-item" href="#s03"><span class="toc-num">03</span><span class="toc-text">Color Governance System</span></a>
+      <a class="toc-item" href="#s04"><span class="toc-num">04</span><span class="toc-text">Typography System</span></a>
+      <a class="toc-item" href="#s05"><span class="toc-num">05</span><span class="toc-text">Component System — RCM Cards</span></a>
+      <a class="toc-item" href="#s06"><span class="toc-num">06</span><span class="toc-text">Layout & Grid System</span></a>
+      <a class="toc-item" href="#s07"><span class="toc-num">07</span><span class="toc-text">Imagery & Icon Rules</span></a>
+      <a class="toc-item" href="#s08"><span class="toc-num">08</span><span class="toc-text">Image Placeholder Standards</span></a>
+      <a class="toc-item" href="#s09"><span class="toc-num">09</span><span class="toc-text">Content Integrity Mandate</span></a>
+      <a class="toc-item" href="#s10"><span class="toc-num">10</span><span class="toc-text">Human Psychology Design Protocol</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 01 — BRAND ESSENCE — BG: SHAPES only, 2% on white ============ -->
+<section class="section" id="s01">
+  <div class="sec-bg">
+    <div class="bg-s" style="top:5%;right:4%;width:120px;height:120px;opacity:0.02;animation:shapeFloat 20s ease-in-out infinite;">
+      <svg viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="55" stroke="#0E143C" stroke-width="1" stroke-dasharray="4 6"/><path d="M28 60 L42 60 L48 38 L54 82 L60 53 L66 67 L72 60 L92 60" stroke="#16C1C2" stroke-width="1" fill="none"/></svg>
+    </div>
+    <div class="bg-s" style="bottom:10%;left:3%;width:80px;height:100px;opacity:0.02;animation:shapeFloat 22s ease-in-out infinite 5s;">
+      <svg viewBox="0 0 70 90" fill="none"><rect x="4" y="4" width="62" height="82" rx="4" stroke="#0E143C" stroke-width="1"/><rect x="16" y="54" width="10" height="20" fill="#16C1C2" opacity="0.15"/><rect x="30" y="48" width="10" height="26" fill="#16C1C2" opacity="0.2"/><rect x="44" y="42" width="10" height="32" fill="#16C1C2" opacity="0.25"/></svg>
+    </div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 01</p>
+    <h2 class="section-title">Brand Essence & <em>Position</em></h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">Dastify Solutions is a U.S. healthcare Revenue Cycle Management company built on AI-augmented billing workflows, compliance-first operations, and multi-specialty expertise. We are positioned as a strategic RCM partner — not a basic billing service — targeting healthcare decision-makers with ROI-focused messaging and measurable outcomes.</p>
+
+    <h3 class="sub-h reveal">Brand Mission</h3>
+    <p class="reveal" style="font-size:15px;font-weight:300;color:rgba(14,20,60,0.6);line-height:1.7;margin-bottom:40px;max-width:720px;">Dastify Solutions is dedicated to empowering healthcare providers with intelligent, technology-driven medical billing and revenue cycle management solutions that maximize reimbursements and minimize administrative burden. We combine deep industry expertise with cutting-edge technology to deliver transparent, scalable solutions that allow providers to focus on what matters most — patient care.</p>
+
+    <h3 class="sub-h reveal">Core Values</h3>
+    <div class="values-grid reveal">
+      <div class="value-card"><span class="value-name">Precision</span></div>
+      <div class="value-card"><span class="value-name">Trust</span></div>
+      <div class="value-card"><span class="value-name">Growth</span></div>
+      <div class="value-card"><span class="value-name">Speed</span></div>
+    </div>
+
+    <h3 class="sub-h reveal">Brand Keywords</h3>
+    <div class="keywords-row reveal">
+      <span class="keyword">Compliance</span><span class="keyword">Accuracy</span><span class="keyword">Clinical</span><span class="keyword">Data Integrity</span><span class="keyword">Trust</span><span class="keyword">Automation</span><span class="keyword">Scalability</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 — DESIGN PHILOSOPHY — BG: LETTERS only, 3% on lightgrey ============ -->
+<section class="section" id="s02" style="background:var(--lightgrey);">
+  <div class="sec-bg">
+    <div class="bg-l" style="font-size:55vw;bottom:-15%;right:-10%;color:var(--teal);opacity:0.03;">D</div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 02</p>
+    <h2 class="section-title">Design Philosophy</h2>
+    <p class="section-subtitle">Editorial Minimalism</p>
+    <div class="section-divider"></div>
+    <div class="quote-block reveal">
+      <p>"Less noise, more trust. Every element must earn its place. We design with restraint, precision, and purpose — letting whitespace breathe and content speak."</p>
+    </div>
+    <h3 class="sub-h reveal">Six Design Principles</h3>
+    <div class="principles-grid">
+      <div class="principle-card reveal reveal-d1" data-num="01"><div class="principle-title">Generous Whitespace</div><div class="principle-desc">Space is not emptiness — it's clarity. Always use generous padding (80px–120px sections), let content breathe, and never crowd elements together.</div></div>
+      <div class="principle-card reveal reveal-d2" data-num="02"><div class="principle-title">Choreographed Reveals</div><div class="principle-desc">Elements appear with staggered fadeUp animations and intentional delays. Each piece enters the stage purposefully — never all at once.</div></div>
+      <div class="principle-card reveal reveal-d3" data-num="03"><div class="principle-title">Muted Hierarchy</div><div class="principle-desc">Use reduced opacity, light letter-spacing, and uppercase labels for supporting text. Headlines command attention; everything else defers gracefully.</div></div>
+      <div class="principle-card reveal reveal-d4" data-num="04"><div class="principle-title">Directional Cues</div><div class="principle-desc">Subtle lines, gradients, and scroll indicators guide the eye. Use thin vertical or horizontal lines as visual anchors — never heavy borders or dividers.</div></div>
+      <div class="principle-card reveal reveal-d5" data-num="05"><div class="principle-title">Poppins Scaling</div><div class="principle-desc">Poppins is our single type system — weight, size, spacing, and case create all hierarchy. Light (300) for body, SemiBold (600) for headings, Bold (700) for impact.</div></div>
+      <div class="principle-card reveal reveal-d6" data-num="06"><div class="principle-title">Restrained Color</div><div class="principle-desc">Lead with neutrals and whitespace. Brand colors appear as deliberate accents — a teal CTA, a green divider, a subtle gradient — never as overwhelming fills.</div></div>
+    </div>
+    <h3 class="sub-h reveal">Visual DNA</h3>
+    <div class="dna-grid reveal">
+      <div class="dna-card"><div class="dna-word">Clean</div><div class="dna-sub">Uncluttered layouts</div></div>
+      <div class="dna-card"><div class="dna-word">Refined</div><div class="dna-sub">Polished details</div></div>
+      <div class="dna-card"><div class="dna-word">Purposeful</div><div class="dna-sub">Every element earns its place</div></div>
+      <div class="dna-card"><div class="dna-word">Trustworthy</div><div class="dna-sub">Healthcare-grade credibility</div></div>
+      <div class="dna-card"><div class="dna-word">Quiet Luxury</div><div class="dna-sub">Sophistication without excess</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 — COLOR — BG: SHAPES only, 2% on white ============ -->
+<section class="section" id="s03">
+  <div class="sec-bg">
+    <div class="bg-s" style="top:10%;right:3%;width:100px;height:100px;opacity:0.02;animation:shapeFloat 20s ease-in-out infinite;">
+      <svg viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="42" stroke="#0E143C" stroke-width="0.8"/><circle cx="50" cy="50" r="22" stroke="#16C1C2" stroke-width="0.8"/><circle cx="50" cy="50" r="5" fill="#16C1C2" opacity="0.15"/></svg>
+    </div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 03</p>
+    <h2 class="section-title">Color Governance <em>System</em></h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">This is not a palette. This is a medical-grade colour governance system with exact usage rules for enterprise healthcare branding.</p>
+    <div class="color-group reveal">
+      <div class="color-group-label">Primary Brand Colors</div>
+      <div class="color-row">
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#0E143C;"><span style="color:#fff;">#0E143C</span></div><div class="color-swatch-info"><div class="color-swatch-name">Deep Healthcare Navy</div><div class="color-swatch-use">Core brand · Headers · CTAs</div></div></div>
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#16C1C2;"><span style="color:#0E143C;">#16C1C2</span></div><div class="color-swatch-info"><div class="color-swatch-name">Clinical Teal</div><div class="color-swatch-use">Icons · Highlights · Interactions</div></div></div>
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#4ECED1;"><span style="color:#0E143C;">#4ECED1</span></div><div class="color-swatch-info"><div class="color-swatch-name">Aqua Accent</div><div class="color-swatch-use">Micro accents · Dividers</div></div></div>
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#222222;"><span style="color:#fff;">#222222</span></div><div class="color-swatch-info"><div class="color-swatch-name">Clinical Charcoal</div><div class="color-swatch-use">Body text</div></div></div>
+      </div>
+    </div>
+    <div class="color-group reveal">
+      <div class="color-group-label">Neutral System</div>
+      <div class="color-row">
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#F6F7FB;border-bottom:1px solid rgba(198,204,216,0.3);"><span style="color:#0E143C;">#F6F7FB</span></div><div class="color-swatch-info"><div class="color-swatch-name">Medical Light Grey</div><div class="color-swatch-use">Section backgrounds</div></div></div>
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#C6CCD8;"><span style="color:#0E143C;">#C6CCD8</span></div><div class="color-swatch-info"><div class="color-swatch-name">Functional Grey</div><div class="color-swatch-use">Borders · Separators</div></div></div>
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#FFFFFF;border:1px solid rgba(198,204,216,0.3);"><span style="color:#0E143C;">#FFFFFF</span></div><div class="color-swatch-info"><div class="color-swatch-name">Clean White</div><div class="color-swatch-use">Primary backgrounds</div></div></div>
+      </div>
+    </div>
+    <div class="color-group reveal">
+      <div class="color-group-label">RCM Status Colors</div>
+      <div class="color-row">
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#B3261E;"><span style="color:#fff;">#B3261E</span></div><div class="color-swatch-info"><div class="color-swatch-name">Denial Red</div><div class="color-swatch-use">Error alerts · Denied claims</div></div></div>
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#2E7D32;"><span style="color:#fff;">#2E7D32</span></div><div class="color-swatch-info"><div class="color-swatch-name">Success Green</div><div class="color-swatch-use">Approved · Paid status</div></div></div>
+        <div class="color-swatch"><div class="color-swatch-fill" style="background:#F4A300;"><span style="color:#0E143C;">#F4A300</span></div><div class="color-swatch-info"><div class="color-swatch-name">Warning Amber</div><div class="color-swatch-use">Pending · Warnings</div></div></div>
+      </div>
+    </div>
+    <h3 class="sub-h reveal" style="margin-top:40px;">Color Ratio Rule — 60 / 25 / 10 / 5</h3>
+    <div class="ratio-bar reveal">
+      <div style="width:60%;background:var(--lightgrey);"></div>
+      <div style="width:25%;background:var(--navy);"></div>
+      <div style="width:10%;background:var(--teal);"></div>
+      <div style="width:5%;background:var(--aqua);"></div>
+    </div>
+    <div class="ratio-legend reveal">
+      <div><div class="ratio-item-pct">60%</div><div class="ratio-item-label">White / Light Grey</div></div>
+      <div><div class="ratio-item-pct">25%</div><div class="ratio-item-label">Navy — identity backbone</div></div>
+      <div><div class="ratio-item-pct">10%</div><div class="ratio-item-label">Teal — interaction</div></div>
+      <div><div class="ratio-item-pct">5%</div><div class="ratio-item-label">Aqua / Functional</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 — TYPOGRAPHY — BG: LETTERS only, 3% on lightgrey ============ -->
+<section class="section" id="s04" style="background:var(--lightgrey);">
+  <div class="sec-bg">
+    <div class="bg-l" style="font-size:60vw;top:-8%;left:-12%;color:var(--navy);opacity:0.03;">Aa</div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 04</p>
+    <h2 class="section-title">Typography <em>System</em></h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">Poppins — Healthcare-grade scaling with pixel-perfect hierarchy. Weight, size, and spacing create all differentiation within a single type family.</p>
+    <div class="reveal" style="margin-bottom:40px;">
+      <div class="type-row"><div class="type-sample" style="font-size:48px;font-weight:700;color:var(--navy);">Revenue Cycle</div><div class="type-meta"><div class="type-meta-size">52–64px</div><div class="type-meta-weight">700 Bold</div><div class="type-meta-use">Hero titles</div></div></div>
+      <div class="type-row"><div class="type-sample" style="font-size:36px;font-weight:600;color:var(--navy);">Section Headings</div><div class="type-meta"><div class="type-meta-size">36–42px</div><div class="type-meta-weight">600 SemiBold</div><div class="type-meta-use">Section titles</div></div></div>
+      <div class="type-row"><div class="type-sample" style="font-size:26px;font-weight:600;color:var(--navy);">Subsection Title</div><div class="type-meta"><div class="type-meta-size">26–32px</div><div class="type-meta-weight">600 SemiBold</div><div class="type-meta-use">Subsections</div></div></div>
+      <div class="type-row"><div class="type-sample" style="font-size:20px;font-weight:500;color:var(--navy);">Feature Heading</div><div class="type-meta"><div class="type-meta-size">20–24px</div><div class="type-meta-weight">500 Medium</div><div class="type-meta-use">Feature headings</div></div></div>
+      <div class="type-row"><div class="type-sample" style="font-size:16px;font-weight:400;color:var(--charcoal);">Body text flows with precision and clarity across enterprise healthcare materials.</div><div class="type-meta"><div class="type-meta-size">15–16px</div><div class="type-meta-weight">400 Regular</div><div class="type-meta-use">Body copy</div></div></div>
+      <div class="type-row"><div class="type-sample" style="font-size:13px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:var(--teal);">LABEL TEXT</div><div class="type-meta"><div class="type-meta-size">13–14px</div><div class="type-meta-weight">600 Uppercase</div><div class="type-meta-use">Labels & captions</div></div></div>
+    </div>
+    <div class="quote-block reveal" style="margin-top:40px;">
+      <p style="font-size:17px;font-style:normal;font-weight:600;color:var(--navy);margin-bottom:8px;">Body Text Minimum — 15px Rule</p>
+      <p style="font-size:15px;font-style:normal;font-weight:300;color:rgba(14,20,60,0.6);line-height:1.7;">All body text, card descriptions, list items, FAQ answers, and any content in &lt;p&gt; tags must be <strong style="color:var(--teal);font-weight:600;">15px minimum</strong>, with 16px as the standard. This applies to: card descriptions, step descriptions, serve/cost list items, FAQ answer text, callout descriptions, and all inline paragraph styles. Only labels (10–11px), badges, table cells (13px), subspecialty tags (12px), trust items (11px), and navigation elements are exempt from this minimum.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 — RCM CARDS — BG: LETTERS inside cards, 3% on white ============ -->
+<section class="section" id="s05">
+  <div class="section-inner">
+    <p class="section-num">Section 05</p>
+    <h2 class="section-title">Component System — <em>RCM</em> Cards</h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">The R–C–M card system is the signature Dastify visual element. Each card uses its letter as a background watermark at 3% opacity.</p>
+    <div class="rcm-cards reveal">
+      <div class="rcm-card">
+        <div class="rcm-card-bg">R</div>
+        <div class="rcm-card-icon"><span>R</span></div>
+        <h3 class="rcm-card-title">Revenue</h3>
+        <p class="rcm-card-full">Revenue Recovery</p>
+        <div class="rcm-card-line"></div>
+        <p class="rcm-card-desc">Root-cause denial analysis and resubmission workflows that recover revenue most practices write off as lost.</p>
+        <div class="rcm-card-metric"><div class="rcm-card-metric-val">30%</div><div class="rcm-card-metric-lbl">Average Revenue Increase</div></div>
+      </div>
+      <div class="rcm-card">
+        <div class="rcm-card-bg">C</div>
+        <div class="rcm-card-icon"><span>C</span></div>
+        <h3 class="rcm-card-title">Cycle</h3>
+        <p class="rcm-card-full">Cycle Optimization</p>
+        <div class="rcm-card-line"></div>
+        <p class="rcm-card-desc">End-to-end claim lifecycle management from eligibility verification through final payment posting — zero gaps.</p>
+        <div class="rcm-card-metric"><div class="rcm-card-metric-val">97.4%</div><div class="rcm-card-metric-lbl">First-Pass Claim Rate</div></div>
+      </div>
+      <div class="rcm-card">
+        <div class="rcm-card-bg">M</div>
+        <div class="rcm-card-icon"><span>M</span></div>
+        <h3 class="rcm-card-title">Management</h3>
+        <p class="rcm-card-full">Strategic Management</p>
+        <div class="rcm-card-line"></div>
+        <p class="rcm-card-desc">AI-powered analytics dashboards and compliance monitoring that give decision-makers real-time operational control.</p>
+        <div class="rcm-card-metric"><div class="rcm-card-metric-val">99%</div><div class="rcm-card-metric-lbl">Client Retention Rate</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 — LAYOUT — BG: SHAPES only, 2% on lightgrey ============ -->
+<section class="section" id="s06" style="background:var(--lightgrey);">
+  <div class="sec-bg">
+    <div class="bg-s" style="top:8%;right:4%;width:80px;height:80px;opacity:0.02;animation:shapeFloat 22s ease-in-out infinite;">
+      <svg viewBox="0 0 80 80" fill="none"><rect x="4" y="4" width="72" height="72" rx="2" stroke="#0E143C" stroke-width="0.8" stroke-dasharray="3 4"/></svg>
+    </div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 06</p>
+    <h2 class="section-title">Layout & Grid <em>System</em></h2>
+    <div class="section-divider"></div>
+    <h3 class="sub-h reveal">12-Column Grid</h3>
+    <div class="grid-demo reveal">
+      <div class="grid-col">1</div><div class="grid-col">2</div><div class="grid-col">3</div><div class="grid-col">4</div><div class="grid-col">5</div><div class="grid-col">6</div><div class="grid-col">7</div><div class="grid-col">8</div><div class="grid-col">9</div><div class="grid-col">10</div><div class="grid-col">11</div><div class="grid-col">12</div>
+    </div>
+    <h3 class="sub-h reveal">Spacing Tokens</h3>
+    <div class="spacing-tokens reveal">
+      <div class="spacing-token"><div class="spacing-token-val">4px</div><div class="spacing-token-name">XS</div><div class="spacing-token-use">Micro adjust</div></div>
+      <div class="spacing-token"><div class="spacing-token-val">8px</div><div class="spacing-token-name">S</div><div class="spacing-token-use">Small padding</div></div>
+      <div class="spacing-token"><div class="spacing-token-val">16px</div><div class="spacing-token-name">M</div><div class="spacing-token-use">Paragraph</div></div>
+      <div class="spacing-token"><div class="spacing-token-val">24px</div><div class="spacing-token-name">L</div><div class="spacing-token-use">Card padding</div></div>
+      <div class="spacing-token"><div class="spacing-token-val">32px</div><div class="spacing-token-name">XL</div><div class="spacing-token-use">Section gap</div></div>
+      <div class="spacing-token"><div class="spacing-token-val">48px</div><div class="spacing-token-name">2XL</div><div class="spacing-token-use">Major gap</div></div>
+      <div class="spacing-token"><div class="spacing-token-val">80px</div><div class="spacing-token-name">4XL</div><div class="spacing-token-use">Standard sections</div></div>
+      <div class="spacing-token"><div class="spacing-token-val">120px</div><div class="spacing-token-name">5XL</div><div class="spacing-token-use">Hero sections</div></div>
+    </div>
+    <h3 class="sub-h reveal">Breakpoints</h3>
+    <table class="spec-table reveal">
+      <thead><tr><th>Breakpoint</th><th>Columns</th><th>Max Width</th><th>Gutter</th></tr></thead>
+      <tbody>
+        <tr><td class="highlight">Desktop ≥1200px</td><td>12</td><td>1320px</td><td>24px</td></tr>
+        <tr><td class="highlight">Tablet 768–1199px</td><td>8</td><td>Fluid</td><td>20px</td></tr>
+        <tr><td class="highlight">Mobile ≤767px</td><td>4</td><td>Fluid</td><td>16px</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 07 — IMAGERY — BG: LETTERS only, 2% on white ============ -->
+<section class="section" id="s07">
+  <div class="sec-bg">
+    <div class="bg-l" style="font-size:45vw;bottom:-10%;right:-8%;color:var(--navy);opacity:0.02;">I</div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 07</p>
+    <h2 class="section-title">Imagery & <em>Icon</em> Rules</h2>
+    <div class="section-divider"></div>
+    <div class="rules-grid reveal">
+      <div class="rule-block">
+        <div class="rule-block-label allowed">✓ Photography — Allowed</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>U.S. clinical environments</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Real medical settings with blue/neutral lighting</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Healthcare professionals in authentic settings</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Data analysis and workflow imagery</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Subtle navy/teal overlays (15–25% opacity)</div>
+      </div>
+      <div class="rule-block">
+        <div class="rule-block-label forbidden">✗ Photography — Not Allowed</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Overly smiling stock models</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Non-U.S. hospital imagery</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Warm orange/yellow lighting</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Cartoonish or staged photos</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Call center or sales team imagery</div>
+      </div>
+    </div>
+    <h3 class="sub-h reveal">Icon System Rules</h3>
+    <div class="reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+      <div style="padding:20px;background:var(--lightgrey);border-radius:8px;text-align:center;"><div style="font-size:13px;font-weight:500;color:var(--navy);">Line icons only</div><div style="font-size:11px;color:rgba(14,20,60,0.4);margin-top:4px;">2px stroke</div></div>
+      <div style="padding:20px;background:var(--lightgrey);border-radius:8px;text-align:center;"><div style="font-size:13px;font-weight:500;color:var(--navy);">Teal primary</div><div style="font-size:11px;color:rgba(14,20,60,0.4);margin-top:4px;">Navy secondary</div></div>
+      <div style="padding:20px;background:var(--lightgrey);border-radius:8px;text-align:center;"><div style="font-size:13px;font-weight:500;color:var(--navy);">24px or 32px</div><div style="font-size:11px;color:rgba(14,20,60,0.4);margin-top:4px;">No solid fills</div></div>
+    </div>
+    <h3 class="sub-h reveal" style="margin-top:40px;">Logo Usage Rules</h3>
+    <p class="reveal" style="font-size:15px;font-weight:300;color:rgba(14,20,60,0.6);line-height:1.7;">Always maintain minimum clear space around the logo. Use on clean, uncluttered backgrounds with sufficient contrast. Use approved white version on dark backgrounds. Never stretch, skew, distort, rotate, tilt, or apply effects like shadows or outlines. No custom logo recreations — use the official asset only.</p>
+
+    <h3 class="sub-h reveal" style="margin-top:40px;">Brand Color Mandate for All Imagery</h3>
+    <div class="quote-block reveal">
+      <p style="font-size:17px;font-style:normal;font-weight:600;color:var(--navy);margin-bottom:8px;">Every image must strictly adhere to brand colors.</p>
+      <p style="font-size:15px;font-style:normal;font-weight:300;color:rgba(14,20,60,0.6);line-height:1.7;">All generated, photographed, or designed imagery — including backgrounds, clothing, UI elements, charts, data visualizations, objects, and environments — must use <strong style="color:var(--teal);font-weight:600;">only approved brand colors</strong>: Navy #0E143C, Teal #16C1C2, Aqua #4ECED1, Charcoal #222, Light Grey #F6F7FB, Grey #C6CCD8, and White #FFF. No off-brand colors are permitted anywhere within any image asset.</p>
+    </div>
+    <div class="rules-grid reveal" style="margin-top:24px;">
+      <div class="rule-block">
+        <div class="rule-block-label allowed">✓ Image Color Rules — Required</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Backgrounds in Navy, Light Grey, or White only</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Clothing in Navy, Teal, Charcoal, or White</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>UI elements use Teal for active states, Navy for headers</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Charts and data use Teal, Navy, Aqua, Grey palette</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Cool blue-navy color grading on all photography</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>CSS overlay blend: navy→teal gradient at 15%/10% opacity</div>
+      </div>
+      <div class="rule-block">
+        <div class="rule-block-label forbidden">✗ Image Color Rules — Forbidden</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Any off-brand colors in any part of any image</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Warm orange, yellow, or red tones in photography</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Saturated non-brand colors in UI mockups or charts</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Natural/ungraded photography without brand color treatment</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Generic stock photo color palettes</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Colorful icons or illustrations outside brand palette</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<!-- ============ 08 — IMAGE PLACEHOLDER STANDARDS — BG: SHAPES only, 2% on lightgrey ============ -->
+<section class="section" id="s08" style="background:var(--lightgrey);">
+  <div class="sec-bg">
+    <div class="bg-s" style="top:6%;left:4%;width:80px;height:100px;opacity:0.02;animation:shapeFloat 20s ease-in-out infinite;">
+      <svg viewBox="0 0 80 100" fill="none"><rect x="8" y="8" width="64" height="84" rx="8" stroke="#0E143C" stroke-width="1"/><path d="M20 56 L32 44 L44 52 L56 36 L68 48" stroke="#16C1C2" stroke-width="1.2" fill="none" stroke-linecap="round"/><circle cx="28" cy="28" r="6" stroke="#16C1C2" stroke-width="1" fill="none"/></svg>
+    </div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 08</p>
+    <h2 class="section-title">Image Placeholder <em>Standards</em></h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">Every page build must include image placeholder boxes exactly where images are needed — never skip or omit any image slot. Each page also ships with a separate Image Requirements file (.md) that specifies every image needed, its dimensions, purpose, brand color compliance rules, and editorial direction.</p>
+
+    <div class="quote-block reveal">
+      <p style="font-size:17px;font-style:normal;font-weight:600;color:var(--navy);margin-bottom:8px;">Mandatory Two-File Delivery</p>
+      <p style="font-size:15px;font-style:normal;font-weight:300;color:rgba(14,20,60,0.6);line-height:1.7;">Every page build outputs exactly <strong style="color:var(--teal);font-weight:600;">2 files</strong>: (1) The production HTML page with all image placeholders present, and (2) a unified Image Requirements .md file. No exceptions — both files are mandatory deliverables.</p>
+    </div>
+
+    <h3 class="sub-h reveal" style="margin-top:40px;">Placeholder Specifications</h3>
+    <table class="spec-table reveal">
+      <thead><tr><th>Property</th><th>Specification</th></tr></thead>
+      <tbody>
+        <tr><td class="highlight">Background</td><td>var(--lightgrey) — #F6F7FB</td></tr>
+        <tr><td class="highlight">Border</td><td>2px dashed rgba(var(--grey-rgb), 0.4)</td></tr>
+        <tr><td class="highlight">Border Radius</td><td>12px</td></tr>
+        <tr><td class="highlight">Icon</td><td>SVG camera/image icon — 24px, teal stroke, centered</td></tr>
+        <tr><td class="highlight">Label</td><td>10px uppercase, 25% navy opacity — describes image purpose</td></tr>
+        <tr><td class="highlight">Overlay Class</td><td>.with-overlay — linear-gradient(135deg, rgba(navy,0.15), rgba(teal,0.10))</td></tr>
+        <tr><td class="highlight">Sizing</td><td>Use aspect-ratio (e.g. 4/3, 16/9) — responsive by default</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sub-h reveal" style="margin-top:40px;">Image Requirements File (.md) Must Include</h3>
+    <div class="rules-grid reveal">
+      <div class="rule-block">
+        <div class="rule-block-label allowed">✓ Required for Every Image</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Image number and placement location on page</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Exact dimensions or aspect ratio</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Purpose description (hero, section illustration, etc.)</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Brand color palette enforcement</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Editorial direction and mood</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Overlay / blending instructions</div>
+      </div>
+      <div class="rule-block">
+        <div class="rule-block-label forbidden">✗ Forbidden</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Omitting any image placeholder from the HTML page</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Delivering a page without the .md image requirements file</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Using off-brand colors in any image specification</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Generic descriptions like "stock photo" without direction</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Exceeding 5 images per page or going below 3</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Ungraded photography without brand color treatment</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 09 — CONTENT INTEGRITY MANDATE — BG: LETTERS only, 2% on white ============ -->
+<section class="section" id="s09">
+  <div class="sec-bg">
+    <div class="bg-l" style="font-size:45vw;bottom:-10%;right:-8%;color:var(--navy);opacity:0.02;">C</div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 09</p>
+    <h2 class="section-title">Content Integrity <em>Mandate</em></h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">This is the most critical rule in the entire brandbook. When redesigning or building any page, the content provided — whether from a document or pasted in chat — must be treated as sacred. The design is visual and structural only. The words are untouchable.</p>
+
+    <div class="quote-block reveal" style="border-left-color:var(--red);">
+      <p style="font-size:17px;font-style:normal;font-weight:600;color:var(--red);margin-bottom:8px;">Absolute Content Protection Rule</p>
+      <p style="font-size:15px;font-style:normal;font-weight:300;color:rgba(14,20,60,0.6);line-height:1.7;">Copy <strong style="color:var(--red);font-weight:600;">ALL</strong> source content verbatim — no additions, removals, rewording, or alterations of any kind. Every section in the source document must appear in the final page. No section may be missing, invented, merged, or split. This applies to headings, body copy, lists, FAQs, tables, workflow steps, and all text. The redesign is visual and structural only.</p>
+    </div>
+
+    <h3 class="sub-h reveal" style="margin-top:40px;">Content Handling Rules</h3>
+    <div class="rules-grid reveal">
+      <div class="rule-block">
+        <div class="rule-block-label allowed">✓ Content Rules — Required</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Fetch or copy content exactly from source doc or chat</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Every section provided must appear as its own designed section</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Preserve all headings, subheadings, and hierarchy verbatim</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Keep all list items, bullet points, and numbered steps intact</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Retain all FAQ questions and answers word-for-word</div>
+        <div class="rule-item"><span class="rule-icon check">✓</span>Maintain all table data, rows, and columns as provided</div>
+      </div>
+      <div class="rule-block">
+        <div class="rule-block-label forbidden">✗ Content Rules — Forbidden</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Rewording, paraphrasing, or "improving" any source text</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Adding content, sections, or copy not in the source</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Removing or omitting any section, paragraph, or detail</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Merging separate sections into one combined section</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Splitting one source section into multiple new sections</div>
+        <div class="rule-item"><span class="rule-icon cross">✗</span>Changing terminology, brand names, or technical terms</div>
+      </div>
+    </div>
+
+    <div class="gate-callout reveal" style="margin-top:32px;">
+      <div class="gate-callout-title">Design transforms the visual experience. Content stays exactly as written.</div>
+      <div class="gate-callout-desc">If a source document has 12 sections, the final page must have 12 designed sections — no more, no fewer. The creative freedom is in layout, typography, spacing, animation, and visual treatment. The text is locked.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10 — HUMAN PSYCHOLOGY DESIGN — BG: SHAPES only, 2% on lightgrey ============ -->
+<section class="section" id="s10" style="background:var(--lightgrey);">
+  <div class="sec-bg">
+    <div class="bg-s" style="top:8%;right:5%;width:100px;height:100px;opacity:0.02;animation:shapeFloat 22s ease-in-out infinite;">
+      <svg viewBox="0 0 100 100" fill="none"><circle cx="50" cy="35" r="18" stroke="#0E143C" stroke-width="1"/><path d="M20 85 C20 62 80 62 80 85" stroke="#0E143C" stroke-width="1" fill="none"/><circle cx="50" cy="35" r="5" stroke="#16C1C2" stroke-width="1" fill="none"/></svg>
+    </div>
+    <div class="bg-s" style="bottom:10%;left:3%;width:70px;height:70px;opacity:0.02;animation:shapeFloat 18s ease-in-out infinite 4s;">
+      <svg viewBox="0 0 70 70" fill="none"><path d="M35 10 L10 60 L60 60 Z" stroke="#16C1C2" stroke-width="0.8" fill="none"/><circle cx="35" cy="45" r="8" stroke="#0E143C" stroke-width="0.8" fill="none"/></svg>
+    </div>
+  </div>
+  <div class="section-inner">
+    <p class="section-num">Section 10</p>
+    <h2 class="section-title">Human Psychology <em>Design</em> Protocol</h2>
+    <div class="section-divider"></div>
+    <p class="section-desc">Every page must be designed through the lens of human psychology. Section order, visual weight, spacing, color application, and interaction patterns are driven by how healthcare decision-makers actually process, evaluate, and act on information — not by arbitrary aesthetics.</p>
+
+    <h3 class="sub-h reveal">Cognitive Principles Applied Per Section</h3>
+    <div class="principles-grid">
+      <div class="principle-card reveal reveal-d1" data-num="01"><div class="principle-title">Authority & Trust First</div><div class="principle-desc">Hero sections lead with credibility signals — compliance badges, acceptance rates, and clinical authority. Decision-makers evaluate trust before reading content. Establish it within the first viewport.</div></div>
+      <div class="principle-card reveal reveal-d2" data-num="02"><div class="principle-title">Progressive Disclosure</div><div class="principle-desc">Information flows from broad (what we do) to specific (how we do it) to proof (results). This mirrors natural cognitive processing — reducing overwhelm while building conviction layer by layer.</div></div>
+      <div class="principle-card reveal reveal-d3" data-num="03"><div class="principle-title">Loss Aversion Framing</div><div class="principle-desc">Content sections addressing pain points (denials, revenue leakage, compliance risk) are positioned before solution sections. Humans act more urgently to avoid loss than to acquire gain — design leverages this.</div></div>
+      <div class="principle-card reveal reveal-d4" data-num="04"><div class="principle-title">Social Proof Anchoring</div><div class="principle-desc">Metrics, trust bars, and client outcomes are placed at psychological anchor points — immediately after the hero, between pain/solution sections, and before CTAs — where they reinforce credibility at decision moments.</div></div>
+      <div class="principle-card reveal reveal-d5" data-num="05"><div class="principle-title">Cognitive Load Reduction</div><div class="principle-desc">Whitespace, muted hierarchy, and editorial minimalism reduce cognitive load. Healthcare decision-makers process complex information daily — our layouts give their eyes breathing room and clear visual paths.</div></div>
+      <div class="principle-card reveal reveal-d6" data-num="06"><div class="principle-title">Action-Ready CTA Placement</div><div class="principle-desc">CTA sections appear after the reader has processed enough information to feel confident acting. Never too early (before trust), never too late (after attention fades). Position at the psychological "ready" moment.</div></div>
+    </div>
+
+    <h3 class="sub-h reveal" style="margin-top:40px;">Section Design Psychology Workflow</h3>
+    <table class="spec-table reveal">
+      <thead><tr><th>Step</th><th>Psychology Action</th></tr></thead>
+      <tbody>
+        <tr><td class="highlight">1. Read Content</td><td>Analyze every section of provided content — understand what each communicates and what emotional/logical response it should trigger in the reader.</td></tr>
+        <tr><td class="highlight">2. Map User Journey</td><td>Sequence sections to follow the reader's psychological decision path: awareness → pain recognition → solution understanding → proof/trust → action readiness.</td></tr>
+        <tr><td class="highlight">3. Assign Visual Weight</td><td>Higher-impact sections (hero, core services, CTA) receive more visual prominence. Supporting sections (compliance, subspecialties) use lighter visual treatment.</td></tr>
+        <tr><td class="highlight">4. Apply Contrast Rhythm</td><td>Alternate between light/dark backgrounds, dense/sparse layouts, and text-heavy/visual sections to maintain cognitive engagement and prevent fatigue.</td></tr>
+        <tr><td class="highlight">5. Validate Emotionally</td><td>Review the complete page as if seeing it for the first time. Does each section feel purposeful? Does the page build confidence? Is the CTA positioned at the moment of maximum conviction?</td></tr>
+      </tbody>
+    </table>
+
+    <div class="gate-callout reveal" style="margin-top:32px;">
+      <div class="gate-callout-title">Design is not decoration — it is persuasion architecture.</div>
+      <div class="gate-callout-desc">Every section layout, spacing choice, color application, and animation timing must serve a psychological purpose. If a design decision cannot be justified by how it affects the reader's decision-making process, it does not belong on the page.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA — Dark, BG: LETTERS only, 1.5% white on navy ============ -->
+<section class="section dark" style="padding:100px var(--side-pad);">
+  <div class="sec-bg">
+    <div class="bg-l" style="font-size:30vw;top:-5%;left:5%;color:var(--white);opacity:0.015;">R</div>
+    <div class="bg-l" style="font-size:28vw;top:10%;left:38%;color:var(--white);opacity:0.012;">C</div>
+    <div class="bg-l" style="font-size:26vw;top:5%;right:5%;color:var(--white);opacity:0.015;">M</div>
+  </div>
+  <div class="section-inner reveal" style="text-align:center;">
+    <p style="font-size:11px;font-weight:600;letter-spacing:5px;text-transform:uppercase;color:var(--teal);margin-bottom:24px;">Ready to Scale</p>
+    <h2 style="font-size:clamp(28px,4vw,44px);font-weight:700;color:var(--white);line-height:1.2;margin-bottom:16px;">Your Revenue Cycle Deserves Better</h2>
+    <p style="font-size:15px;font-weight:300;color:rgba(255,255,255,0.45);margin-bottom:40px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.7;">Schedule a consultation with our RCM architects. We'll audit your current cycle and show you exactly where revenue is being left behind.</p>
+    <a href="#" class="cta-btn">Schedule Consultation <svg viewBox="0 0 16 16"><path d="M3 8 L13 8 M9 4 L13 8 L9 12"/></svg></a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer-bar">
+  <div class="footer-left">© 2025 Dastify Solutions. All rights reserved. · www.dastifysolutions.com</div>
+  <div class="footer-right">
+    <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Compliance</a><a href="#">Contact</a>
+  </div>
+</footer>
+
+<!-- ============ SCRIPTS ============ -->
+<script>
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>60));
+
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add('in-view');
+      entry.target.querySelectorAll('.reveal').forEach((el,i)=>{setTimeout(()=>el.classList.add('vis'),i*80);});
+      observer.unobserve(entry.target);
+    }
+  });
+},{threshold:0.08,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.section').forEach(s=>observer.observe(s));
+
+const revealObs=new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('vis');revealObs.unobserve(entry.target);}});
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>{if(!el.closest('.section'))revealObs.observe(el);});
+
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const target=document.querySelector(a.getAttribute('href'));
+    if(target){e.preventDefault();target.scrollIntoView({behavior:'smooth',block:'start'});}
+  });
+});
+</script>
+</body>
+</html>
