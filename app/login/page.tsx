@@ -30,17 +30,15 @@ export default async function LoginPage({
           }}
         />
 
-        <div className="relative z-10 flex items-center gap-3">
+        <div className="relative z-10 flex items-center">
           <Image
-            src="/dastify-mark.png"
-            alt=""
-            aria-hidden
-            width={40}
-            height={40}
+            src="/dastify-logo-on-dark.svg"
+            alt="Dastify"
+            width={172}
+            height={80}
             priority
-            className="h-10 w-10"
+            className="h-10 w-auto"
           />
-          <span className="text-[18px] font-semibold tracking-[-0.005em]">Dastify</span>
         </div>
 
         <div className="relative z-10 mt-auto max-w-[460px]">

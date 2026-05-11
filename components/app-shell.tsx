@@ -34,12 +34,12 @@ export function AppShell({
         <div className="flex items-center gap-7">
           <Link href={homeHref} className="flex items-center gap-2.5">
             <Image
-              src="/dastify-logo.svg"
+              src="/dastify-logo-on-dark.svg"
               alt="Dastify"
               width={107}
               height={50}
               priority
-              className="h-[26px] w-auto invert brightness-0"
+              className="h-[26px] w-auto"
             />
             <span className="ml-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
               Credentialing
