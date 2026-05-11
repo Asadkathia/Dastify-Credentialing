@@ -11,17 +11,17 @@ export default async function PortalLayout({ children }: { children: React.React
     .eq("id", session.clientId)
     .maybeSingle();
 
+  const baseNav: NavItem[] = [
+    { href: "/portal", label: "Dashboard", icon: "dashboard" },
+    { href: "/portal/providers", label: "Providers", icon: "providers" },
+    { href: "/portal/enrollments", label: "Enrollments", icon: "enrollments" },
+    { href: "/portal/documents", label: "Documents", icon: "documents" },
+  ];
+
   const navItems: NavItem[] =
     session.role === "client_admin"
-      ? [
-          { href: "/portal", label: "Dashboard", icon: "dashboard" },
-          { href: "/portal/enrollments", label: "Enrollments", icon: "enrollments" },
-          { href: "/portal/team", label: "Team", icon: "team" },
-        ]
-      : [
-          { href: "/portal", label: "Dashboard", icon: "dashboard" },
-          { href: "/portal/enrollments", label: "Enrollments", icon: "enrollments" },
-        ];
+      ? [...baseNav, { href: "/portal/team", label: "Team", icon: "team" }]
+      : baseNav;
 
   return (
     <AppShell

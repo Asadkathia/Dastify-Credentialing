@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
-import { ArrowRight } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { Activity, ArrowRight } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireClient } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
+import { StatusPipeline } from "@/components/ui/status-pipeline";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentsThread } from "@/app/admin/clients/[clientId]/enrollments/[enrollmentId]/_components/comments-thread";
 import { DocumentsPanel } from "@/components/documents-panel";
 import type { EnrollmentStatus } from "@/db/schema/enums";
@@ -26,11 +29,13 @@ export default async function ClientEnrollmentDetailPage({
 }: {
   params: Promise<{ enrollmentId: string }>;
 }) {
+  await requireClient();
   const { enrollmentId } = await params;
   const supabase = await createSupabaseServerClient();
 
   // RLS enforces tenant isolation; if the enrollment isn't for this client_id,
-  // the query returns null and we 404.
+  // the query returns null and we 404 (NOT 403 — per CLAUDE.md, denied access
+  // surfaces as not-found).
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select(
@@ -57,20 +62,25 @@ export default async function ClientEnrollmentDetailPage({
     ? `${provider.last_name}, ${provider.first_name}`
     : (groupEntity?.legal_name ?? "—");
 
-  const [{ data: comments }, { data: history }, { data: documents }, { data: docCategories }] =
+  const [{ data: comments }, { data: history }, { data: documents }, { data: docCategories }, { data: activity }] =
     await Promise.all([
       supabase
         .from("comments")
         .select("id, body, author_user_id, parent_comment_id, created_at")
         .eq("enrollment_id", enrollmentId)
         .is("deleted_at", null)
-        .order("created_at"),
+        .order("created_at", { ascending: true })
+        .limit(200),
       supabase
         .from("status_history")
-        .select("id, from_status, to_status, changed_at")
+        .select(
+          "id, from_status, to_status, from_sub_status, to_sub_status, reason, changed_at",
+        )
         .eq("enrollment_id", enrollmentId)
         .order("changed_at", { ascending: false })
-        .limit(20),
+        .limit(50),
+      // RLS hides internal documents from client roles — additionally filter
+      // is_internal=false here as defense in depth.
       supabase
         .from("documents")
         .select(
@@ -80,10 +90,17 @@ export default async function ClientEnrollmentDetailPage({
         )
         .eq("owner_type", "enrollment")
         .eq("owner_id", enrollmentId)
+        .eq("is_internal", false)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(50),
       supabase.from("document_categories").select("id, name, label, is_default").order("sort_order"),
+      supabase
+        .from("activity_events")
+        .select("id, action, target_table, target_id, summary, occurred_at, actor_user_id")
+        .eq("target_id", enrollmentId)
+        .order("occurred_at", { ascending: false })
+        .limit(50),
     ]);
 
   return (
@@ -91,87 +108,139 @@ export default async function ClientEnrollmentDetailPage({
       <PageHeader
         title={`${payer?.name ?? "Unknown payer"} · ${enrollment.state} · Cycle ${enrollment.cycle_number}`}
         subtitle={subjectLabel}
-        crumbs={[{ label: "Dashboard", href: "/portal" }, { label: "Enrollment" }]}
+        crumbs={[
+          { label: "Enrollments", href: "/portal/enrollments" },
+          { label: `${payer?.name ?? ""} · ${enrollment.state}` },
+        ]}
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          {/* Status snapshot */}
-          <section className="surface">
-            <header className="border-b border-border-subtle px-5 py-4">
-              <h2 className="text-[15px] font-semibold text-navy">Status</h2>
-            </header>
-            <div className="space-y-4 px-5 py-5">
-              <div className="flex items-center gap-3">
-                <StatusChip status={status} size="lg" />
-                {enrollment.sub_status ? (
-                  <span className="text-[13px] text-navy/65">{enrollment.sub_status}</span>
-                ) : null}
-              </div>
-              {enrollment.effective_date ? (
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border-subtle pt-4 text-[13px]">
-                  <Meta
-                    label="Effective"
-                    value={format(new Date(enrollment.effective_date), "PP")}
-                  />
-                  {enrollment.next_recred_due_date ? (
-                    <Meta
-                      label="Next recred"
-                      value={format(new Date(enrollment.next_recred_due_date), "PP")}
-                    />
-                  ) : null}
-                </dl>
-              ) : null}
-            </div>
-          </section>
-
-          {/* Comments */}
-          <section className="surface">
-            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-              <h2 className="text-[15px] font-semibold text-navy">Comments</h2>
-              <span className="label-sm">{comments?.length ?? 0}</span>
-            </header>
-            <div className="px-5 py-5">
-              <CommentsThread enrollmentId={enrollmentId} comments={comments ?? []} allowPost />
-            </div>
-          </section>
-
-          {/* Documents — RLS hides internal documents in client view */}
-          <section className="surface">
-            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-              <h2 className="text-[15px] font-semibold text-navy">Documents</h2>
-              <span className="label-sm">{documents?.length ?? 0}</span>
-            </header>
-            <div className="px-5 py-5">
-              <DocumentsPanel
-                clientId={enrollment.client_id}
-                ownerType="enrollment"
-                ownerId={enrollmentId}
-                documents={documents ?? []}
-                categories={docCategories ?? []}
-                canManage={false}
-                defaultCategoryName="payer_letter"
-              />
-            </div>
-          </section>
+      {/* Status snapshot + pipeline */}
+      <section className="surface mb-6">
+        <div className="border-b border-border-subtle px-5 py-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusChip status={status} size="lg" />
+            {enrollment.sub_status ? (
+              <span className="text-[13px] text-navy/65">{enrollment.sub_status}</span>
+            ) : null}
+            <span className="ml-auto label-sm">Pipeline</span>
+          </div>
+        </div>
+        <div className="px-5 py-6">
+          <StatusPipeline status={status} />
         </div>
 
-        {/* Timeline — read-only */}
-        <aside>
-          <section className="surface sticky top-[88px]">
-            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-              <h2 className="text-[15px] font-semibold text-navy">Timeline</h2>
-              <span className="label-sm">{history?.length ?? 0}</span>
+        {(enrollment.effective_date ||
+          enrollment.submitted_at ||
+          enrollment.next_recred_due_date) ? (
+          <dl className="grid gap-x-6 gap-y-3 border-t border-border-subtle px-5 py-4 text-[13px] md:grid-cols-3">
+            {enrollment.submitted_at ? (
+              <Meta label="Submitted" value={format(new Date(enrollment.submitted_at), "PP")} />
+            ) : null}
+            {enrollment.effective_date ? (
+              <Meta
+                label="Effective"
+                value={format(new Date(enrollment.effective_date), "PP")}
+              />
+            ) : null}
+            {enrollment.next_recred_due_date ? (
+              <Meta
+                label="Next recred"
+                value={format(new Date(enrollment.next_recred_due_date), "PP")}
+              />
+            ) : null}
+          </dl>
+        ) : null}
+      </section>
+
+      {/* Tabs — Internal Notes deliberately absent in client view per CLAUDE.md §C5 */}
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="history">
+            Status History
+            <span className="ml-1.5 rounded-full bg-lightgrey px-1.5 py-px text-[10px] font-semibold tnum text-navy/65">
+              {history?.length ?? 0}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="documents">
+            Documents
+            <span className="ml-1.5 rounded-full bg-lightgrey px-1.5 py-px text-[10px] font-semibold tnum text-navy/65">
+              {documents?.length ?? 0}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="comments">
+            Comments
+            <span className="ml-1.5 rounded-full bg-lightgrey px-1.5 py-px text-[10px] font-semibold tnum text-navy/65">
+              {comments?.length ?? 0}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+        </TabsList>
+
+        {/* Overview */}
+        <TabsContent value="overview">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <section className="surface lg:col-span-2">
+              <header className="border-b border-border-subtle px-5 py-4">
+                <h2 className="text-[15px] font-semibold text-navy">Latest activity</h2>
+              </header>
+              {!activity || activity.length === 0 ? (
+                <p className="px-5 py-10 text-center text-[13px] text-navy/55">
+                  No activity yet.
+                </p>
+              ) : (
+                <ol className="divide-y divide-border-subtle">
+                  {activity.slice(0, 8).map((a) => (
+                    <li key={a.id} className="px-5 py-3.5 text-[13px]">
+                      <div className="flex items-center gap-2">
+                        <Activity size={12} className="shrink-0 text-teal" strokeWidth={1.6} />
+                        <span className="font-semibold uppercase tracking-[0.06em] text-[11px] text-navy/70">
+                          {a.action.replace(/_/g, " ")}
+                        </span>
+                        <span className="ml-auto tnum text-[11px] text-navy/55">
+                          {formatDistanceToNow(new Date(a.occurred_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      {a.summary ? (
+                        <p className="mt-1 text-[12px] text-charcoal">{a.summary}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+
+            <aside className="surface">
+              <header className="border-b border-border-subtle px-5 py-4">
+                <h2 className="text-[15px] font-semibold text-navy">Cycle info</h2>
+              </header>
+              <dl className="space-y-4 px-5 py-5 text-[13px]">
+                <Meta label="Cycle" value={`#${enrollment.cycle_number}`} />
+                <Meta label="Created" value={format(new Date(enrollment.created_at), "PP")} />
+                <Meta
+                  label="Updated"
+                  value={formatDistanceToNow(new Date(enrollment.updated_at), { addSuffix: true })}
+                />
+              </dl>
+            </aside>
+          </div>
+        </TabsContent>
+
+        {/* Status History */}
+        <TabsContent value="history">
+          <section className="surface">
+            <header className="border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Status history</h2>
             </header>
             {!history || history.length === 0 ? (
-              <p className="px-5 py-6 text-center text-[13px] text-navy/55">No activity yet.</p>
+              <p className="px-5 py-10 text-center text-[13px] text-navy/55">No history yet.</p>
             ) : (
               <ol className="divide-y divide-border-subtle">
                 {history.map((h) => {
                   const from = h.from_status as EnrollmentStatus | null;
                   const to = h.to_status as EnrollmentStatus;
                   return (
-                    <li key={h.id} className="space-y-1.5 px-5 py-3.5">
+                    <li key={h.id} className="space-y-1.5 px-5 py-4">
                       <div className="flex items-center gap-2 text-[11px]">
                         {from ? (
                           <>
@@ -194,18 +263,102 @@ export default async function ClientEnrollmentDetailPage({
                             </span>
                           </>
                         )}
+                        <span className="ml-auto tnum text-navy/55">
+                          {format(new Date(h.changed_at), "PP · p")}
+                        </span>
                       </div>
-                      <p className="tnum text-[11px] text-navy/55">
-                        {format(new Date(h.changed_at), "PP · p")}
-                      </p>
+                      {h.to_sub_status ? (
+                        <p className="text-[12px] italic text-navy/65">
+                          sub-status → {h.to_sub_status}
+                        </p>
+                      ) : null}
+                      {h.reason ? (
+                        <p className="text-[13px] text-charcoal">{h.reason}</p>
+                      ) : null}
                     </li>
                   );
                 })}
               </ol>
             )}
           </section>
-        </aside>
-      </div>
+        </TabsContent>
+
+        {/* Documents — read-only (canManage=false) */}
+        <TabsContent value="documents">
+          <section className="surface">
+            <header className="border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Documents</h2>
+            </header>
+            <div className="px-5 py-5">
+              <DocumentsPanel
+                clientId={enrollment.client_id}
+                ownerType="enrollment"
+                ownerId={enrollmentId}
+                documents={documents ?? []}
+                categories={docCategories ?? []}
+                canManage={false}
+                defaultCategoryName="payer_letter"
+              />
+            </div>
+          </section>
+        </TabsContent>
+
+        {/* Comments — writable */}
+        <TabsContent value="comments">
+          <section className="surface">
+            <header className="border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Comments</h2>
+            </header>
+            <div className="px-5 py-5">
+              <CommentsThread enrollmentId={enrollmentId} comments={comments ?? []} allowPost />
+            </div>
+          </section>
+        </TabsContent>
+
+        {/* Activity */}
+        <TabsContent value="activity">
+          <section className="surface">
+            <header className="border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Full activity log</h2>
+            </header>
+            {!activity || activity.length === 0 ? (
+              <p className="px-5 py-10 text-center text-[13px] text-navy/55">No activity yet.</p>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th className="w-[140px]">Time</th>
+                    <th className="w-[160px]">Action</th>
+                    <th>Summary</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activity.map((a) => (
+                    <tr key={a.id}>
+                      <td>
+                        <div className="text-[12px] tnum text-navy/85">
+                          {format(new Date(a.occurred_at), "PP")}
+                        </div>
+                        <div className="text-[11px] text-navy/55">
+                          {formatDistanceToNow(new Date(a.occurred_at), { addSuffix: true })}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/85">
+                          {a.action.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="text-[13px] text-charcoal">
+                        {a.summary ?? <span className="text-navy/45">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

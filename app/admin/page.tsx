@@ -10,7 +10,7 @@ import {
   BarChart,
   Sparkline,
   CHART_COLORS,
-} from "./_components/dashboard-charts";
+} from "@/components/charts/dashboard-charts";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
 
 const STATUS_LABEL: Record<EnrollmentStatus, string> = {

@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, Search } from "lucide-react";
-import { signOutAction } from "@/lib/auth/actions";
 import { AppSidebarNav, type NavItem } from "@/components/app-sidebar-nav";
+import { SignOutButton } from "@/components/sign-out-button";
 
 export type { NavItem } from "@/components/app-sidebar-nav";
 
@@ -34,15 +34,13 @@ export function AppShell({
         <div className="flex items-center gap-7">
           <Link href={homeHref} className="flex items-center gap-2.5">
             <Image
-              src="/dastify-mark.png"
-              alt=""
-              aria-hidden
-              width={28}
-              height={28}
+              src="/dastify-logo.svg"
+              alt="Dastify"
+              width={107}
+              height={50}
               priority
-              className="h-7 w-7"
+              className="h-[26px] w-auto invert brightness-0"
             />
-            <span className="text-[15px] font-semibold leading-none">Dastify</span>
             <span className="ml-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
               Credentialing
             </span>
@@ -87,14 +85,7 @@ export function AppShell({
             <ChevronDown size={12} className="text-white/50" />
           </div>
 
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="rounded-md border border-white/10 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-white/75 transition-colors hover:bg-white/8 hover:text-white"
-            >
-              Sign out
-            </button>
-          </form>
+          <SignOutButton />
         </div>
       </header>
 

@@ -1,47 +1,215 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { Download, Info } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { Download, Info, MessageSquare } from "lucide-react";
 import { requireClient } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
-import { pipelineDisplayOrder, STATUS_LABELS } from "@/lib/enrollment/state-machine";
-import type { EnrollmentStatus } from "@/db/schema/enums";
+import {
+  Donut,
+  LineChart,
+  BarChart,
+  Sparkline,
+  CHART_COLORS,
+} from "@/components/charts/dashboard-charts";
+import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
+
+const STATUS_LABEL: Record<EnrollmentStatus, string> = {
+  intake: "Intake",
+  prep: "Prep",
+  submitted: "Submitted",
+  in_review: "In Review",
+  info_requested: "Info Requested",
+  approved: "Approved",
+  denied: "Denied",
+  effective: "Effective",
+  closed: "Closed",
+  withdrawn: "Withdrawn",
+};
+
+const STATUS_DOT: Record<EnrollmentStatus, string> = {
+  intake: CHART_COLORS.grey,
+  prep: CHART_COLORS.aqua,
+  submitted: CHART_COLORS.teal,
+  in_review: CHART_COLORS.teal,
+  info_requested: CHART_COLORS.amber,
+  approved: CHART_COLORS.green,
+  denied: CHART_COLORS.red,
+  effective: CHART_COLORS.green,
+  closed: CHART_COLORS.grey,
+  withdrawn: CHART_COLORS.grey,
+};
 
 export default async function ClientPortalDashboardPage() {
   const session = await requireClient();
   const supabase = await createSupabaseServerClient();
+  const today = new Date();
 
-  // RLS enforces that we only see this client's data.
-  const [{ data: settings }, { data: enrollments }] = await Promise.all([
+  const cutoff90 = new Date();
+  cutoff90.setDate(cutoff90.getDate() + 90);
+  const cutoff90Iso = cutoff90.toISOString().split("T")[0]!;
+
+  const cutoff84d = new Date();
+  cutoff84d.setDate(cutoff84d.getDate() - 84);
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const sixMonthsLater = new Date();
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+  sixMonthsLater.setDate(0);
+
+  // RLS scopes every query below to this client_id automatically.
+  const [
+    { data: settings },
+    { count: activeCount },
+    { count: recredsDueCount },
+    { count: infoReqCount },
+    { count: commentsThisWeekCount },
+    { data: allEnrollments },
+    { data: transitions },
+    { data: upcomingRecreds },
+    { data: recentlyUpdated },
+    { data: recentComments },
+  ] = await Promise.all([
     supabase
       .from("client_settings")
       .select("disclaimer_banner_text")
       .eq("client_id", session.clientId)
       .maybeSingle(),
+
+    supabase
+      .from("enrollments")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .not("status", "in", "(closed,withdrawn)"),
+
+    supabase
+      .from("enrollments")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "effective")
+      .not("next_recred_due_date", "is", null)
+      .lte("next_recred_due_date", cutoff90Iso),
+
+    supabase
+      .from("enrollments")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "info_requested")
+      .is("deleted_at", null),
+
+    supabase
+      .from("comments")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", sevenDaysAgo.toISOString())
+      .is("deleted_at", null),
+
+    supabase
+      .from("enrollments")
+      .select("id, status")
+      .is("deleted_at", null),
+
+    supabase
+      .from("status_history")
+      .select("to_status, changed_at")
+      .gte("changed_at", cutoff84d.toISOString())
+      .in("to_status", ["submitted", "effective"])
+      .limit(2000),
+
+    supabase
+      .from("enrollments")
+      .select("next_recred_due_date, status")
+      .eq("status", "effective")
+      .not("next_recred_due_date", "is", null)
+      .gte("next_recred_due_date", today.toISOString().split("T")[0]!)
+      .lte("next_recred_due_date", sixMonthsLater.toISOString().split("T")[0]!),
+
     supabase
       .from("enrollments")
       .select(
-        `id, state, status, sub_status, cycle_number, effective_date, next_recred_due_date,
-         provider:provider_id (id, first_name, last_name),
-         group_entity:group_entity_id (id, legal_name),
-         payer:payer_id (id, name)`,
+        `id, state, status, sub_status, updated_at,
+         provider:provider_id (first_name, last_name),
+         group_entity:group_entity_id (legal_name),
+         payer:payer_id (name)`,
       )
       .is("deleted_at", null)
-      .order("created_at", { ascending: false }),
+      .order("updated_at", { ascending: false })
+      .limit(8),
+
+    supabase
+      .from("comments")
+      .select(
+        `id, body, author_user_id, created_at,
+         enrollment:enrollment_id (id, state,
+           provider:provider_id (first_name, last_name),
+           payer:payer_id (name))`,
+      )
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
-  const pipelineOrder = pipelineDisplayOrder();
-  const counts = pipelineOrder.reduce(
-    (acc, status) => {
-      acc[status] = enrollments?.filter((e) => e.status === status).length ?? 0;
+  // Status distribution snapshot
+  const statusCounts = ENROLLMENT_STATUSES.reduce<Record<EnrollmentStatus, number>>(
+    (acc, s) => {
+      acc[s] = 0;
       return acc;
     },
     {} as Record<EnrollmentStatus, number>,
   );
+  (allEnrollments ?? []).forEach((e) => {
+    const s = e.status as EnrollmentStatus;
+    statusCounts[s] = (statusCounts[s] ?? 0) + 1;
+  });
+  const donutData = ENROLLMENT_STATUSES.map((s) => ({
+    key: s,
+    label: STATUS_LABEL[s],
+    value: statusCounts[s],
+    color: STATUS_DOT[s],
+  }));
+  const totalDonut = donutData.reduce((s, d) => s + d.value, 0);
 
-  const total = enrollments?.length ?? 0;
+  // Throughput — 12 weeks
+  const weeks: Array<{ label: string; start: Date; submitted: number; effective: number }> = [];
+  for (let i = 11; i >= 0; i--) {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - start.getDay() - i * 7);
+    weeks.push({
+      label: `W${weekOfYear(start)}`,
+      start,
+      submitted: 0,
+      effective: 0,
+    });
+  }
+  (transitions ?? []).forEach((t) => {
+    const at = new Date(t.changed_at);
+    const w = weeks.find((week, i) => {
+      const next = weeks[i + 1]?.start;
+      return at >= week.start && (!next || at < next);
+    });
+    if (!w) return;
+    if (t.to_status === "submitted") w.submitted += 1;
+    else if (t.to_status === "effective") w.effective += 1;
+  });
+
+  // Recred forecast — next 6 months
+  const months: Array<{ label: string; key: string; count: number }> = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    months.push({
+      label: d.toLocaleString("en-US", { month: "short" }),
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      count: 0,
+    });
+  }
+  (upcomingRecreds ?? []).forEach((r) => {
+    if (!r.next_recred_due_date) return;
+    const d = new Date(r.next_recred_due_date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const bucket = months.find((m) => m.key === key);
+    if (bucket) bucket.count += 1;
+  });
 
   return (
     <div>
@@ -54,11 +222,11 @@ export default async function ClientPortalDashboardPage() {
       ) : null}
 
       <PageHeader
-        title="Credentialing status"
+        title="Dashboard"
         subtitle={
           <>
-            <span className="tnum font-semibold text-charcoal">{total}</span> total enrollments
-            across all providers, payers, and states.
+            Credentialing status across all your providers, payers, and states. Updated{" "}
+            <span className="font-mono tnum">{format(today, "PP")}</span>.
           </>
         }
         actions={
@@ -71,86 +239,322 @@ export default async function ClientPortalDashboardPage() {
         }
       />
 
-      {/* KPI strip — pipeline stage counts */}
-      <div className="mb-8 grid gap-3 md:grid-cols-4 lg:grid-cols-7">
-        {pipelineOrder.map((status) => (
-          <div
-            key={status}
-            className="rounded-md border border-border-subtle bg-white px-4 py-3 shadow-[var(--shadow-xs)]"
-          >
-            <p className="label-sm">{STATUS_LABELS[status]}</p>
-            <p className="mt-1.5 text-[24px] font-bold tnum tracking-[-0.01em] text-navy">
-              {counts[status]}
-            </p>
-          </div>
-        ))}
+      {/* KPI band */}
+      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Active enrollments"
+          value={activeCount ?? 0}
+          spark={weeks.map((w) => w.submitted)}
+          color="navy"
+        />
+        <KpiCard
+          label="Recreds due 90d"
+          value={recredsDueCount ?? 0}
+          spark={months.map((m) => m.count)}
+          color="amber"
+        />
+        <KpiCard
+          label="Open info requests"
+          value={infoReqCount ?? 0}
+          spark={weeks.map((w) => w.submitted)}
+          color="amber"
+        />
+        <KpiCard
+          label="New comments · 7d"
+          value={commentsThisWeekCount ?? 0}
+          spark={weeks.map((w) => w.effective)}
+          color="teal"
+        />
       </div>
 
-      <section className="surface">
-        <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-          <h2 className="text-[15px] font-semibold text-navy">All enrollments</h2>
-          <span className="label-sm">{total} total</span>
-        </header>
+      {/* Row 2 — throughput + status mix */}
+      <div className="mb-6 grid gap-4 xl:grid-cols-[1.65fr_1fr]">
+        <ChartCard
+          title="Throughput · last 12 weeks"
+          caption="Your enrollments transitioning to Submitted / Effective per week."
+          legend={[
+            { color: CHART_COLORS.navy, label: "Submitted" },
+            { color: CHART_COLORS.teal, label: "Effective" },
+          ]}
+        >
+          <LineChart
+            labels={weeks.map((w) => w.label)}
+            series={[
+              { name: "Submitted", color: CHART_COLORS.navy, data: weeks.map((w) => w.submitted) },
+              { name: "Effective", color: CHART_COLORS.teal, data: weeks.map((w) => w.effective) },
+            ]}
+          />
+        </ChartCard>
 
-        {total === 0 ? (
-          <p className="px-5 py-10 text-center text-[13px] text-navy/55">
-            No enrollments yet. Your credentialing team will populate this as work begins.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
+        <ChartCard title="Active enrollments by status" caption="Snapshot — current">
+          <div className="flex flex-col items-center gap-4">
+            <Donut data={donutData} total={totalDonut} totalLabel="Active" />
+            <ul className="w-full space-y-1 border-t border-border-subtle pt-3">
+              {donutData.map((d) => {
+                const pct = totalDonut > 0 ? Math.round((d.value / totalDonut) * 100) : 0;
+                return (
+                  <li
+                    key={d.key}
+                    className="flex items-center justify-between gap-2 rounded px-1 py-[3px] text-[12px]"
+                  >
+                    <span className="flex items-center gap-2 truncate text-charcoal">
+                      <span
+                        aria-hidden
+                        className="h-2 w-2 shrink-0 rounded-[2px]"
+                        style={{ background: d.color }}
+                      />
+                      {d.label}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="min-w-[36px] text-right font-semibold tnum text-charcoal">
+                        {d.value}
+                      </span>
+                      <span className="min-w-[42px] text-right tnum text-[11px] text-navy/55">
+                        {pct}%
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Row 3 — recreds forecast (full width, client view doesn't have denial-rate) */}
+      <div className="mb-6">
+        <ChartCard
+          title="Recreds forecast · next 6 months"
+          caption="Your effective enrollments due for recredentialing per month."
+        >
+          <BarChart
+            data={months.map((m) => ({ label: m.label, value: m.count, color: CHART_COLORS.teal }))}
+          />
+        </ChartCard>
+      </div>
+
+      {/* Row 4 — recently updated + recent comments */}
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="surface">
+          <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+            <h2 className="text-[15px] font-semibold text-navy">Recently updated</h2>
+            <Link
+              href="/portal/enrollments"
+              className="text-[11px] font-semibold uppercase tracking-[0.06em] text-teal hover:text-[#0E7475]"
+            >
+              View all →
+            </Link>
+          </header>
+          {!recentlyUpdated || recentlyUpdated.length === 0 ? (
+            <p className="px-5 py-10 text-center text-[13px] text-navy/55">No activity yet.</p>
+          ) : (
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Provider / Group</th>
-                  <th className="w-[60px]">State</th>
-                  <th>Payer</th>
+                  <th>Subject</th>
+                  <th>Payer · State</th>
                   <th>Status</th>
-                  <th>Effective</th>
-                  <th className="w-[80px] text-right" />
+                  <th>Updated</th>
                 </tr>
               </thead>
               <tbody>
-                {enrollments!.map((e) => {
-                  const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
-                  const groupEntity = Array.isArray(e.group_entity)
-                    ? e.group_entity[0]
-                    : e.group_entity;
-                  const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
-                  const status = e.status as EnrollmentStatus;
+                {recentlyUpdated.map((r) => {
+                  const provider = Array.isArray(r.provider) ? r.provider[0] : r.provider;
+                  const groupEntity = Array.isArray(r.group_entity)
+                    ? r.group_entity[0]
+                    : r.group_entity;
+                  const payer = Array.isArray(r.payer) ? r.payer[0] : r.payer;
+                  const subject = provider
+                    ? `${provider.last_name}, ${provider.first_name}`
+                    : (groupEntity?.legal_name ?? "—");
                   return (
-                    <tr key={e.id}>
-                      <td className="font-medium text-navy">
-                        {provider
-                          ? `${provider.last_name}, ${provider.first_name}`
-                          : (groupEntity?.legal_name ?? "—")}
-                      </td>
-                      <td className="font-mono text-[12px] tnum text-navy/70">{e.state}</td>
-                      <td className="text-navy/85">{payer?.name ?? "—"}</td>
+                    <tr key={r.id}>
                       <td>
-                        <StatusChip status={status} />
-                        {e.sub_status ? (
-                          <p className="mt-1 text-[11px] text-navy/55">{e.sub_status}</p>
-                        ) : null}
-                      </td>
-                      <td className="tnum text-[12px] text-navy/70">
-                        {e.effective_date ? format(new Date(e.effective_date), "PP") : "—"}
-                      </td>
-                      <td className="text-right">
                         <Link
-                          href={`/portal/enrollments/${e.id}`}
-                          className="text-[12px] font-semibold uppercase tracking-wider text-teal hover:text-[#0E7475]"
+                          href={`/portal/enrollments/${r.id}`}
+                          className="font-medium text-navy hover:text-teal"
                         >
-                          View →
+                          {subject}
                         </Link>
+                      </td>
+                      <td className="text-navy/70">
+                        {payer?.name ?? "—"} · <span className="font-mono tnum">{r.state}</span>
+                      </td>
+                      <td>
+                        <StatusChip status={r.status as EnrollmentStatus} />
+                      </td>
+                      <td className="tnum text-[11px] text-navy/55">
+                        {formatDistanceToNow(new Date(r.updated_at), { addSuffix: true })}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+
+        <section className="surface">
+          <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+            <h2 className="text-[15px] font-semibold text-navy">Recent comments</h2>
+            <span className="label-sm">{recentComments?.length ?? 0}</span>
+          </header>
+          {!recentComments || recentComments.length === 0 ? (
+            <div className="px-5 py-10 text-center text-[13px] text-navy/55">
+              No comments yet on your enrollments.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border-subtle">
+              {recentComments.map((c) => {
+                const enrollment = Array.isArray(c.enrollment) ? c.enrollment[0] : c.enrollment;
+                const provider = enrollment?.provider
+                  ? Array.isArray(enrollment.provider)
+                    ? enrollment.provider[0]
+                    : enrollment.provider
+                  : null;
+                const payer = enrollment?.payer
+                  ? Array.isArray(enrollment.payer)
+                    ? enrollment.payer[0]
+                    : enrollment.payer
+                  : null;
+                const subject = provider
+                  ? `${provider.last_name}, ${provider.first_name}`
+                  : "—";
+                return (
+                  <li key={c.id} className="px-5 py-4">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <Link
+                        href={enrollment ? `/portal/enrollments/${enrollment.id}` : "#"}
+                        className="flex items-baseline gap-2 text-[12px] hover:text-teal"
+                      >
+                        <MessageSquare
+                          size={11}
+                          strokeWidth={1.6}
+                          className="shrink-0 text-teal"
+                        />
+                        <span className="font-medium text-navy">{subject}</span>
+                        {payer ? (
+                          <span className="text-navy/55">
+                            · {payer.name}
+                            {enrollment?.state ? (
+                              <>
+                                {" "}
+                                · <span className="font-mono tnum">{enrollment.state}</span>
+                              </>
+                            ) : null}
+                          </span>
+                        ) : null}
+                      </Link>
+                      <span className="shrink-0 tnum text-[11px] text-navy/55">
+                        {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 line-clamp-2 text-[13px] leading-[20px] text-charcoal">
+                      {c.body}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Date-stamped footnote — pre-recred warning */}
+      {recredsDueCount && recredsDueCount > 0 ? (
+        <p className="mt-6 text-center text-[11px] text-navy/55">
+          <span className="font-mono tnum">
+            {recredsDueCount} enrollment{recredsDueCount === 1 ? "" : "s"}
+          </span>{" "}
+          due for recredentialing within 90 days.{" "}
+          <Link
+            href="/portal/enrollments?status=effective"
+            className="font-semibold uppercase tracking-[0.06em] text-teal hover:text-[#0E7475]"
+          >
+            View →
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }
+
+function KpiCard({
+  label,
+  value,
+  suffix,
+  spark,
+  color,
+}: {
+  label: string;
+  value: number | string;
+  suffix?: string;
+  spark: number[];
+  color: "navy" | "teal" | "amber";
+}) {
+  const sparkColor =
+    color === "navy"
+      ? CHART_COLORS.navy
+      : color === "amber"
+        ? CHART_COLORS.amber
+        : CHART_COLORS.teal;
+  return (
+    <div className="rounded-md border border-border-subtle bg-white px-5 py-4 shadow-[var(--shadow-xs)] transition-shadow hover:shadow-[var(--shadow-sm)]">
+      <p className="label-sm">{label}</p>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <p className="text-[32px] font-bold leading-none tracking-[-0.01em] tnum text-navy">
+          {value}
+          {suffix ? (
+            <span className="ml-0.5 text-[18px] font-medium text-navy/55">{suffix}</span>
+          ) : null}
+        </p>
+        <Sparkline data={spark} color={sparkColor} />
+      </div>
+    </div>
+  );
+}
+
+function ChartCard({
+  title,
+  caption,
+  legend,
+  children,
+}: {
+  title: string;
+  caption?: string;
+  legend?: Array<{ color: string; label: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-0 flex-col rounded-md border border-border-subtle bg-white px-5 py-4 shadow-[var(--shadow-xs)]">
+      <header className="mb-3">
+        <h3 className="text-[14px] font-semibold leading-5 text-navy">{title}</h3>
+        {caption ? <p className="mt-0.5 text-[12px] leading-[18px] text-navy/55">{caption}</p> : null}
+      </header>
+      <div className="pt-2">{children}</div>
+      {legend && legend.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-4 border-t border-border-subtle pt-3 text-[12px] text-navy/70">
+          {legend.map((l, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5 font-medium">
+              <span
+                aria-hidden
+                className="h-2 w-2 rounded-[2px]"
+                style={{ background: l.color }}
+              />
+              {l.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function weekOfYear(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
