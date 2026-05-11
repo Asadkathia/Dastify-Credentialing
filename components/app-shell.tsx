@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, Search } from "lucide-react";
 import { signOutAction } from "@/lib/auth/actions";
@@ -32,12 +33,15 @@ export function AppShell({
       <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-white/5 bg-navy px-6 text-white">
         <div className="flex items-center gap-7">
           <Link href={homeHref} className="flex items-center gap-2.5">
-            <span
+            <Image
+              src="/dastify-mark.png"
+              alt=""
               aria-hidden
-              className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-teal text-[12px] font-bold text-navy"
-            >
-              D
-            </span>
+              width={28}
+              height={28}
+              priority
+              className="h-7 w-7"
+            />
             <span className="text-[15px] font-semibold leading-none">Dastify</span>
             <span className="ml-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
               Credentialing

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LoginForm } from "./_components/login-form";
 
 export default async function LoginPage({
@@ -30,9 +31,15 @@ export default async function LoginPage({
         />
 
         <div className="relative z-10 flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-teal text-[16px] font-bold text-navy">
-            D
-          </span>
+          <Image
+            src="/dastify-mark.png"
+            alt=""
+            aria-hidden
+            width={40}
+            height={40}
+            priority
+            className="h-10 w-10"
+          />
           <span className="text-[18px] font-semibold tracking-[-0.005em]">Dastify</span>
         </div>
 
