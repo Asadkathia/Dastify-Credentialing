@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { payerTypeEnum } from "./enums";
 
 // Master list of insurance payers. Global (not tenant-scoped); shared across all clients.
@@ -9,7 +9,6 @@ export const payers = pgTable(
     name: text("name").notNull(),
     payerType: payerTypeEnum("payer_type").notNull().default("commercial"),
     statesActive: jsonb("states_active").$type<string[]>().notNull().default([]),
-    recredCycleMonths: integer("recred_cycle_months").notNull().default(24),
     websiteUrl: text("website_url"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

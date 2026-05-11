@@ -46,12 +46,6 @@ export const enrollmentsRelations = relations(enrollments, ({ one, many }) => ({
     references: [groupEntities.id],
   }),
   payer: one(payers, { fields: [enrollments.payerId], references: [payers.id] }),
-  parentEnrollment: one(enrollments, {
-    fields: [enrollments.parentEnrollmentId],
-    references: [enrollments.id],
-    relationName: "recred_chain",
-  }),
-  childEnrollments: many(enrollments, { relationName: "recred_chain" }),
   comments: many(comments),
   internalNotes: many(internalNotes),
   statusHistory: many(statusHistory),
