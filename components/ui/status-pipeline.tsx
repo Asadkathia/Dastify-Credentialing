@@ -2,56 +2,43 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
-// Display order in the pipeline visualization.
-// The 10-stage flow per CLAUDE.md §3 rule 18.
+// Linear pipeline order — matches `pipelineDisplayOrder()` in state-machine.ts.
 const PIPELINE: ReadonlyArray<{ key: EnrollmentStatus; label: string }> = [
-  { key: "intake", label: "Intake" },
   { key: "prep", label: "Prep" },
   { key: "submitted", label: "Submitted" },
   { key: "in_review", label: "In Review" },
-  { key: "info_requested", label: "Info Req" },
   { key: "approved", label: "Approved" },
-  { key: "effective", label: "Effective" },
+  { key: "completed", label: "Completed" },
 ];
 
+// Terminal off-rail outcome (renders as an overlay tag dimming the rail).
 const TERMINAL: ReadonlyArray<{ key: EnrollmentStatus; label: string }> = [
-  { key: "denied", label: "Denied" },
-  { key: "closed", label: "Closed" },
-  { key: "withdrawn", label: "Withdrawn" },
+  { key: "non_par_credentialed", label: "Non-par credentialed" },
 ];
 
 export function StatusPipeline({ status }: { status: EnrollmentStatus }) {
   const terminal = TERMINAL.find((t) => t.key === status);
 
-  // If the enrollment ended in a terminal state, render the pipeline at 50%
-  // opacity with an overlay tag showing the terminal label.
+  // If the enrollment ended off-rail, render the rail at 40% opacity with an
+  // overlay tag showing the terminal label.
   const dimmed = !!terminal;
   const currentIdx = terminal
-    ? PIPELINE.findIndex((s) => s.key === "approved") // anchor visually at "approved" when terminal
+    ? // Anchor visually at "approved" — the most likely fork-off point.
+      PIPELINE.findIndex((s) => s.key === "approved")
     : PIPELINE.findIndex((s) => s.key === status);
 
   return (
     <div className="relative">
       {dimmed && terminal ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center">
-          <span
-            className={cn(
-              "rounded-sm px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.06em]",
-              terminal.key === "denied"
-                ? "bg-danger-08 text-danger ring-1 ring-danger/30"
-                : "bg-lightgrey text-navy/65 ring-1 ring-grey",
-            )}
-          >
+          <span className="rounded-sm bg-warning-08 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7a4f00] ring-1 ring-warning/30">
             {terminal.label}
           </span>
         </div>
       ) : null}
 
       <ol
-        className={cn(
-          "relative flex items-center gap-2",
-          dimmed && "opacity-40",
-        )}
+        className={cn("relative flex items-center gap-2", dimmed && "opacity-40")}
         aria-label="Status pipeline"
       >
         {PIPELINE.map((stage, i) => {
@@ -76,7 +63,7 @@ export function StatusPipeline({ status }: { status: EnrollmentStatus }) {
                 </span>
                 <span
                   className={cn(
-                    "text-[10px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap",
+                    "whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.06em]",
                     isCurrent ? "text-navy" : isPast ? "text-success" : "text-navy/40",
                   )}
                 >
@@ -86,10 +73,7 @@ export function StatusPipeline({ status }: { status: EnrollmentStatus }) {
               {i < PIPELINE.length - 1 ? (
                 <span
                   aria-hidden
-                  className={cn(
-                    "mx-1 h-px flex-1",
-                    isPast ? "bg-success" : "bg-grey",
-                  )}
+                  className={cn("mx-1 h-px flex-1", isPast ? "bg-success" : "bg-grey")}
                 />
               ) : null}
             </li>
