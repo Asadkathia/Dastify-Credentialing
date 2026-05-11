@@ -7,6 +7,7 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
+import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -16,19 +17,6 @@ type SearchParams = Promise<{
 }>;
 
 const PAGE_SIZE = 50;
-
-const STATUS_LABEL: Record<EnrollmentStatus, string> = {
-  intake: "Intake",
-  prep: "Prep",
-  submitted: "Submitted",
-  in_review: "In Review",
-  info_requested: "Info Requested",
-  approved: "Approved",
-  denied: "Denied",
-  effective: "Effective",
-  closed: "Closed",
-  withdrawn: "Withdrawn",
-};
 
 export default async function AdminEnrollmentsPage({
   searchParams,
@@ -47,7 +35,7 @@ export default async function AdminEnrollmentsPage({
   let query = supabase
     .from("enrollments")
     .select(
-      `id, state, status, sub_status, cycle_number, effective_date, next_recred_due_date, updated_at,
+      `id, state, status, sub_status, effective_date, updated_at,
        client:client_id (id, display_name),
        provider:provider_id (id, first_name, last_name),
        group_entity:group_entity_id (id, legal_name),
@@ -117,7 +105,7 @@ export default async function AdminEnrollmentsPage({
             return (
               <FilterChip
                 key={s}
-                label={STATUS_LABEL[s]}
+                label={STATUS_LABELS[s]}
                 href={buildHref({
                   ...params,
                   status: nextStatus.length === 0 ? undefined : nextStatus,
@@ -209,7 +197,6 @@ export default async function AdminEnrollmentsPage({
                   <th>Payer</th>
                   <th className="w-[60px]">State</th>
                   <th>Status</th>
-                  <th className="w-[60px]">Cycle</th>
                   <th>Effective</th>
                   <th className="w-[110px]">Updated</th>
                   <th className="w-[60px] text-right" />
@@ -254,7 +241,6 @@ export default async function AdminEnrollmentsPage({
                           <p className="mt-1 text-[11px] text-navy/55">{e.sub_status}</p>
                         ) : null}
                       </td>
-                      <td className="tnum text-navy/70">{e.cycle_number}</td>
                       <td className="tnum text-[12px] text-navy/70">
                         {e.effective_date ? format(new Date(e.effective_date), "PP") : "—"}
                       </td>
@@ -356,11 +342,10 @@ function FilterChip({
   );
 }
 
-function statusTone(s: EnrollmentStatus): "teal" | "amber" | "green" | "danger" | "grey" {
-  if (s === "info_requested") return "amber";
-  if (s === "denied") return "danger";
-  if (s === "effective" || s === "approved") return "green";
-  if (s === "closed" || s === "withdrawn" || s === "intake") return "grey";
+function statusTone(s: EnrollmentStatus): "teal" | "amber" | "green" | "grey" {
+  if (s === "non_par_credentialed") return "amber";
+  if (s === "approved" || s === "completed") return "green";
+  if (s === "prep") return "grey";
   return "teal";
 }
 

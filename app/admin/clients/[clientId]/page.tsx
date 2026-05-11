@@ -28,7 +28,7 @@ export default async function ClientOverviewPage({
       supabase
         .from("enrollments")
         .select(
-          `id, state, status, sub_status, cycle_number,
+          `id, state, status, sub_status,
            provider:provider_id (id, first_name, last_name),
            group_entity:group_entity_id (id, legal_name),
            payer:payer_id (id, name)`,
@@ -92,7 +92,6 @@ export default async function ClientOverviewPage({
                       <th className="w-[60px]">State</th>
                       <th>Payer</th>
                       <th>Status</th>
-                      <th className="w-[60px]">Cycle</th>
                       <th className="w-[60px] text-right" />
                     </tr>
                   </thead>
@@ -118,7 +117,6 @@ export default async function ClientOverviewPage({
                               <p className="mt-1 text-[11px] text-navy/55">{e.sub_status}</p>
                             ) : null}
                           </td>
-                          <td className="tnum text-navy/70">{e.cycle_number}</td>
                           <td className="text-right">
                             <Link
                               href={`/admin/clients/${clientId}/enrollments/${e.id}`}

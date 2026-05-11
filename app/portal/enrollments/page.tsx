@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
+import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -17,19 +18,6 @@ type SearchParams = Promise<{
 }>;
 
 const PAGE_SIZE = 50;
-
-const STATUS_LABEL: Record<EnrollmentStatus, string> = {
-  intake: "Intake",
-  prep: "Prep",
-  submitted: "Submitted",
-  in_review: "In Review",
-  info_requested: "Info Requested",
-  approved: "Approved",
-  denied: "Denied",
-  effective: "Effective",
-  closed: "Closed",
-  withdrawn: "Withdrawn",
-};
 
 export default async function PortalEnrollmentsPage({
   searchParams,
@@ -49,7 +37,7 @@ export default async function PortalEnrollmentsPage({
   let query = supabase
     .from("enrollments")
     .select(
-      `id, state, status, sub_status, cycle_number, effective_date, next_recred_due_date, updated_at,
+      `id, state, status, sub_status, effective_date, updated_at,
        provider:provider_id (id, first_name, last_name),
        group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name)`,
@@ -121,7 +109,7 @@ export default async function PortalEnrollmentsPage({
             return (
               <FilterChip
                 key={s}
-                label={STATUS_LABEL[s]}
+                label={STATUS_LABELS[s]}
                 href={buildHref({
                   status: nextStatus.length === 0 ? undefined : nextStatus,
                   payer: payerFilter,
@@ -198,7 +186,6 @@ export default async function PortalEnrollmentsPage({
                   <th>Payer</th>
                   <th className="w-[60px]">State</th>
                   <th>Status</th>
-                  <th className="w-[60px]">Cycle</th>
                   <th>Effective</th>
                   <th className="w-[110px]">Updated</th>
                   <th className="w-[80px] text-right" />
@@ -226,7 +213,6 @@ export default async function PortalEnrollmentsPage({
                           <p className="mt-1 text-[11px] text-navy/55">{e.sub_status}</p>
                         ) : null}
                       </td>
-                      <td className="tnum text-navy/70">{e.cycle_number}</td>
                       <td className="tnum text-[12px] text-navy/70">
                         {e.effective_date ? format(new Date(e.effective_date), "PP") : "—"}
                       </td>
@@ -329,11 +315,10 @@ function FilterChip({
   );
 }
 
-function statusTone(s: EnrollmentStatus): "teal" | "amber" | "green" | "danger" | "grey" {
-  if (s === "info_requested") return "amber";
-  if (s === "denied") return "danger";
-  if (s === "effective" || s === "approved") return "green";
-  if (s === "closed" || s === "withdrawn" || s === "intake") return "grey";
+function statusTone(s: EnrollmentStatus): "teal" | "amber" | "green" | "grey" {
+  if (s === "non_par_credentialed") return "amber";
+  if (s === "approved" || s === "completed") return "green";
+  if (s === "prep") return "grey";
   return "teal";
 }
 

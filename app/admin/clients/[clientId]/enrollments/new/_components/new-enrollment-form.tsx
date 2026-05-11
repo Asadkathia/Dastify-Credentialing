@@ -260,21 +260,8 @@ export function NewEnrollmentForm({
         ) : null}
       </FieldGroup>
 
-      <FieldGroup label="Cycle & sub-status">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="cycleNumber" className={labelClasses}>
-              Cycle
-            </Label>
-            <Input
-              id="cycleNumber"
-              name="cycleNumber"
-              type="number"
-              min={1}
-              defaultValue={1}
-              className={`mt-2 tnum ${inputClasses}`}
-            />
-          </div>
+      <FieldGroup label="Sub-status">
+        <div>
           <div>
             <Label htmlFor="subStatus" className={labelClasses}>
               Sub-status (optional)

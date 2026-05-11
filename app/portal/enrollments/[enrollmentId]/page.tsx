@@ -9,20 +9,8 @@ import { StatusPipeline } from "@/components/ui/status-pipeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentsThread } from "@/app/admin/clients/[clientId]/enrollments/[enrollmentId]/_components/comments-thread";
 import { DocumentsPanel } from "@/components/documents-panel";
+import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 import type { EnrollmentStatus } from "@/db/schema/enums";
-
-const STATUS_LABEL: Record<EnrollmentStatus, string> = {
-  intake: "Intake",
-  prep: "Prep",
-  submitted: "Submitted",
-  in_review: "In Review",
-  info_requested: "Info Requested",
-  approved: "Approved",
-  denied: "Denied",
-  effective: "Effective",
-  closed: "Closed",
-  withdrawn: "Withdrawn",
-};
 
 export default async function ClientEnrollmentDetailPage({
   params,
@@ -106,7 +94,7 @@ export default async function ClientEnrollmentDetailPage({
   return (
     <div>
       <PageHeader
-        title={`${payer?.name ?? "Unknown payer"} · ${enrollment.state} · Cycle ${enrollment.cycle_number}`}
+        title={`${payer?.name ?? "Unknown payer"} · ${enrollment.state}`}
         subtitle={subjectLabel}
         crumbs={[
           { label: "Enrollments", href: "/portal/enrollments" },
@@ -129,9 +117,7 @@ export default async function ClientEnrollmentDetailPage({
           <StatusPipeline status={status} />
         </div>
 
-        {(enrollment.effective_date ||
-          enrollment.submitted_at ||
-          enrollment.next_recred_due_date) ? (
+        {(enrollment.effective_date || enrollment.submitted_at) ? (
           <dl className="grid gap-x-6 gap-y-3 border-t border-border-subtle px-5 py-4 text-[13px] md:grid-cols-3">
             {enrollment.submitted_at ? (
               <Meta label="Submitted" value={format(new Date(enrollment.submitted_at), "PP")} />
@@ -140,12 +126,6 @@ export default async function ClientEnrollmentDetailPage({
               <Meta
                 label="Effective"
                 value={format(new Date(enrollment.effective_date), "PP")}
-              />
-            ) : null}
-            {enrollment.next_recred_due_date ? (
-              <Meta
-                label="Next recred"
-                value={format(new Date(enrollment.next_recred_due_date), "PP")}
               />
             ) : null}
           </dl>
@@ -212,10 +192,9 @@ export default async function ClientEnrollmentDetailPage({
 
             <aside className="surface">
               <header className="border-b border-border-subtle px-5 py-4">
-                <h2 className="text-[15px] font-semibold text-navy">Cycle info</h2>
+                <h2 className="text-[15px] font-semibold text-navy">Enrollment info</h2>
               </header>
               <dl className="space-y-4 px-5 py-5 text-[13px]">
-                <Meta label="Cycle" value={`#${enrollment.cycle_number}`} />
                 <Meta label="Created" value={format(new Date(enrollment.created_at), "PP")} />
                 <Meta
                   label="Updated"
@@ -245,11 +224,11 @@ export default async function ClientEnrollmentDetailPage({
                         {from ? (
                           <>
                             <span className="font-semibold uppercase tracking-[0.06em] text-navy/55">
-                              {STATUS_LABEL[from]}
+                              {STATUS_LABELS[from]}
                             </span>
                             <ArrowRight size={12} className="text-navy/30" strokeWidth={1.6} />
                             <span className="font-semibold uppercase tracking-[0.06em] text-navy">
-                              {STATUS_LABEL[to]}
+                              {STATUS_LABELS[to]}
                             </span>
                           </>
                         ) : (
@@ -259,7 +238,7 @@ export default async function ClientEnrollmentDetailPage({
                             </span>
                             <ArrowRight size={12} className="text-navy/30" strokeWidth={1.6} />
                             <span className="font-semibold uppercase tracking-[0.06em] text-navy">
-                              {STATUS_LABEL[to]}
+                              {STATUS_LABELS[to]}
                             </span>
                           </>
                         )}

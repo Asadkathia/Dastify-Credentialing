@@ -32,7 +32,7 @@ export default async function PortalProviderDetailPage({
     supabase
       .from("enrollments")
       .select(
-        `id, state, status, sub_status, cycle_number, effective_date, next_recred_due_date,
+        `id, state, status, sub_status, effective_date,
          payer:payer_id (id, name)`,
       )
       .eq("provider_id", providerId)
@@ -129,7 +129,6 @@ export default async function PortalProviderDetailPage({
                       <th className="w-[60px]">State</th>
                       <th>Payer</th>
                       <th>Status</th>
-                      <th className="w-[60px]">Cycle</th>
                       <th>Effective</th>
                       <th className="w-[80px] text-right" />
                     </tr>
@@ -148,7 +147,6 @@ export default async function PortalProviderDetailPage({
                               <p className="mt-1 text-[11px] text-navy/55">{e.sub_status}</p>
                             ) : null}
                           </td>
-                          <td className="tnum text-navy/70">{e.cycle_number}</td>
                           <td className="tnum text-[12px] text-navy/70">
                             {e.effective_date ? format(new Date(e.effective_date), "PP") : "—"}
                           </td>

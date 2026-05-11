@@ -17,9 +17,13 @@ import {
 import { StatusChip } from "@/components/ui/status-chip";
 import { transitionStatusAction } from "@/lib/actions/enrollments";
 import { STATUS_LABELS, pipelineDisplayOrder } from "@/lib/enrollment/state-machine";
-import type { EnrollmentStatus } from "@/db/schema/enums";
+import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
 
-const ALL_STATUSES: EnrollmentStatus[] = [...pipelineDisplayOrder(), "closed", "withdrawn"];
+// All 6 enum values, with the linear path first and the off-rail terminal last.
+const ALL_STATUSES: EnrollmentStatus[] = [
+  ...pipelineDisplayOrder(),
+  ...ENROLLMENT_STATUSES.filter((s) => !pipelineDisplayOrder().includes(s)),
+];
 
 const labelClasses = "text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70";
 const selectClasses =
@@ -40,7 +44,10 @@ export function StatusTransitionDialog({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const willDeny = toStatus === "denied";
+  // Non-par is a terminal off-rail outcome — surface a "why" prompt so the
+  // admin has to make the decision explicit, but the reason is optional (no
+  // dedicated column to capture it; lives in status_history.reason if filled).
+  const isOffRail = toStatus === "non_par_credentialed";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -124,16 +131,15 @@ export function StatusTransitionDialog({
 
           <div>
             <Label htmlFor="td-reason" className={labelClasses}>
-              {willDeny ? "Denial reason (required)" : "Reason (optional)"}
+              {isOffRail ? "Reason (recommended)" : "Reason (optional)"}
             </Label>
             <Textarea
               id="td-reason"
               name="reason"
               rows={3}
-              required={willDeny}
               placeholder={
-                willDeny
-                  ? "Reason for denial — required and recorded on the enrollment row."
+                isOffRail
+                  ? "Why this is non-par credentialed — recorded in status history."
                   : "Recorded in status history."
               }
               className={inputClasses}
