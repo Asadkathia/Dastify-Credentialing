@@ -13,7 +13,7 @@ Replace the spreadsheet-based credentialing-status reporting workflow with a mul
 - **Dastify staff (admins)** manage the full payer-enrollment lifecycle for each client practice across all of their providers, payers, and US states.
 - **Client practices** log in to a real-time view of their enrollment status, comment on individual enrollments, and download .xlsx reports that match the deliverable format their team already knows.
 
-The portal replaces the current Excel template (`States | Payers | Participation Request Status | Comments`) but adds: standardized status vocabulary, audit trail, document handling, multi-user access, notifications, recredentialing tracking, and per-state granularity.
+The portal replaces the current Excel template (`States | Payers | Participation Request Status | Comments`) but adds: standardized status vocabulary, audit trail, document handling, multi-user access, notifications, and per-state granularity.
 
 ---
 
@@ -73,23 +73,20 @@ Each Enrollment record represents **one** of:
 | `group_entity_id` | uuid? (FK GroupEntity) | nullable — set if group enrollment |
 | `payer_id` | uuid (FK Payer) | |
 | `state` | char(2) | US state code (e.g., `TX`) — NOT NULL |
-| `cycle_number` | int | 1 = initial, 2+ = recred cycles |
-| `parent_enrollment_id` | uuid? | FK to the prior cycle's enrollment |
-| `status` | enum | one of 7 canonical values (see §4) |
+| `status` | enum | one of 6 canonical values (see §4) |
 | `sub_status` | text? | free-form nuance shown beside status |
-| `effective_date` | date? | set when status = `effective` |
-| `next_recred_due_date` | date? | computed/set when effective; drives upcoming-recred view |
-| `submitted_at` | timestamptz? | when status first hit `submitted` |
+| `effective_date` | date? | manual override; no longer auto-computed |
+| `submitted_at` | timestamptz? | set automatically the first time status hits `submitted` |
 | `created_at` / `updated_at` | timestamptz | |
 
 **Constraints**:
 - `CHECK ((provider_id IS NOT NULL) <> (group_entity_id IS NOT NULL))` — exactly one of the two is set.
-- `UNIQUE (client_id, provider_id, payer_id, state, cycle_number)` for individual enrollments.
-- `UNIQUE (client_id, group_entity_id, payer_id, state, cycle_number)` for group enrollments.
+- `UNIQUE (client_id, provider_id, payer_id, state)` for individual enrollments.
+- `UNIQUE (client_id, group_entity_id, payer_id, state)` for group enrollments.
 
 **Why state is a column, not a CSV**: many payers operate per-state (Anthem CA ≠ Anthem TX, BCBS is a federation, every Medicaid is per-state). One Aetna application can be approved in TX and pending in NM — that has to be representable.
 
-**Why recred is a new record**: status doesn't get reset, the prior cycle's history is preserved, "upcoming recreds" reports are clean SQL, and the parent_enrollment_id link keeps lineage.
+**Note — recredentialing removed**: migrations 0009 + 0010 dropped `cycle_number`, `parent_enrollment_id`, `next_recred_due_date`, `denied_reason`, and `payers.recred_cycle_months`. If recredentialing comes back as a feature, it's a fresh data model — don't resurrect these columns.
 
 ### Provider
 
@@ -184,23 +181,23 @@ Both are append-only. No update or delete is permitted (RLS).
 
 ## 4. Status Pipeline
 
-Canonical 7 stages (enum on `enrollment.status`):
+Canonical 6 values (enum on `enrollment.status`). Linear happy path:
 
-1. **`intake`** — record created, info-gathering not yet complete
-2. **`prep`** — CAQH up to date, documents collected, application being prepared
-3. **`submitted`** — application sent to payer; `submitted_at` is set
-4. **`in_review`** — payer is reviewing
-5. **`info_requested`** — payer asked for additional info; clock paused
-6. **`approved`** | **`denied`** — terminal review outcome
-7. **`effective`** — provider/group is actively enrolled; `effective_date` set, `next_recred_due_date` computed
+1. **`prep`** — CAQH up to date, documents collected, application being prepared
+2. **`submitted`** — application sent to payer; `submitted_at` is set automatically the first time
+3. **`in_review`** — payer is reviewing (absorbs the old "info_requested" / "pending" semantics)
+4. **`approved`** — payer accepted the application
+5. **`completed`** — provider/group is in-network; the linear flow's terminal state
 
-Plus terminal/edge states: **`closed`**, **`withdrawn`**.
+Plus the off-rail terminal:
+
+6. **`non_par_credentialed`** — credentialed but non-participating (provider accepted by payer but not added to the in-network roster).
 
 **Sub-status** is a free-form text field (e.g., "Awaiting CV from provider," "Payer rep escalated," "Contract pending signature"). Renders next to the status chip.
 
-**State machine**: enforced in application logic (not in DB) — illegal transitions (e.g., `intake → effective` skipping submitted) are blocked with a clear error. Backwards transitions are allowed but always create a `status_history` row.
+**State machine**: enforced in application logic (not in DB). `lib/enrollment/state-machine.ts` defines the allowed transitions; illegal transitions are blocked with `{ ok: false, error }`. Backwards transitions (e.g., `submitted → prep` to correct a mis-click) are allowed; each one writes a `status_history` row via the `trg_enrollment_status_change` trigger.
 
-**Recred trigger**: when status hits `effective`, app sets `next_recred_due_date = effective_date + (payer.recred_cycle_months || 24 months)`. A nightly Inngest job creates a new linked enrollment in `intake` status 90 days before `next_recred_due_date`.
+**No recredentialing.** There is no auto-creation of cycle-N enrollments, no `next_recred_due_date`, no parent-chain linkage. If recred comes back, it's a fresh feature.
 
 ---
 
@@ -210,7 +207,7 @@ Two surfaces; one underlying data:
 
 ### A) Live dashboard (per client)
 - **Default view**: filterable table of all enrollments. Columns: `Provider | State | Payer | Status | Sub-status | Last Activity | Comments`.
-- **Filters**: by provider, payer, state, status, "upcoming recreds (next 90 days)," "needs attention" (info_requested or stalled > 30 days).
+- **Filters**: by provider, payer, state, status. (The dashboard's 6 status KPI cards are the primary filter affordance — each card links to `/admin/enrollments?status=X`.)
 - **Group-by**: by provider, by payer, by state, by status.
 - **Activity feed sidebar**: recent status changes + comments across the client's whole portfolio.
 - **Status counters at top**: count per stage.
@@ -256,7 +253,7 @@ In-app notification bell is a v1.1 stretch — emails first.
 | Auth | **Supabase Auth** (admin-provisioned invites, magic-link first-login, MFA optional) | Auth identity flows native into RLS — no JWT bridge to misconfigure |
 | File storage | **Supabase Storage** with RLS bucket policies + ClamAV scan via Inngest | Per-bucket access control, signed URLs |
 | Email | **Resend** | BAA-eligible on Enterprise; clean API |
-| Background jobs | **Inngest** | Durable execution, retries, scheduled jobs (digests, recred triggers, scan hooks) |
+| Background jobs | **Inngest** | Durable execution, retries, scheduled jobs (digests, expiration alerts, scan hooks) |
 | Logs / alerting | **Axiom** or **Better Stack** | Centralized log search + alerts |
 | Field-level encryption | **pgcrypto** (built-in to Postgres) | DEA, SSN-last-4, DOB, Tax ID encrypted at column level |
 | Hosting | **Vercel** (Pro initially; Enterprise w/ BAA when required) | First-class Next.js host |
