@@ -3,34 +3,29 @@ import type { EnrollmentStatus } from "@/db/schema/enums";
 /**
  * Status transition rules for enrollments.
  *
- * The DB does not enforce these — application logic does. The reasoning:
- * status changes are sometimes corrective (admin clicks the wrong status,
- * needs to back up), so we allow ANY transition to a non-terminal status,
- * but require an explicit "reason" when going backwards.
+ * The DB does not enforce these — application logic does. Linear happy path:
  *
- * Effective is special: it sets effective_date and triggers recred-due
- * computation in a DB trigger (see 0001_audit_triggers.sql).
+ *   prep → submitted → in_review → approved → completed
  *
- * Closed and withdrawn are terminal — once there, only admin can re-open
- * (which clears them by transitioning to a non-terminal state).
+ * `non_par_credentialed` is a terminal off-rail outcome — provider is
+ * credentialed by the payer but not added to the participating network.
+ * Reachable from any review-or-later state, and (like `completed`) terminal.
+ *
+ * Backwards/corrective moves are allowed from any non-terminal state into the
+ * preceding active states, so admins can fix mis-clicks without writing SQL.
  */
 
 const FORWARD_TRANSITIONS: Record<EnrollmentStatus, ReadonlyArray<EnrollmentStatus>> = {
-  intake: ["prep", "submitted", "withdrawn", "closed"],
-  prep: ["submitted", "intake", "withdrawn", "closed"],
-  submitted: ["in_review", "info_requested", "approved", "denied", "withdrawn", "closed"],
-  in_review: ["info_requested", "approved", "denied", "submitted", "withdrawn", "closed"],
-  info_requested: ["in_review", "submitted", "approved", "denied", "withdrawn", "closed"],
-  approved: ["effective", "denied", "closed"],
-  denied: ["info_requested", "in_review", "submitted", "withdrawn", "closed"],
-  effective: ["closed"],
-  closed: ["intake"],
-  withdrawn: ["intake"],
+  prep: ["submitted"],
+  submitted: ["in_review", "prep"],
+  in_review: ["approved", "non_par_credentialed", "submitted"],
+  approved: ["completed", "non_par_credentialed", "in_review"],
+  // Terminal states — admin can re-open by moving back to a prior active state.
+  non_par_credentialed: ["in_review", "approved"],
+  completed: ["approved"],
 };
 
-export type TransitionResult =
-  | { ok: true }
-  | { ok: false; error: string };
+export type TransitionResult = { ok: true } | { ok: false; error: string };
 
 export function validateTransition(
   from: EnrollmentStatus,
@@ -52,43 +47,31 @@ export function validateTransition(
 }
 
 export const STATUS_LABELS: Record<EnrollmentStatus, string> = {
-  intake: "Intake",
   prep: "Prep",
   submitted: "Submitted",
   in_review: "In Review",
-  info_requested: "Info Requested",
   approved: "Approved",
-  denied: "Denied",
-  effective: "Effective",
-  closed: "Closed",
-  withdrawn: "Withdrawn",
+  non_par_credentialed: "Non-par credentialed",
+  completed: "Completed",
 };
 
 export const STATUS_BADGE_VARIANT: Record<
   EnrollmentStatus,
   "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info"
 > = {
-  intake: "outline",
   prep: "secondary",
   submitted: "info",
   in_review: "info",
-  info_requested: "warning",
   approved: "success",
-  denied: "destructive",
-  effective: "success",
-  closed: "secondary",
-  withdrawn: "secondary",
+  non_par_credentialed: "outline",
+  completed: "success",
 };
 
+/**
+ * Linear display order for the status pipeline visualization. Excludes
+ * `non_par_credentialed` — that's a terminal off-rail branch and renders as an
+ * overlay tag (same treatment as the old `denied` had).
+ */
 export function pipelineDisplayOrder(): EnrollmentStatus[] {
-  return [
-    "intake",
-    "prep",
-    "submitted",
-    "in_review",
-    "info_requested",
-    "approved",
-    "denied",
-    "effective",
-  ];
+  return ["prep", "submitted", "in_review", "approved", "completed"];
 }

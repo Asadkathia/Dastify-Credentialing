@@ -45,7 +45,6 @@ export async function createPayerAction(
       name: parsed.data.name,
       payer_type: parsed.data.payerType,
       states_active: parsed.data.statesActive,
-      recred_cycle_months: parsed.data.recredCycleMonths,
     })
     .select("id, name")
     .single();

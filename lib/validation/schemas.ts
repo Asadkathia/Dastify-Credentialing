@@ -19,7 +19,6 @@ export const createPayerSchema = z.object({
   name: z.string().min(2).max(120).trim(),
   payerType: z.enum(["commercial", "medicare", "medicaid", "tricare", "other"]).default("commercial"),
   statesActive: z.array(z.string().regex(US_STATE_REGEX)).default([]),
-  recredCycleMonths: z.number().int().positive().max(120).default(24),
 });
 export type CreatePayerInput = z.infer<typeof createPayerSchema>;
 
@@ -79,8 +78,6 @@ export const createEnrollmentSchema = z
     groupEntityId: z.string().uuid().optional(),
     payerId: z.string().uuid(),
     state: z.string().regex(US_STATE_REGEX, "State must be a 2-letter US state code (e.g. TX)"),
-    cycleNumber: z.number().int().min(1).default(1),
-    parentEnrollmentId: z.string().uuid().optional(),
     subStatus: z.string().max(200).optional().or(z.literal("")),
   })
   .refine(

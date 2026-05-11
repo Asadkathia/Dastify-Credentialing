@@ -21,10 +21,6 @@ export async function createEnrollmentAction(
     groupEntityId: groupEntityId ? String(groupEntityId) : undefined,
     payerId: formData.get("payerId"),
     state: String(formData.get("state") ?? "").toUpperCase(),
-    cycleNumber: Number(formData.get("cycleNumber") ?? 1),
-    parentEnrollmentId: formData.get("parentEnrollmentId")
-      ? String(formData.get("parentEnrollmentId"))
-      : undefined,
     subStatus: formData.get("subStatus") || "",
   });
   if (!parsed.success) {
@@ -41,9 +37,7 @@ export async function createEnrollmentAction(
       group_entity_id: parsed.data.groupEntityId ?? null,
       payer_id: parsed.data.payerId,
       state: parsed.data.state,
-      cycle_number: parsed.data.cycleNumber,
-      parent_enrollment_id: parsed.data.parentEnrollmentId ?? null,
-      status: "intake",
+      status: "prep",
       sub_status: parsed.data.subStatus || null,
     })
     .select("id")
@@ -59,7 +53,7 @@ export async function createEnrollmentAction(
     action: "create",
     target_table: "enrollments",
     target_id: enrollment.id,
-    summary: `Created enrollment in ${parsed.data.state} (cycle ${parsed.data.cycleNumber})`,
+    summary: `Created enrollment in ${parsed.data.state}`,
   });
 
   revalidatePath(`/admin/clients/${parsed.data.clientId}`);
@@ -97,8 +91,9 @@ export async function transitionStatusAction(
   );
   if (!transition.ok) return fail(transition.error);
 
-  // Note: the status_history audit trigger reads auth.uid() automatically since
-  // we're using the user-scoped Supabase client (RLS-enforced JWT).
+  // Side-effect: set submitted_at the first time the row enters `submitted`.
+  // effective_date is no longer auto-set (recred module is gone) — admins can
+  // edit it via the standard update path if/when we expose that field again.
   const { error: updateErr } = await supabase
     .from("enrollments")
     .update({
