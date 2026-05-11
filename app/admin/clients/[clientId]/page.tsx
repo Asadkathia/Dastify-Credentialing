@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Plus, UserCircle2 } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/enrollment/state-machine";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusChip } from "@/components/ui/status-chip";
 import { InviteClientUserForm } from "./_components/invite-user-form";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
@@ -47,44 +47,53 @@ export default async function ClientOverviewPage({
   if (!client) notFound();
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{client.display_name}</h1>
-          <p className="text-sm text-muted-foreground">{client.legal_name}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href={`/admin/clients/${clientId}/providers/new`}>+ Provider</Link>
-          </Button>
-          <Button asChild>
-            <Link href={`/admin/clients/${clientId}/enrollments/new`}>+ Enrollment</Link>
-          </Button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title={client.display_name}
+        subtitle={client.legal_name}
+        crumbs={[{ label: "Clients", href: "/admin" }, { label: client.display_name }]}
+        actions={
+          <>
+            <Button asChild variant="outline">
+              <Link href={`/admin/clients/${clientId}/providers/new`}>
+                <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
+                Provider
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/admin/clients/${clientId}/enrollments/new`}>
+                <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
+                Enrollment
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Enrollments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {(!enrollments || enrollments.length === 0) && (
-              <p className="text-sm text-muted-foreground">
+        {/* Enrollments — main column */}
+        <section className="lg:col-span-2">
+          <div className="surface">
+            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Enrollments</h2>
+              <span className="label-sm">{enrollments?.length ?? 0} total</span>
+            </header>
+
+            {!enrollments || enrollments.length === 0 ? (
+              <p className="px-5 py-10 text-center text-[13px] text-navy/55">
                 No enrollments yet. Add a provider, then create the first enrollment.
               </p>
-            )}
-            {enrollments && enrollments.length > 0 && (
+            ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <table className="data-table">
+                  <thead>
                     <tr>
-                      <th className="px-3 py-2 font-medium">Subject</th>
-                      <th className="px-3 py-2 font-medium">State</th>
-                      <th className="px-3 py-2 font-medium">Payer</th>
-                      <th className="px-3 py-2 font-medium">Status</th>
-                      <th className="px-3 py-2 font-medium">Cycle</th>
-                      <th className="px-3 py-2" />
+                      <th>Subject</th>
+                      <th className="w-[60px]">State</th>
+                      <th>Payer</th>
+                      <th>Status</th>
+                      <th className="w-[60px]">Cycle</th>
+                      <th className="w-[60px] text-right" />
                     </tr>
                   </thead>
                   <tbody>
@@ -95,27 +104,25 @@ export default async function ClientOverviewPage({
                         : e.group_entity;
                       const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
                       const subjectLabel = provider
-                        ? `${provider.first_name} ${provider.last_name}`
-                        : groupEntity?.legal_name ?? "—";
+                        ? `${provider.last_name}, ${provider.first_name}`
+                        : (groupEntity?.legal_name ?? "—");
                       const status = e.status as EnrollmentStatus;
                       return (
-                        <tr key={e.id} className="border-t">
-                          <td className="px-3 py-2">{subjectLabel}</td>
-                          <td className="px-3 py-2 font-mono text-xs">{e.state}</td>
-                          <td className="px-3 py-2">{payer?.name ?? "—"}</td>
-                          <td className="px-3 py-2">
-                            <Badge variant={STATUS_BADGE_VARIANT[status]}>
-                              {STATUS_LABELS[status]}
-                            </Badge>
-                            {e.sub_status && (
-                              <p className="mt-0.5 text-xs text-muted-foreground">{e.sub_status}</p>
-                            )}
+                        <tr key={e.id}>
+                          <td className="font-medium text-navy">{subjectLabel}</td>
+                          <td className="font-mono text-[12px] text-navy/70 tnum">{e.state}</td>
+                          <td className="text-navy/70">{payer?.name ?? "—"}</td>
+                          <td>
+                            <StatusChip status={status} />
+                            {e.sub_status ? (
+                              <p className="mt-1 text-[11px] text-navy/55">{e.sub_status}</p>
+                            ) : null}
                           </td>
-                          <td className="px-3 py-2">{e.cycle_number}</td>
-                          <td className="px-3 py-2 text-right">
+                          <td className="tnum text-navy/70">{e.cycle_number}</td>
+                          <td className="text-right">
                             <Link
                               href={`/admin/clients/${clientId}/enrollments/${e.id}`}
-                              className="text-xs font-medium text-primary hover:underline"
+                              className="text-[12px] font-semibold uppercase tracking-wider text-teal hover:text-[#0E7475]"
                             >
                               Open →
                             </Link>
@@ -127,55 +134,72 @@ export default async function ClientOverviewPage({
                 </table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Providers</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {(!providers || providers.length === 0) && (
-                <p className="text-sm text-muted-foreground">No providers yet.</p>
-              )}
-              {providers?.map((p) => (
-                <div key={p.id} className="flex justify-between text-sm">
+        {/* Side rail — providers + portal users */}
+        <aside className="space-y-6">
+          <div className="surface">
+            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Providers</h2>
+              <span className="label-sm">{providers?.length ?? 0}</span>
+            </header>
+            <div className="divide-y divide-border-subtle">
+              {!providers || providers.length === 0 ? (
+                <p className="px-5 py-6 text-center text-[13px] text-navy/55">
+                  No providers yet.
+                </p>
+              ) : (
+                providers.map((p) => (
                   <Link
+                    key={p.id}
                     href={`/admin/clients/${clientId}/providers/${p.id}`}
-                    className="hover:underline"
+                    className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-navy-04"
                   >
-                    <span>
-                      {p.last_name}, {p.first_name}
-                      {p.primary_specialty && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {p.primary_specialty}
-                        </span>
-                      )}
+                    <span
+                      aria-hidden
+                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-08 text-teal"
+                    >
+                      <UserCircle2 size={14} strokeWidth={1.6} />
                     </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-navy">
+                        {p.last_name}, {p.first_name}
+                      </p>
+                      {p.primary_specialty ? (
+                        <p className="text-[11px] text-navy/55">{p.primary_specialty}</p>
+                      ) : null}
+                    </div>
+                    {p.npi ? (
+                      <span className="font-mono text-[11px] text-navy/45 tnum">{p.npi}</span>
+                    ) : null}
                   </Link>
-                  {p.npi && <span className="font-mono text-xs text-muted-foreground">{p.npi}</span>}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                ))
+              )}
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Portal users</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="surface">
+            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Portal users</h2>
+              <span className="label-sm">{users?.length ?? 0}</span>
+            </header>
+            <div className="px-5 py-4">
               {users && users.length > 0 ? (
-                <ul className="space-y-2 text-sm">
+                <ul className="space-y-3 pb-4">
                   {users.map((u) => (
-                    <li key={u.id} className="flex justify-between">
-                      <div>
-                        <p className="font-medium">{u.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{u.email}</p>
+                    <li key={u.id} className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium text-navy">
+                          {u.full_name}
+                        </p>
+                        <p className="truncate text-[11px] text-navy/55">{u.email}</p>
                       </div>
-                      <div className="text-right text-xs">
-                        <p>{u.role === "client_admin" ? "Admin" : "Viewer"}</p>
-                        <p className="text-muted-foreground">
+                      <div className="shrink-0 text-right">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70">
+                          {u.role === "client_admin" ? "Admin" : "Viewer"}
+                        </p>
+                        <p className="text-[10px] uppercase tracking-[0.06em] text-navy/45">
                           {u.accepted_at ? "Accepted" : "Invited"}
                         </p>
                       </div>
@@ -183,12 +207,16 @@ export default async function ClientOverviewPage({
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No portal users invited yet.</p>
+                <p className="pb-4 text-center text-[13px] text-navy/55">
+                  No portal users invited yet.
+                </p>
               )}
-              <InviteClientUserForm clientId={clientId} />
-            </CardContent>
-          </Card>
-        </div>
+              <div className="border-t border-border-subtle pt-4">
+                <InviteClientUserForm clientId={clientId} />
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

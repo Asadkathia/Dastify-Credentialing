@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
+import { Plus } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusChip } from "@/components/ui/status-chip";
 import { DocumentsPanel } from "@/components/documents-panel";
-import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "@/lib/enrollment/state-machine";
 import { ProviderEditForm } from "./_components/provider-edit-form";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
@@ -18,103 +18,125 @@ export default async function ProviderDetailPage({
   const { clientId, providerId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: provider }, { data: enrollments }, { data: documents }] = await Promise.all([
-    supabase
-      .from("providers")
-      .select(
-        `id, client_id, first_name, middle_name, last_name, suffix, npi,
-         primary_specialty, secondary_specialty, caqh_id, email, phone,
-         license_states, created_at`,
-      )
-      .eq("id", providerId)
-      .eq("client_id", clientId)
-      .is("deleted_at", null)
-      .maybeSingle(),
-    supabase
-      .from("enrollments")
-      .select(
-        `id, state, status, sub_status, cycle_number, effective_date, next_recred_due_date,
-         payer:payer_id (id, name)`,
-      )
-      .eq("provider_id", providerId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("documents")
-      .select(
-        "id, file_name, category, size_bytes, mime_type, expiration_date, is_internal, virus_scan_status, created_at",
-      )
-      .eq("owner_type", "provider")
-      .eq("owner_id", providerId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .limit(50),
-  ]);
+  const [{ data: client }, { data: provider }, { data: enrollments }, { data: documents }, { data: docCategories }] =
+    await Promise.all([
+      supabase.from("clients").select("display_name").eq("id", clientId).maybeSingle(),
+      supabase
+        .from("providers")
+        .select(
+          `id, client_id, first_name, middle_name, last_name, suffix, npi,
+           primary_specialty, secondary_specialty, caqh_id, email, phone,
+           license_states, created_at`,
+        )
+        .eq("id", providerId)
+        .eq("client_id", clientId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      supabase
+        .from("enrollments")
+        .select(
+          `id, state, status, sub_status, cycle_number, effective_date, next_recred_due_date,
+           payer:payer_id (id, name)`,
+        )
+        .eq("provider_id", providerId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("documents")
+        .select(
+          `id, file_name, category_id, size_bytes, mime_type, expiration_date, is_internal,
+           virus_scan_status, created_at,
+           category:category_id (id, name, label, is_default)`,
+        )
+        .eq("owner_type", "provider")
+        .eq("owner_id", providerId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("document_categories")
+        .select("id, name, label, is_default")
+        .order("sort_order"),
+    ]);
 
   if (!provider) notFound();
 
-  const fullName = [provider.first_name, provider.middle_name, provider.last_name, provider.suffix]
-    .filter(Boolean)
-    .join(" ");
+  const displayName =
+    `${provider.last_name}, ${provider.first_name}` +
+    (provider.middle_name ? ` ${provider.middle_name[0]}.` : "") +
+    (provider.suffix ? `, ${provider.suffix}` : "");
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          href={`/admin/clients/${clientId}`}
-          className="text-xs text-muted-foreground hover:underline"
-        >
-          ← Back to client
-        </Link>
-        <div className="mt-1 flex items-baseline gap-3">
-          <h1 className="text-2xl font-semibold">{fullName}</h1>
-          {provider.npi && (
-            <span className="font-mono text-sm text-muted-foreground">NPI {provider.npi}</span>
-          )}
-        </div>
-        {provider.primary_specialty && (
-          <p className="text-sm text-muted-foreground">{provider.primary_specialty}</p>
-        )}
-      </div>
+    <div>
+      <PageHeader
+        title={displayName}
+        subtitle={
+          <>
+            {provider.primary_specialty ? (
+              <span className="text-charcoal">{provider.primary_specialty}</span>
+            ) : null}
+            {provider.npi ? (
+              <>
+                {provider.primary_specialty ? " · " : ""}
+                <span className="font-mono tnum">NPI {provider.npi}</span>
+              </>
+            ) : null}
+          </>
+        }
+        crumbs={[
+          { label: "Clients", href: "/admin" },
+          { label: client?.display_name ?? "Client", href: `/admin/clients/${clientId}` },
+          { label: displayName },
+        ]}
+        actions={
+          <Button asChild>
+            <Link href={`/admin/clients/${clientId}/enrollments/new`}>
+              <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
+              New enrollment
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Provider details</CardTitle>
-            </CardHeader>
-            <CardContent>
+          {/* Edit form */}
+          <section className="surface">
+            <header className="border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Provider details</h2>
+            </header>
+            <div className="px-5 py-5">
               <ProviderEditForm provider={provider} />
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Enrollments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(!enrollments || enrollments.length === 0) && (
-                <p className="text-sm text-muted-foreground">
-                  No enrollments yet.{" "}
-                  <Link
-                    href={`/admin/clients/${clientId}/enrollments/new`}
-                    className="text-primary hover:underline"
-                  >
-                    Create one
-                  </Link>
-                  .
-                </p>
-              )}
-              {enrollments && enrollments.length > 0 && (
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          {/* Enrollments */}
+          <section className="surface">
+            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Enrollments</h2>
+              <span className="label-sm">{enrollments?.length ?? 0}</span>
+            </header>
+            {!enrollments || enrollments.length === 0 ? (
+              <p className="px-5 py-8 text-center text-[13px] text-navy/55">
+                No enrollments yet.{" "}
+                <Link
+                  href={`/admin/clients/${clientId}/enrollments/new`}
+                  className="font-semibold text-teal hover:text-[#0E7475]"
+                >
+                  Create one →
+                </Link>
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="data-table">
+                  <thead>
                     <tr>
-                      <th className="px-3 py-2 font-medium">State</th>
-                      <th className="px-3 py-2 font-medium">Payer</th>
-                      <th className="px-3 py-2 font-medium">Status</th>
-                      <th className="px-3 py-2 font-medium">Cycle</th>
-                      <th className="px-3 py-2 font-medium">Effective</th>
-                      <th className="px-3 py-2" />
+                      <th className="w-[60px]">State</th>
+                      <th>Payer</th>
+                      <th>Status</th>
+                      <th className="w-[60px]">Cycle</th>
+                      <th>Effective</th>
+                      <th className="w-[80px] text-right" />
                     </tr>
                   </thead>
                   <tbody>
@@ -122,27 +144,23 @@ export default async function ProviderDetailPage({
                       const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
                       const status = e.status as EnrollmentStatus;
                       return (
-                        <tr key={e.id} className="border-t">
-                          <td className="px-3 py-2 font-mono text-xs">{e.state}</td>
-                          <td className="px-3 py-2">{payer?.name ?? "—"}</td>
-                          <td className="px-3 py-2">
-                            <Badge variant={STATUS_BADGE_VARIANT[status]}>
-                              {STATUS_LABELS[status]}
-                            </Badge>
-                            {e.sub_status && (
-                              <p className="mt-0.5 text-xs text-muted-foreground">
-                                {e.sub_status}
-                              </p>
-                            )}
+                        <tr key={e.id}>
+                          <td className="font-mono text-[12px] text-navy/70 tnum">{e.state}</td>
+                          <td className="text-navy/85">{payer?.name ?? "—"}</td>
+                          <td>
+                            <StatusChip status={status} />
+                            {e.sub_status ? (
+                              <p className="mt-1 text-[11px] text-navy/55">{e.sub_status}</p>
+                            ) : null}
                           </td>
-                          <td className="px-3 py-2">{e.cycle_number}</td>
-                          <td className="px-3 py-2 text-xs">
+                          <td className="tnum text-navy/70">{e.cycle_number}</td>
+                          <td className="tnum text-[12px] text-navy/70">
                             {e.effective_date ? format(new Date(e.effective_date), "PP") : "—"}
                           </td>
-                          <td className="px-3 py-2 text-right">
+                          <td className="text-right">
                             <Link
                               href={`/admin/clients/${clientId}/enrollments/${e.id}`}
-                              className="text-xs font-medium text-primary hover:underline"
+                              className="text-[12px] font-semibold uppercase tracking-wider text-teal hover:text-[#0E7475]"
                             >
                               Open →
                             </Link>
@@ -152,116 +170,105 @@ export default async function ProviderDetailPage({
                     })}
                   </tbody>
                 </table>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Provider documents</CardTitle>
-            </CardHeader>
-            <CardContent>
+          {/* Documents */}
+          <section className="surface">
+            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Provider documents</h2>
+              <span className="label-sm">{documents?.length ?? 0}</span>
+            </header>
+            <div className="px-5 py-5">
               <DocumentsPanel
                 clientId={clientId}
                 ownerType="provider"
                 ownerId={providerId}
                 documents={documents ?? []}
+                categories={docCategories ?? []}
                 canManage
-                defaultCategory="license"
+                defaultCategoryName="license"
               />
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         </div>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {provider.email ? (
-                <div>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Email
-                  </span>
-                  <p>{provider.email}</p>
-                </div>
-              ) : null}
-              {provider.phone ? (
-                <div>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Phone
-                  </span>
-                  <p>{provider.phone}</p>
-                </div>
-              ) : null}
+        {/* Side rail */}
+        <aside className="space-y-6">
+          <section className="surface">
+            <header className="border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Contact</h2>
+            </header>
+            <dl className="space-y-4 px-5 py-5 text-[13px]">
+              {provider.email ? <Detail label="Email" value={provider.email} /> : null}
+              {provider.phone ? <Detail label="Phone" value={provider.phone} /> : null}
               {provider.caqh_id ? (
-                <div>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                    CAQH ID
-                  </span>
-                  <p className="font-mono">{provider.caqh_id}</p>
-                </div>
+                <Detail
+                  label="CAQH ID"
+                  value={<span className="font-mono tnum">{provider.caqh_id}</span>}
+                />
               ) : null}
-              {!provider.email && !provider.phone && !provider.caqh_id && (
-                <p className="text-muted-foreground">No contact info on file.</p>
-              )}
-            </CardContent>
-          </Card>
+              {!provider.email && !provider.phone && !provider.caqh_id ? (
+                <p className="text-navy/55">No contact info on file.</p>
+              ) : null}
+            </dl>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>State licenses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {Array.isArray(provider.license_states) && provider.license_states.length > 0 ? (
-                <ul className="space-y-2 text-sm">
-                  {provider.license_states.map(
-                    (
-                      l: { state: string; licenseNumber: string; expiration: string | null },
-                      i: number,
-                    ) => (
-                      <li key={i} className="flex items-baseline justify-between">
-                        <div>
-                          <span className="font-mono font-semibold">{l.state}</span>
-                          {l.licenseNumber && (
-                            <span className="ml-2 font-mono text-xs text-muted-foreground">
-                              {l.licenseNumber}
-                            </span>
-                          )}
-                        </div>
-                        {l.expiration && (
-                          <span className="text-xs text-muted-foreground">
-                            exp {format(new Date(l.expiration), "PP")}
+          <section className="surface">
+            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">State licenses</h2>
+              <span className="label-sm">
+                {Array.isArray(provider.license_states) ? provider.license_states.length : 0}
+              </span>
+            </header>
+            {Array.isArray(provider.license_states) && provider.license_states.length > 0 ? (
+              <ul className="divide-y divide-border-subtle">
+                {provider.license_states.map(
+                  (
+                    l: { state: string; licenseNumber: string; expiration: string | null },
+                    i: number,
+                  ) => (
+                    <li
+                      key={i}
+                      className="flex items-baseline justify-between gap-3 px-5 py-3 text-[13px]"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-mono text-[12px] font-semibold tnum text-navy">
+                          {l.state}
+                        </span>
+                        {l.licenseNumber ? (
+                          <span className="ml-2 font-mono text-[11px] tnum text-navy/55">
+                            {l.licenseNumber}
                           </span>
-                        )}
-                      </li>
-                    ),
-                  )}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No state licenses recorded yet. Add via the License document upload (with
-                  expiration) or extend the provider edit form.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button asChild size="sm" className="w-full">
-                <Link href={`/admin/clients/${clientId}/enrollments/new`}>
-                  + New enrollment
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+                        ) : null}
+                      </div>
+                      {l.expiration ? (
+                        <span className="tnum text-[11px] text-navy/55">
+                          exp {format(new Date(l.expiration), "PP")}
+                        </span>
+                      ) : null}
+                    </li>
+                  ),
+                )}
+              </ul>
+            ) : (
+              <p className="px-5 py-6 text-center text-[12px] text-navy/55">
+                No state licenses recorded yet.
+              </p>
+            )}
+          </section>
+        </aside>
       </div>
+    </div>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="label-sm">{label}</dt>
+      <dd className="mt-1 text-charcoal">{value}</dd>
     </div>
   );
 }

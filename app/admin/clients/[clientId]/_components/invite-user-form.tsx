@@ -1,11 +1,17 @@
 "use client";
 import { useState, useTransition } from "react";
+import { UserPlus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { inviteClientUserAction } from "@/lib/actions/clients";
 
 type AuthMethod = "magic_link" | "password";
+
+const labelClasses = "text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70";
+const selectClasses =
+  "mt-2 flex h-9 w-full rounded-sm border border-border-subtle bg-white px-3 py-1 text-[13px] text-charcoal focus-visible:border-teal focus-visible:outline-none";
+const inputClasses = "mt-2 bg-white text-[13px]";
 
 export function InviteClientUserForm({ clientId }: { clientId: string }) {
   const [open, setOpen] = useState(false);
@@ -21,33 +27,36 @@ export function InviteClientUserForm({ clientId }: { clientId: string }) {
 
   if (success) {
     return (
-      <div className="space-y-2 rounded-md border border-green-300 bg-green-50 p-3 text-sm">
+      <div className="space-y-3 rounded-md border border-success/30 bg-success-08 px-4 py-3 text-[13px]">
         {success.method === "password" ? (
           <>
-            <p className="font-medium text-green-900">Account created.</p>
-            <p className="text-xs text-green-800">
+            <p className="font-semibold text-[#1B5E20]">Account created.</p>
+            <p className="text-[12px] text-navy/70">
               Share these credentials with the user securely (Signal, in person, password manager —
               not email):
             </p>
-            <div className="rounded border border-green-200 bg-white p-2 font-mono text-xs">
+            <div className="space-y-1 rounded-sm border border-success/20 bg-white p-3 font-mono text-[12px] tnum">
               <div>
-                <span className="text-muted-foreground">Email:</span> {success.email}
+                <span className="text-navy/55">Email: </span>
+                {success.email}
               </div>
               <div>
-                <span className="text-muted-foreground">Password:</span> {success.password}
+                <span className="text-navy/55">Password: </span>
+                {success.password}
               </div>
               <div>
-                <span className="text-muted-foreground">URL:</span>{" "}
+                <span className="text-navy/55">URL: </span>
                 {typeof window !== "undefined" ? window.location.origin : ""}/login
               </div>
             </div>
           </>
         ) : (
           <>
-            <p className="font-medium text-green-900">Magic-link invite sent.</p>
-            <p className="text-xs text-green-800">
-              An email has been sent to <span className="font-mono">{success.email}</span>. The link
-              is valid for one hour.
+            <p className="font-semibold text-[#1B5E20]">Magic-link invite sent.</p>
+            <p className="text-[12px] text-navy/70">
+              An email has been sent to{" "}
+              <span className="font-mono tnum">{success.email}</span>. The link is valid for one
+              hour.
             </p>
           </>
         )}
@@ -70,6 +79,7 @@ export function InviteClientUserForm({ clientId }: { clientId: string }) {
   if (!open) {
     return (
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <UserPlus size={12} strokeWidth={1.6} className="mr-1.5" />
         Invite user
       </Button>
     );
@@ -77,7 +87,7 @@ export function InviteClientUserForm({ clientId }: { clientId: string }) {
 
   return (
     <form
-      className="space-y-3 border-t pt-3"
+      className="space-y-4"
       action={(formData) => {
         setError(null);
         startTransition(async () => {
@@ -99,74 +109,77 @@ export function InviteClientUserForm({ clientId }: { clientId: string }) {
     >
       <input type="hidden" name="clientId" value={clientId} />
 
-      <div className="space-y-1">
-        <Label htmlFor="invite-fullName" className="text-xs">
+      <p className="label-sm">Invite portal user</p>
+
+      <div>
+        <Label htmlFor="invite-fullName" className={labelClasses}>
           Full name
         </Label>
-        <Input id="invite-fullName" name="fullName" required />
+        <Input id="invite-fullName" name="fullName" required className={inputClasses} />
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="invite-email" className="text-xs">
+      <div>
+        <Label htmlFor="invite-email" className={labelClasses}>
           Email
         </Label>
-        <Input id="invite-email" name="email" type="email" required />
+        <Input
+          id="invite-email"
+          name="email"
+          type="email"
+          required
+          className={inputClasses}
+        />
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="invite-role" className="text-xs">
+      <div>
+        <Label htmlFor="invite-role" className={labelClasses}>
           Role
         </Label>
         <select
           id="invite-role"
           name="role"
           defaultValue="client_viewer"
-          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+          className={selectClasses}
         >
           <option value="client_viewer">Viewer (read + comment)</option>
           <option value="client_admin">Admin (manage users)</option>
         </select>
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs">Auth method</Label>
-        <div className="flex rounded-md border bg-muted/40 p-0.5">
+      <div>
+        <p className={labelClasses}>Auth method</p>
+        <div className="mt-2 inline-flex rounded-md border border-border-subtle bg-lightgrey p-0.5">
           <button
             type="button"
             onClick={() => setAuthMethod("magic_link")}
-            className={`flex-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
-              authMethod === "magic_link"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            data-active={authMethod === "magic_link"}
+            className="rounded-sm px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/55 transition-colors data-[active=true]:bg-white data-[active=true]:text-navy data-[active=true]:shadow-[var(--shadow-xs)]"
           >
             Magic link
           </button>
           <button
             type="button"
             onClick={() => setAuthMethod("password")}
-            className={`flex-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
-              authMethod === "password"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            data-active={authMethod === "password"}
+            className="rounded-sm px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/55 transition-colors data-[active=true]:bg-white data-[active=true]:text-navy data-[active=true]:shadow-[var(--shadow-xs)]"
           >
             Email + password
           </button>
         </div>
       </div>
 
-      {authMethod === "password" && (
-        <div className="space-y-1">
+      {authMethod === "password" ? (
+        <div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="invite-password" className="text-xs">
+            <Label htmlFor="invite-password" className={labelClasses}>
               Initial password (≥ 8 chars)
             </Label>
             <button
               type="button"
               onClick={() => setPassword(generateStrongPassword())}
-              className="text-xs text-primary hover:underline"
+              className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-teal hover:text-[#0E7475]"
             >
+              <RefreshCw size={10} strokeWidth={1.6} />
               Generate
             </button>
           </div>
@@ -177,30 +190,35 @@ export function InviteClientUserForm({ clientId }: { clientId: string }) {
             onChange={(e) => setPassword(e.target.value)}
             minLength={8}
             required
-            className="font-mono"
+            className={`${inputClasses} font-mono tnum`}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="mt-1 text-[11px] text-navy/55">
             Share with the user securely. They can change it after first sign-in.
           </p>
         </div>
-      )}
-
-      {authMethod === "magic_link" && (
-        <p className="text-xs text-muted-foreground">
+      ) : (
+        <p className="text-[12px] text-navy/55">
           The user receives a one-time sign-in email. No password is set up front.
         </p>
       )}
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-md border border-danger/20 bg-danger-08 px-3 py-2 text-[12px] text-danger"
+        >
+          {error}
+        </p>
+      ) : null}
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <Button
           type="submit"
           size="sm"
           disabled={pending || (authMethod === "password" && password.length < 8)}
         >
           {pending
-            ? "Working..."
+            ? "Working…"
             : authMethod === "password"
               ? "Create account"
               : "Send invite"}
