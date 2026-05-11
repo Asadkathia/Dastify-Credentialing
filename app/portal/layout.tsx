@@ -1,6 +1,6 @@
 import { requireClient } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AppShell } from "@/components/app-shell";
+import { AppShell, type NavItem } from "@/components/app-shell";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await requireClient();
@@ -11,13 +11,17 @@ export default async function PortalLayout({ children }: { children: React.React
     .eq("id", session.clientId)
     .maybeSingle();
 
-  const navItems =
+  const navItems: NavItem[] =
     session.role === "client_admin"
       ? [
-          { href: "/portal", label: "Dashboard" },
-          { href: "/portal/team", label: "Team" },
+          { href: "/portal", label: "Dashboard", icon: "dashboard" },
+          { href: "/portal/enrollments", label: "Enrollments", icon: "enrollments" },
+          { href: "/portal/team", label: "Team", icon: "team" },
         ]
-      : [{ href: "/portal", label: "Dashboard" }];
+      : [
+          { href: "/portal", label: "Dashboard", icon: "dashboard" },
+          { href: "/portal/enrollments", label: "Enrollments", icon: "enrollments" },
+        ];
 
   return (
     <AppShell
@@ -28,6 +32,7 @@ export default async function PortalLayout({ children }: { children: React.React
         clientName: client?.display_name ?? "",
       }}
       nav={navItems}
+      workspaceLabel={client?.display_name ?? "Workspace"}
     >
       {children}
     </AppShell>
