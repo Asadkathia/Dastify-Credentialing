@@ -56,7 +56,6 @@ export function digestEmail(opts: {
   periodLabel: string;
   statusChanges: Array<{ summary: string; at: string }>;
   newComments: number;
-  upcomingRecreds: number;
 }) {
   const subject = `${opts.clientName} — ${opts.periodLabel} credentialing digest`;
   const lines: string[] = [
@@ -66,7 +65,6 @@ export function digestEmail(opts: {
     "",
     `• Status changes: ${opts.statusChanges.length}`,
     `• New comments: ${opts.newComments}`,
-    `• Upcoming recreds (next 90 days): ${opts.upcomingRecreds}`,
     "",
   ];
   if (opts.statusChanges.length > 0) {
