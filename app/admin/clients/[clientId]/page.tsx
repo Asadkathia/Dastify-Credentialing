@@ -3,10 +3,37 @@ import { notFound } from "next/navigation";
 import { Plus, UserCircle2 } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
+import { HeroCard } from "@/components/ui/hero-card";
 import { StatusChip } from "@/components/ui/status-chip";
 import { InviteClientUserForm } from "./_components/invite-user-form";
 import type { EnrollmentStatus } from "@/db/schema/enums";
+
+function initials(name: string | null | undefined): string {
+  if (!name) return "—";
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter((p) => p.length > 0);
+  const first = parts[0];
+  if (!first) return "—";
+  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
+  const last = parts[parts.length - 1] ?? first;
+  return ((first[0] ?? "") + (last[0] ?? "")).toUpperCase();
+}
+
+function ActivePill({ active }: { active: boolean }) {
+  return active ? (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-success-08 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#1B5E20]">
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#1B5E20]" />
+      Active
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-navy/08 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-navy/55">
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-navy/40" />
+      Inactive
+    </span>
+  );
+}
 
 export default async function ClientOverviewPage({
   params,
@@ -46,12 +73,37 @@ export default async function ClientOverviewPage({
 
   if (!client) notFound();
 
+  const idShort = clientId.slice(0, 8).toUpperCase();
+
   return (
     <div>
-      <PageHeader
+      <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-[12px]">
+        <Link href="/admin/clients" className="text-navy/55 hover:text-navy">
+          Clients
+        </Link>
+        <span className="text-navy/30">/</span>
+        <span className="text-navy/85">{client.display_name}</span>
+      </nav>
+
+      <HeroCard
+        className="mb-6"
+        avatar={initials(client.display_name)}
+        avatarTone="teal"
         title={client.display_name}
-        subtitle={client.legal_name}
-        crumbs={[{ label: "Clients", href: "/admin" }, { label: client.display_name }]}
+        meta={
+          <>
+            {client.legal_name ? <span>{client.legal_name}</span> : null}
+            {client.legal_name ? <span className="text-navy/30">·</span> : null}
+            <span className="font-mono tnum">#CLT-{idShort}</span>
+            <span className="text-navy/30">·</span>
+            <ActivePill active={Boolean(client.is_active)} />
+          </>
+        }
+        stats={[
+          { label: "ENROLLMENTS", value: enrollments?.length ?? 0 },
+          { label: "PROVIDERS", value: providers?.length ?? 0 },
+          { label: "PORTAL USERS", value: users?.length ?? 0 },
+        ]}
         actions={
           <>
             <Button asChild variant="outline">

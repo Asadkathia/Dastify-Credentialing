@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusTransitionDialog } from "./_components/status-transition-dialog";
 import { CommentsThread } from "./_components/comments-thread";
 import { InternalNotesThread } from "./_components/internal-notes-thread";
+import { QuickActionCard } from "./_components/quick-action-card";
 import { DocumentsPanel } from "@/components/documents-panel";
-import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
+import { STATUS_LABELS, pipelineDisplayOrder } from "@/lib/enrollment/state-machine";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
 export default async function EnrollmentDetailPage({
@@ -50,6 +51,10 @@ export default async function EnrollmentDetailPage({
     : (groupEntity?.legal_name ?? "—");
 
   const status = enrollment.status as EnrollmentStatus;
+
+  const pipelineOrder = pipelineDisplayOrder();
+  const pipelineStepIdx = pipelineOrder.indexOf(status);
+  const isOffRailTerminal = pipelineStepIdx === -1;
 
   const [
     { data: history },
@@ -139,7 +144,18 @@ export default async function EnrollmentDetailPage({
             {enrollment.sub_status ? (
               <span className="text-[13px] text-navy/65">{enrollment.sub_status}</span>
             ) : null}
-            <span className="ml-auto label-sm">Pipeline</span>
+            <div className="ml-auto flex flex-col items-end leading-tight">
+              <span className="label-sm">Pipeline</span>
+              {isOffRailTerminal ? (
+                <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-warning">
+                  Off-rail terminal
+                </span>
+              ) : (
+                <span className="text-[13px] font-semibold tnum text-navy">
+                  Step {pipelineStepIdx + 1} of {pipelineOrder.length}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="px-5 py-6">
@@ -220,21 +236,30 @@ export default async function EnrollmentDetailPage({
               )}
             </section>
 
-            <aside className="surface">
-              <header className="border-b border-border-subtle px-5 py-4">
-                <h2 className="text-[15px] font-semibold text-navy">Enrollment info</h2>
-              </header>
-              <dl className="space-y-4 px-5 py-5 text-[13px]">
-                <Meta
-                  label="Created"
-                  value={format(new Date(enrollment.created_at), "PP")}
-                />
-                <Meta
-                  label="Updated"
-                  value={formatDistanceToNow(new Date(enrollment.updated_at), { addSuffix: true })}
-                />
-              </dl>
-            </aside>
+            <div>
+              <aside className="surface">
+                <header className="border-b border-border-subtle px-5 py-4">
+                  <h2 className="text-[15px] font-semibold text-navy">Enrollment info</h2>
+                </header>
+                <dl className="space-y-4 px-5 py-5 text-[13px]">
+                  <Meta
+                    label="Created"
+                    value={format(new Date(enrollment.created_at), "PP")}
+                  />
+                  <Meta
+                    label="Updated"
+                    value={formatDistanceToNow(new Date(enrollment.updated_at), {
+                      addSuffix: true,
+                    })}
+                  />
+                </dl>
+              </aside>
+              <QuickActionCard
+                enrollmentId={enrollmentId}
+                currentStatus={status}
+                currentSubStatus={enrollment.sub_status ?? ""}
+              />
+            </div>
           </div>
         </TabsContent>
 

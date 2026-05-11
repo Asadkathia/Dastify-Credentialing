@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { CheckCircle2, Circle, ClipboardList, Lock, Plus } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
+import { HeroCard } from "@/components/ui/hero-card";
+import { SensitiveField } from "@/components/ui/sensitive-field";
 import { StatusChip } from "@/components/ui/status-chip";
 import { DocumentsPanel } from "@/components/documents-panel";
 import { ProviderEditForm } from "./_components/provider-edit-form";
 import type { EnrollmentStatus } from "@/db/schema/enums";
+import { cn } from "@/lib/utils";
 
 export default async function ProviderDetailPage({
   params,
@@ -26,7 +28,8 @@ export default async function ProviderDetailPage({
         .select(
           `id, client_id, first_name, middle_name, last_name, suffix, npi,
            primary_specialty, secondary_specialty, caqh_id, email, phone,
-           license_states, created_at`,
+           license_states, created_at,
+           dea_number_encrypted, ssn_last4_encrypted, dob_encrypted`,
         )
         .eq("id", providerId)
         .eq("client_id", clientId)
@@ -66,27 +69,84 @@ export default async function ProviderDetailPage({
     (provider.middle_name ? ` ${provider.middle_name[0]}.` : "") +
     (provider.suffix ? `, ${provider.suffix}` : "");
 
+  const initials = `${(provider.first_name?.[0] ?? "").toUpperCase()}${
+    (provider.last_name?.[0] ?? "").toUpperCase()
+  }`;
+
+  const licenseStates = Array.isArray(provider.license_states) ? provider.license_states : [];
+  const enrollmentCount = enrollments?.length ?? 0;
+  const approvedCount =
+    enrollments?.filter((e) => e.status === "approved" || e.status === "completed").length ?? 0;
+
+  // Profile completeness — 10 binary checks, 10% each.
+  // Sensitive bytea fields are checked for presence only — values are never read here.
+  const hasSensitive =
+    Boolean(provider.dea_number_encrypted) ||
+    Boolean(provider.ssn_last4_encrypted) ||
+    Boolean(provider.dob_encrypted);
+  const completeness: Array<{ label: string; done: boolean }> = [
+    { label: "First name", done: Boolean(provider.first_name) },
+    { label: "Last name", done: Boolean(provider.last_name) },
+    { label: "Middle name", done: Boolean(provider.middle_name) },
+    { label: "NPI", done: Boolean(provider.npi) },
+    { label: "CAQH ID", done: Boolean(provider.caqh_id) },
+    { label: "Primary specialty", done: Boolean(provider.primary_specialty) },
+    { label: "Email", done: Boolean(provider.email) },
+    { label: "Phone", done: Boolean(provider.phone) },
+    { label: "At least one state license", done: licenseStates.length >= 1 },
+    { label: "Sensitive identifiers on file", done: hasSensitive },
+  ];
+  const completenessDone = completeness.filter((c) => c.done).length;
+  const completenessPct = completenessDone * 10;
+
   return (
     <div>
-      <PageHeader
+      <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-[12px]">
+        <Link
+          href={`/admin/clients/${clientId}`}
+          className="text-navy/55 hover:text-navy"
+        >
+          {client?.display_name ?? "Client"}
+        </Link>
+        <span className="text-navy/30">/</span>
+        <Link
+          href={`/admin/clients/${clientId}`}
+          className="text-navy/55 hover:text-navy"
+        >
+          Providers
+        </Link>
+        <span className="text-navy/30">/</span>
+        <span className="text-navy/85">{displayName}</span>
+      </nav>
+
+      <HeroCard
+        avatar={initials}
+        avatarTone="teal"
         title={displayName}
-        subtitle={
+        meta={
           <>
-            {provider.primary_specialty ? (
-              <span className="text-charcoal">{provider.primary_specialty}</span>
-            ) : null}
-            {provider.npi ? (
-              <>
-                {provider.primary_specialty ? " · " : ""}
-                <span className="font-mono tnum">NPI {provider.npi}</span>
-              </>
-            ) : null}
+            <span className="inline-flex items-center rounded-sm bg-teal-08 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-teal">
+              Provider
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-navy/55">
+              {provider.npi ? (
+                <>
+                  NPI <span className="font-mono tnum">{provider.npi}</span>
+                </>
+              ) : (
+                "NPI not set"
+              )}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-08 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#1B5E20]">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-success" />
+              Active
+            </span>
           </>
         }
-        crumbs={[
-          { label: "Clients", href: "/admin" },
-          { label: client?.display_name ?? "Client", href: `/admin/clients/${clientId}` },
-          { label: displayName },
+        stats={[
+          { label: "Enrollments", value: enrollmentCount, tone: "teal" },
+          { label: "State licenses", value: licenseStates.length },
+          { label: "Approved", value: approvedCount, tone: "green" },
         ]}
         actions={
           <Button asChild>
@@ -96,6 +156,7 @@ export default async function ProviderDetailPage({
             </Link>
           </Button>
         }
+        className="mb-6"
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -201,13 +262,7 @@ export default async function ProviderDetailPage({
             <dl className="space-y-4 px-5 py-5 text-[13px]">
               {provider.email ? <Detail label="Email" value={provider.email} /> : null}
               {provider.phone ? <Detail label="Phone" value={provider.phone} /> : null}
-              {provider.caqh_id ? (
-                <Detail
-                  label="CAQH ID"
-                  value={<span className="font-mono tnum">{provider.caqh_id}</span>}
-                />
-              ) : null}
-              {!provider.email && !provider.phone && !provider.caqh_id ? (
+              {!provider.email && !provider.phone ? (
                 <p className="text-navy/55">No contact info on file.</p>
               ) : null}
             </dl>
@@ -216,13 +271,11 @@ export default async function ProviderDetailPage({
           <section className="surface">
             <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
               <h2 className="text-[15px] font-semibold text-navy">State licenses</h2>
-              <span className="label-sm">
-                {Array.isArray(provider.license_states) ? provider.license_states.length : 0}
-              </span>
+              <span className="label-sm">{licenseStates.length}</span>
             </header>
-            {Array.isArray(provider.license_states) && provider.license_states.length > 0 ? (
+            {licenseStates.length > 0 ? (
               <ul className="divide-y divide-border-subtle">
-                {provider.license_states.map(
+                {licenseStates.map(
                   (
                     l: { state: string; licenseNumber: string; expiration: string | null },
                     i: number,
@@ -255,6 +308,76 @@ export default async function ProviderDetailPage({
                 No state licenses recorded yet.
               </p>
             )}
+          </section>
+
+          {/* Sensitive identifiers — admin can see presence; values stay locked at
+              the UI layer (RLS already prevents client roles from reading the
+              bytea). We don't decrypt or render values here per task constraint. */}
+          <section className="surface">
+            <header className="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-navy">Sensitive identifiers</h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-navy-04 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-navy/65">
+                <Lock size={10} strokeWidth={1.8} />
+                Client view locked
+              </span>
+            </header>
+            <div className="grid grid-cols-1 gap-4 px-5 py-5">
+              <SensitiveField label="DEA" canReveal={false} mask="••••••••" />
+              <SensitiveField label="SSN-last-4" canReveal={false} mask="••••" />
+              <SensitiveField label="Date of birth" canReveal={false} mask="••••-••-••" />
+            </div>
+          </section>
+
+          {/* Profile completeness — navy bg with teal accent stripe, mirrors the
+              design in attachments/client-provider-detail.html. */}
+          <section className="relative overflow-hidden rounded-md bg-navy shadow-[var(--shadow-xs)]">
+            <span
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-teal via-aqua to-teal/30"
+            />
+            <div className="px-5 py-5">
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
+                <ClipboardList size={13} strokeWidth={1.8} className="text-teal" />
+                Profile Completeness
+              </div>
+              <div
+                className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
+                role="progressbar"
+                aria-valuenow={completenessPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="h-full rounded-full bg-teal transition-[width]"
+                  style={{ width: `${completenessPct}%` }}
+                />
+              </div>
+              <div className="mt-2.5 text-[12px] font-semibold text-teal tnum">
+                {completenessPct}% complete
+              </div>
+              <ul className="mt-4 space-y-2">
+                {completeness.map((c) => (
+                  <li
+                    key={c.label}
+                    className={cn(
+                      "flex items-center gap-2 text-[11px]",
+                      c.done ? "text-white/80" : "text-white/40",
+                    )}
+                  >
+                    {c.done ? (
+                      <CheckCircle2
+                        size={13}
+                        strokeWidth={1.8}
+                        className="shrink-0 text-success"
+                      />
+                    ) : (
+                      <Circle size={13} strokeWidth={1.8} className="shrink-0 text-white/30" />
+                    )}
+                    <span className="truncate">{c.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </section>
         </aside>
       </div>

@@ -245,3 +245,23 @@
     overflow: hidden;
   }
 }
+
+/* Login left-panel ECG draw-on animation */
+@keyframes ecgDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.ecg-path {
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+  animation: ecgDraw 4s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.8s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ecg-path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

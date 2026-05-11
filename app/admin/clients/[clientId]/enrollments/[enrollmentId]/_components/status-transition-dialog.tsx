@@ -30,14 +30,20 @@ const selectClasses =
   "mt-2 flex h-9 w-full rounded-sm border border-border-subtle bg-white px-3 py-1 text-[13px] text-charcoal focus-visible:border-teal focus-visible:outline-none";
 const inputClasses = "mt-2 bg-white text-[13px]";
 
+export type StatusTransitionTriggerVariant = "default" | "quick-action";
+
 export function StatusTransitionDialog({
   enrollmentId,
   currentStatus,
   currentSubStatus,
+  triggerLabel,
+  triggerVariant = "default",
 }: {
   enrollmentId: string;
   currentStatus: EnrollmentStatus;
   currentSubStatus: string;
+  triggerLabel?: string;
+  triggerVariant?: StatusTransitionTriggerVariant;
 }) {
   const [open, setOpen] = useState(false);
   const [toStatus, setToStatus] = useState<EnrollmentStatus>(currentStatus);
@@ -49,13 +55,25 @@ export function StatusTransitionDialog({
   // dedicated column to capture it; lives in status_history.reason if filled).
   const isOffRail = toStatus === "non_par_credentialed";
 
+  const isQuickAction = triggerVariant === "quick-action";
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <ArrowRight size={12} strokeWidth={1.6} className="mr-1.5" />
-          Transition status
-        </Button>
+        {isQuickAction ? (
+          <button
+            type="button"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-sm bg-teal px-3 py-2 text-[12px] font-semibold text-white shadow-[var(--shadow-xs)] transition-colors hover:bg-teal/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/40 focus-visible:ring-offset-2 focus-visible:ring-offset-navy"
+          >
+            {triggerLabel ?? "Transition status"}
+            <ArrowRight size={12} strokeWidth={1.8} />
+          </button>
+        ) : (
+          <Button size="sm">
+            <ArrowRight size={12} strokeWidth={1.6} className="mr-1.5" />
+            {triggerLabel ?? "Transition status"}
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent>

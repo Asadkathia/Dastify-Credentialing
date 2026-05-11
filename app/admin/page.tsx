@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
-import { Download } from "lucide-react";
+import {
+  AlertOctagon,
+  CheckCircle2,
+  Download,
+  Eye,
+  FileCheck2,
+  FilePlus2,
+  Send,
+  type LucideIcon,
+} from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
+import { DesignKpi } from "@/components/ui/design-kpi";
 import {
   BarChart,
   Donut,
@@ -13,6 +23,24 @@ import {
 } from "@/components/charts/dashboard-charts";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
+
+type KpiTone = "teal" | "amber" | "blue" | "green" | "navy";
+
+const STATUS_KPI_META: Record<
+  EnrollmentStatus,
+  { tone: KpiTone; icon: LucideIcon; hint: string }
+> = {
+  prep: { tone: "blue", icon: FilePlus2, hint: "Gathering documents" },
+  submitted: { tone: "teal", icon: Send, hint: "Awaiting payer pickup" },
+  in_review: { tone: "teal", icon: Eye, hint: "With payer reviewer" },
+  approved: { tone: "green", icon: CheckCircle2, hint: "Approved · pending effective" },
+  non_par_credentialed: {
+    tone: "amber",
+    icon: AlertOctagon,
+    hint: "Credentialed off-network",
+  },
+  completed: { tone: "green", icon: FileCheck2, hint: "Effective on network" },
+};
 
 const STATUS_DOT: Record<EnrollmentStatus, string> = {
   prep: CHART_COLORS.aqua,
@@ -45,6 +73,7 @@ export default async function AdminDashboardPage() {
     { data: allEnrollments },
     { data: createdInWindow },
     { data: nonParEvents },
+    { data: nonParInWindow },
     { data: recentlyUpdated },
   ] = await Promise.all([
     // Used for the 6 KPI counts + donut.
@@ -67,6 +96,15 @@ export default async function AdminDashboardPage() {
       .from("status_history")
       .select(`to_status, enrollment:enrollment_id (payer:payer_id (id, name))`)
       .in("to_status", ["approved", "non_par_credentialed", "completed"])
+      .limit(5000),
+
+    // Used for the 12-month non-par-credentialed bar chart — transitions
+    // into `non_par_credentialed` bucketed by month.
+    supabase
+      .from("status_history")
+      .select("created_at")
+      .eq("to_status", "non_par_credentialed")
+      .gte("created_at", earliestMonthStart.toISOString())
       .limit(5000),
 
     // Recently updated — last 8.
@@ -101,6 +139,19 @@ export default async function AdminDashboardPage() {
   (createdInWindow ?? []).forEach((e) => {
     const at = new Date(e.created_at);
     const bucket = months.find((m) => at >= m.start && at < m.end);
+    if (bucket) bucket.count += 1;
+  });
+
+  // 12-month non-par-credentialed bucketing — mirrors the creations loop.
+  const nonParMonths = months.map((m) => ({
+    label: m.label,
+    start: m.start,
+    end: m.end,
+    count: 0,
+  }));
+  (nonParInWindow ?? []).forEach((ev) => {
+    const at = new Date(ev.created_at);
+    const bucket = nonParMonths.find((m) => at >= m.start && at < m.end);
     if (bucket) bucket.count += 1;
   });
 
@@ -168,25 +219,25 @@ export default async function AdminDashboardPage() {
 
       {/* KPI band — one card per status, clickable */}
       <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {ENROLLMENT_STATUSES.map((s) => (
-          <Link
-            key={s}
-            href={`/admin/enrollments?status=${s}`}
-            className="group block rounded-md border border-border-subtle bg-white px-5 py-4 shadow-[var(--shadow-xs)] transition-all hover:-translate-y-[1px] hover:shadow-[var(--shadow-sm)] hover:border-teal/30"
-          >
-            <div className="mb-3">
-              <StatusChip status={s} />
-            </div>
-            <div className="flex items-end justify-between gap-2">
-              <p className="text-[32px] font-bold leading-none tracking-[-0.01em] tnum text-navy">
-                {statusCounts[s]}
-              </p>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-teal opacity-0 transition-opacity group-hover:opacity-100">
-                View →
-              </span>
-            </div>
-          </Link>
-        ))}
+        {ENROLLMENT_STATUSES.map((s) => {
+          const meta = STATUS_KPI_META[s];
+          return (
+            <Link
+              key={s}
+              href={`/admin/enrollments?status=${s}`}
+              className="block"
+            >
+              <DesignKpi
+                label={STATUS_LABELS[s].toUpperCase()}
+                value={statusCounts[s]}
+                hint={meta.hint}
+                icon={meta.icon}
+                tone={meta.tone}
+                className="transition-all hover:-translate-y-[1px] hover:shadow-[var(--shadow-sm)]"
+              />
+            </Link>
+          );
+        })}
       </div>
 
       {/* Row 2 — status donut + non-par rate */}
@@ -247,20 +298,8 @@ export default async function AdminDashboardPage() {
         </ChartCard>
       </div>
 
-      {/* Row 3 — 12-month creations */}
-      <div className="mb-6">
-        <ChartCard
-          title="Enrollments created · last 12 months"
-          caption="New enrollment rows per calendar month."
-        >
-          <BarChart
-            data={months.map((m) => ({ label: m.label, value: m.count, color: CHART_COLORS.teal }))}
-          />
-        </ChartCard>
-      </div>
-
-      {/* Row 4 — recently updated */}
-      <section className="surface">
+      {/* Row 3 — recently updated (moved up above the chart row) */}
+      <section className="surface mb-6">
         <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
           <h2 className="text-[15px] font-semibold text-navy">Recently updated</h2>
           <Link
@@ -322,6 +361,31 @@ export default async function AdminDashboardPage() {
           </table>
         )}
       </section>
+
+      {/* Row 4 — 12-month creations + 12-month non-par credentialed */}
+      <div className="mb-6 grid gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Enrollments created · last 12 months"
+          caption="New enrollment rows per calendar month."
+        >
+          <BarChart
+            data={months.map((m) => ({ label: m.label, value: m.count, color: CHART_COLORS.teal }))}
+          />
+        </ChartCard>
+
+        <ChartCard
+          title="Non-par credentialed · last 12 months"
+          caption="Transitions into non-par credentialed per calendar month."
+        >
+          <BarChart
+            data={nonParMonths.map((m) => ({
+              label: m.label,
+              value: m.count,
+              color: CHART_COLORS.amber,
+            }))}
+          />
+        </ChartCard>
+      </div>
     </div>
   );
 }

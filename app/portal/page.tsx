@@ -164,58 +164,8 @@ export default async function ClientPortalDashboardPage() {
           linear timeline, visually offset (warning-amber accent). */}
       <NonParCard count={statusCounts.non_par_credentialed} />
 
-      {/* Row 2 — donut + 12-month creations bar */}
-      <div className="mb-6 grid gap-4 xl:grid-cols-[1fr_1.4fr]">
-        <ChartCard
-          title="Status distribution"
-          caption={`Snapshot — ${totalEnrollments} total enrollments`}
-        >
-          <div className="flex flex-col items-center gap-4">
-            <Donut data={donutData} total={totalEnrollments} totalLabel="Total" />
-            <ul className="w-full space-y-1 border-t border-border-subtle pt-3">
-              {donutData.map((d) => {
-                const pct =
-                  totalEnrollments > 0 ? Math.round((d.value / totalEnrollments) * 100) : 0;
-                return (
-                  <li
-                    key={d.key}
-                    className="flex items-center justify-between gap-2 rounded px-1 py-[3px] text-[12px]"
-                  >
-                    <span className="flex items-center gap-2 truncate text-charcoal">
-                      <span
-                        aria-hidden
-                        className="h-2 w-2 shrink-0 rounded-[2px]"
-                        style={{ background: d.color }}
-                      />
-                      {d.label}
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span className="min-w-[36px] text-right font-semibold tnum text-charcoal">
-                        {d.value}
-                      </span>
-                      <span className="min-w-[42px] text-right tnum text-[11px] text-navy/55">
-                        {pct}%
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </ChartCard>
-
-        <ChartCard
-          title="Enrollments created · last 12 months"
-          caption="New enrollment rows per calendar month."
-        >
-          <BarChart
-            data={months.map((m) => ({ label: m.label, value: m.count, color: CHART_COLORS.teal }))}
-          />
-        </ChartCard>
-      </div>
-
-      {/* Row 3 — recently updated + recent comments */}
-      <div className="grid gap-4 xl:grid-cols-2">
+      {/* Recently updated + Recent comments — directly under the timeline */}
+      <div className="mb-6 grid gap-4 xl:grid-cols-2">
         <section className="surface">
           <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
             <h2 className="text-[15px] font-semibold text-navy">Recently updated</h2>
@@ -339,6 +289,56 @@ export default async function ClientPortalDashboardPage() {
             </ul>
           )}
         </section>
+      </div>
+
+      {/* Status donut + 12-month creations bar — secondary analytics row */}
+      <div className="mb-6 grid gap-4 xl:grid-cols-[1fr_1.4fr]">
+        <ChartCard
+          title="Status distribution"
+          caption={`Snapshot — ${totalEnrollments} total enrollments`}
+        >
+          <div className="flex flex-col items-center gap-4">
+            <Donut data={donutData} total={totalEnrollments} totalLabel="Total" />
+            <ul className="w-full space-y-1 border-t border-border-subtle pt-3">
+              {donutData.map((d) => {
+                const pct =
+                  totalEnrollments > 0 ? Math.round((d.value / totalEnrollments) * 100) : 0;
+                return (
+                  <li
+                    key={d.key}
+                    className="flex items-center justify-between gap-2 rounded px-1 py-[3px] text-[12px]"
+                  >
+                    <span className="flex items-center gap-2 truncate text-charcoal">
+                      <span
+                        aria-hidden
+                        className="h-2 w-2 shrink-0 rounded-[2px]"
+                        style={{ background: d.color }}
+                      />
+                      {d.label}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="min-w-[36px] text-right font-semibold tnum text-charcoal">
+                        {d.value}
+                      </span>
+                      <span className="min-w-[42px] text-right tnum text-[11px] text-navy/55">
+                        {pct}%
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </ChartCard>
+
+        <ChartCard
+          title="Enrollments created · last 12 months"
+          caption="New enrollment rows per calendar month."
+        >
+          <BarChart
+            data={months.map((m) => ({ label: m.label, value: m.count, color: CHART_COLORS.teal }))}
+          />
+        </ChartCard>
       </div>
     </div>
   );
