@@ -1,12 +1,17 @@
 "use client";
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { CheckCircle2, KeyRound, MailCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type Mode = "password" | "magic_link";
 
+const inputClasses =
+  "mt-2 flex h-10 w-full rounded-sm border border-border-subtle bg-white px-3 py-1 text-[13px] text-charcoal placeholder:text-navy/35 focus-visible:border-teal focus-visible:outline-none";
+
+const labelClasses = "text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70";
+
 export function LoginForm({ next, initialError }: { next?: string; initialError?: string }) {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,11 +54,18 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
 
   if (sent) {
     return (
-      <div className="rounded-md border border-border bg-card p-6 text-center">
-        <p className="font-medium">Check your email.</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          We sent a sign-in link to <span className="font-mono">{email}</span>. The link is valid
-          for one hour.
+      <div className="rounded-md border border-success/30 bg-success-08 px-5 py-6 text-center">
+        <CheckCircle2
+          size={36}
+          strokeWidth={1.6}
+          className="mx-auto mb-3 text-[#1B5E20]"
+          aria-hidden
+        />
+        <p className="text-[15px] font-semibold text-navy">Check your email</p>
+        <p className="mt-1.5 text-[13px] text-navy/65">
+          We sent a sign-in link to{" "}
+          <span className="font-mono tnum text-charcoal">{email}</span>. The link is valid for one
+          hour.
         </p>
         <button
           type="button"
@@ -61,7 +73,7 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
             setSent(false);
             setMode("password");
           }}
-          className="mt-4 text-xs text-primary hover:underline"
+          className="mt-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-teal hover:text-[#0E7475]"
         >
           Sign in a different way
         </button>
@@ -70,35 +82,36 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* Mode toggle */}
-      <div className="flex rounded-md border bg-muted/40 p-1">
+      <div
+        className="inline-flex w-full rounded-md border border-border-subtle bg-lightgrey p-0.5"
+        role="tablist"
+      >
         <button
           type="button"
+          role="tab"
           onClick={() => setMode("password")}
-          className={`flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-            mode === "password"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          data-active={mode === "password"}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-sm px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/55 transition-colors data-[active=true]:bg-white data-[active=true]:text-navy data-[active=true]:shadow-[var(--shadow-xs)]"
         >
+          <KeyRound size={12} strokeWidth={1.6} />
           Password
         </button>
         <button
           type="button"
+          role="tab"
           onClick={() => setMode("magic_link")}
-          className={`flex-1 rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-            mode === "magic_link"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          data-active={mode === "magic_link"}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-sm px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/55 transition-colors data-[active=true]:bg-white data-[active=true]:text-navy data-[active=true]:shadow-[var(--shadow-xs)]"
         >
+          <MailCheck size={12} strokeWidth={1.6} />
           Magic link
         </button>
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">
+      <div>
+        <label htmlFor="email" className={labelClasses}>
           Work email
         </label>
         <input
@@ -108,14 +121,14 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={inputClasses}
           placeholder="you@yourpractice.com"
         />
       </div>
 
-      {mode === "password" && (
-        <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">
+      {mode === "password" ? (
+        <div>
+          <label htmlFor="password" className={labelClasses}>
             Password
           </label>
           <input
@@ -125,31 +138,41 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={inputClasses}
           />
         </div>
+      ) : (
+        <p className="text-[12px] text-navy/55">
+          We&apos;ll email you a one-time sign-in link. No password needed.
+        </p>
       )}
 
-      {error && (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
-      )}
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-md border border-danger/20 bg-danger-08 px-3 py-2 text-[13px] text-danger"
+        >
+          {error}
+        </p>
+      ) : null}
 
-      <button
+      <Button
         type="submit"
+        size="lg"
         disabled={pending || !email || (mode === "password" && !password)}
-        className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        className="w-full"
       >
         {pending
           ? mode === "password"
-            ? "Signing in..."
-            : "Sending link..."
+            ? "Signing in…"
+            : "Sending link…"
           : mode === "password"
             ? "Sign in"
             : "Email me a sign-in link"}
-      </button>
+      </Button>
 
-      <p className="text-center text-xs text-muted-foreground">
-        New users must be invited by an administrator. Self sign-up is disabled.
+      <p className="text-center text-[11px] text-navy/55">
+        New users must be invited by an administrator.
       </p>
     </form>
   );
