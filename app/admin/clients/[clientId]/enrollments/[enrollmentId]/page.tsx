@@ -19,7 +19,6 @@ import { StatusTransitionDialog } from "./_components/status-transition-dialog";
 import { CommentsThread } from "./_components/comments-thread";
 import { InternalNotesThread } from "./_components/internal-notes-thread";
 import { QuickActionCard } from "./_components/quick-action-card";
-import { DocumentsPanel } from "@/components/documents-panel";
 import { STATUS_LABELS, pipelineDisplayOrder } from "@/lib/enrollment/state-machine";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
@@ -87,8 +86,6 @@ export default async function EnrollmentDetailPage({
     { data: history },
     { data: comments },
     { data: notes },
-    { data: documents },
-    { data: docCategories },
     { data: activity },
   ] = await Promise.all([
     supabase
@@ -113,19 +110,6 @@ export default async function EnrollmentDetailPage({
       .is("deleted_at", null)
       .order("created_at", { ascending: true })
       .limit(200),
-    supabase
-      .from("documents")
-      .select(
-        `id, file_name, category_id, size_bytes, mime_type, expiration_date, is_internal,
-         virus_scan_status, created_at,
-         category:category_id (id, name, label, is_default)`,
-      )
-      .eq("owner_type", "enrollment")
-      .eq("owner_id", enrollmentId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase.from("document_categories").select("id, name, label, is_default").order("sort_order"),
     supabase
       .from("activity_events")
       .select("id, action, target_table, target_id, summary, occurred_at, actor_user_id")
@@ -236,12 +220,6 @@ export default async function EnrollmentDetailPage({
             Status History
             <span className="ml-1.5 rounded-full bg-lightgrey px-1.5 py-px text-[10px] font-semibold tnum text-navy/65">
               {history?.length ?? 0}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="documents">
-            Documents
-            <span className="ml-1.5 rounded-full bg-lightgrey px-1.5 py-px text-[10px] font-semibold tnum text-navy/65">
-              {documents?.length ?? 0}
             </span>
           </TabsTrigger>
           <TabsTrigger value="comments">
@@ -431,26 +409,6 @@ export default async function EnrollmentDetailPage({
                 </table>
               </div>
             )}
-          </section>
-        </TabsContent>
-
-        {/* Documents */}
-        <TabsContent value="documents">
-          <section className="surface">
-            <header className="border-b border-border-subtle px-5 py-4">
-              <h2 className="text-[15px] font-semibold text-navy">Documents</h2>
-            </header>
-            <div className="px-5 py-5">
-              <DocumentsPanel
-                clientId={clientId}
-                ownerType="enrollment"
-                ownerId={enrollmentId}
-                documents={documents ?? []}
-                categories={docCategories ?? []}
-                canManage
-                defaultCategoryName="payer_letter"
-              />
-            </div>
           </section>
         </TabsContent>
 

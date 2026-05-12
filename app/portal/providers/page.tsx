@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireClient } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { RowOpenLink } from "@/components/ui/row-open-link";
 
 type SearchParams = Promise<{
   q?: string;
@@ -175,12 +176,7 @@ export default async function PortalProvidersPage({
                         )}
                       </td>
                       <td className="text-right">
-                        <Link
-                          href={`/portal/providers/${p.id}`}
-                          className="text-[12px] font-semibold uppercase tracking-wider text-teal hover:text-[#0E7475]"
-                        >
-                          View →
-                        </Link>
+                        <RowOpenLink href={`/portal/providers/${p.id}`} label="View" />
                       </td>
                     </tr>
                   );

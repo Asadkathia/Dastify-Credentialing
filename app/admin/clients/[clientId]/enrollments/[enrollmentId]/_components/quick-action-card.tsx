@@ -11,13 +11,13 @@ type QuickActionMessage = {
   cta: string;
 };
 
-// Pipeline statuses that have a "next action". Terminal statuses (`completed`,
+// Pipeline statuses that have a "next action". Terminal statuses (`approved`,
 // `non_par_credentialed`) are intentionally omitted — the card doesn't render.
 const NEXT_ACTION: Partial<Record<EnrollmentStatus, QuickActionMessage>> = {
   prep: {
     current: "Prep",
     next: "Submitted",
-    body: "Upload provider documents to advance.",
+    body: "Gather provider details and confirm readiness to submit.",
     cta: "Transition to Submitted",
   },
   submitted: {
@@ -29,14 +29,8 @@ const NEXT_ACTION: Partial<Record<EnrollmentStatus, QuickActionMessage>> = {
   in_review: {
     current: "In Review",
     next: "Approved",
-    body: "Awaiting payer decision.",
+    body: "Final step: mark as Approved once the payer accepts the provider.",
     cta: "Mark as Approved",
-  },
-  approved: {
-    current: "Approved",
-    next: "Completed",
-    body: "Final step: mark as Completed once provider is active in-network.",
-    cta: "Mark as Completed",
   },
 };
 

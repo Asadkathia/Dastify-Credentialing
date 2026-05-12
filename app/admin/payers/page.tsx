@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/page-header";
+import { AddPayerDialog } from "./_components/add-payer-dialog";
 
 const PAYER_TYPE_TINT: Record<string, string> = {
   commercial: "bg-teal-08 text-navy",
@@ -11,10 +12,14 @@ const PAYER_TYPE_TINT: Record<string, string> = {
 
 export default async function PayersListPage() {
   const supabase = await createSupabaseServerClient();
-  const { data: payers } = await supabase
+  const { data: payers, error } = await supabase
     .from("payers")
-    .select("id, name, payer_type, recred_cycle_months, states_active")
+    .select("id, name, payer_type, states_active")
     .order("name");
+
+  if (error) {
+    throw new Error(`Failed to load payers: ${error.message}`);
+  }
 
   const count = payers?.length ?? 0;
 
@@ -28,6 +33,7 @@ export default async function PayersListPage() {
             list, shared across all clients
           </>
         }
+        actions={<AddPayerDialog />}
       />
 
       {count === 0 ? (
@@ -41,7 +47,6 @@ export default async function PayersListPage() {
               <tr>
                 <th>Name</th>
                 <th className="w-[120px]">Type</th>
-                <th className="w-[140px]">Recred cycle</th>
                 <th>States</th>
               </tr>
             </thead>
@@ -64,7 +69,6 @@ export default async function PayersListPage() {
                         {p.payer_type}
                       </span>
                     </td>
-                    <td className="tnum text-navy/70">{p.recred_cycle_months} months</td>
                     <td className="text-[12px] text-navy/65">
                       {allStates ? (
                         <span className="font-medium text-navy">All states</span>

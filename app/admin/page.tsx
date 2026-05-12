@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Download,
   Eye,
-  FileCheck2,
   FilePlus2,
   Send,
   type LucideIcon,
@@ -21,33 +20,22 @@ import {
   CHART_COLORS,
 } from "@/components/charts/dashboard-charts";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
+import { STATUS_COLORS, type StatusToneName } from "@/lib/enrollment/status-colors";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
-
-type KpiTone = "teal" | "amber" | "blue" | "green" | "navy";
 
 const STATUS_KPI_META: Record<
   EnrollmentStatus,
-  { tone: KpiTone; icon: LucideIcon; hint: string }
+  { tone: StatusToneName; icon: LucideIcon; hint: string }
 > = {
-  prep: { tone: "blue", icon: FilePlus2, hint: "Gathering documents" },
-  submitted: { tone: "teal", icon: Send, hint: "Awaiting payer pickup" },
-  in_review: { tone: "teal", icon: Eye, hint: "With payer reviewer" },
-  approved: { tone: "green", icon: CheckCircle2, hint: "Approved · pending effective" },
+  prep: { tone: STATUS_COLORS.prep.toneName, icon: FilePlus2, hint: "Gathering documents" },
+  submitted: { tone: STATUS_COLORS.submitted.toneName, icon: Send, hint: "Awaiting payer pickup" },
+  in_review: { tone: STATUS_COLORS.in_review.toneName, icon: Eye, hint: "With payer reviewer" },
+  approved: { tone: STATUS_COLORS.approved.toneName, icon: CheckCircle2, hint: "Active in-network" },
   non_par_credentialed: {
-    tone: "amber",
+    tone: STATUS_COLORS.non_par_credentialed.toneName,
     icon: AlertOctagon,
     hint: "Credentialed off-network",
   },
-  completed: { tone: "green", icon: FileCheck2, hint: "Effective on network" },
-};
-
-const STATUS_DOT: Record<EnrollmentStatus, string> = {
-  prep: CHART_COLORS.aqua,
-  submitted: CHART_COLORS.teal,
-  in_review: CHART_COLORS.teal,
-  approved: CHART_COLORS.green,
-  non_par_credentialed: CHART_COLORS.amber,
-  completed: CHART_COLORS.green,
 };
 
 export default async function AdminDashboardPage() {
@@ -74,7 +62,7 @@ export default async function AdminDashboardPage() {
     { data: nonParInWindow },
     { data: recentlyUpdated },
   ] = await Promise.all([
-    // Used for the 6 KPI counts + donut.
+    // Used for the 5 KPI counts + donut.
     supabase
       .from("enrollments")
       .select("id, status")
@@ -111,7 +99,7 @@ export default async function AdminDashboardPage() {
       .limit(20),
   ]);
 
-  // Per-status counts (drives the 6 KPI cards + donut).
+  // Per-status counts (drives the 5 KPI cards + donut).
   const statusCounts = ENROLLMENT_STATUSES.reduce<Record<EnrollmentStatus, number>>(
     (acc, s) => {
       acc[s] = 0;
@@ -149,7 +137,7 @@ export default async function AdminDashboardPage() {
     key: s,
     label: STATUS_LABELS[s],
     value: statusCounts[s],
-    color: STATUS_DOT[s],
+    color: STATUS_COLORS[s].hex,
   }));
 
   return (
@@ -173,7 +161,7 @@ export default async function AdminDashboardPage() {
       />
 
       {/* KPI band — one card per status, clickable */}
-      <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {ENROLLMENT_STATUSES.map((s) => {
           const meta = STATUS_KPI_META[s];
           return (

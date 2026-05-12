@@ -181,17 +181,16 @@ Both are append-only. No update or delete is permitted (RLS).
 
 ## 4. Status Pipeline
 
-Canonical 6 values (enum on `enrollment.status`). Linear happy path:
+Canonical 5 values (enum on `enrollment.status`). Linear happy path — 4 stages:
 
 1. **`prep`** — CAQH up to date, documents collected, application being prepared
 2. **`submitted`** — application sent to payer; `submitted_at` is set automatically the first time
 3. **`in_review`** — payer is reviewing (absorbs the old "info_requested" / "pending" semantics)
-4. **`approved`** — payer accepted the application
-5. **`completed`** — provider/group is in-network; the linear flow's terminal state
+4. **`approved`** — payer accepted the provider; provider is in-network. Terminal happy-path state.
 
 Plus the off-rail terminal:
 
-6. **`non_par_credentialed`** — credentialed but non-participating (provider accepted by payer but not added to the in-network roster).
+5. **`non_par_credentialed`** — credentialed but non-participating (provider accepted by payer but not added to the in-network roster).
 
 **Sub-status** is a free-form text field (e.g., "Awaiting CV from provider," "Payer rep escalated," "Contract pending signature"). Renders next to the status chip.
 
@@ -207,7 +206,7 @@ Two surfaces; one underlying data:
 
 ### A) Live dashboard (per client)
 - **Default view**: filterable table of all enrollments. Columns: `Provider | State | Payer | Status | Sub-status | Last Activity | Comments`.
-- **Filters**: by provider, payer, state, status. (The dashboard's 6 status KPI cards are the primary filter affordance — each card links to `/admin/enrollments?status=X`.)
+- **Filters**: by provider, payer, state, status. (The dashboard's 5 status KPI cards are the primary filter affordance — each card links to `/admin/enrollments?status=X`.)
 - **Group-by**: by provider, by payer, by state, by status.
 - **Activity feed sidebar**: recent status changes + comments across the client's whole portfolio.
 - **Status counters at top**: count per stage.

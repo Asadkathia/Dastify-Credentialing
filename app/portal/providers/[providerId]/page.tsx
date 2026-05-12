@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -6,6 +5,7 @@ import { requireClient } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
 import { SensitiveField } from "@/components/ui/sensitive-field";
+import { RowOpenLink } from "@/components/ui/row-open-link";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
 export default async function PortalProviderDetailPage({
@@ -151,12 +151,7 @@ export default async function PortalProviderDetailPage({
                             {e.effective_date ? format(new Date(e.effective_date), "PP") : "—"}
                           </td>
                           <td className="text-right">
-                            <Link
-                              href={`/portal/enrollments/${e.id}`}
-                              className="text-[12px] font-semibold uppercase tracking-wider text-teal hover:text-[#0E7475]"
-                            >
-                              View →
-                            </Link>
+                            <RowOpenLink href={`/portal/enrollments/${e.id}`} label="View" />
                           </td>
                         </tr>
                       );

@@ -1,42 +1,10 @@
 import { cn } from "@/lib/utils";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
+import { STATUS_COLORS } from "@/lib/enrollment/status-colors";
 
 // Compact pill variant for inline use in activity feeds and history tables.
 // (Differs from StatusChip: smaller, no "size" prop, dimmer "from" tone.)
-const PILL_TONES: Record<EnrollmentStatus, { bg: string; fg: string; dot: string }> = {
-  prep: {
-    bg: "bg-teal-08",
-    fg: "text-teal",
-    dot: "bg-teal",
-  },
-  submitted: {
-    bg: "bg-[#1565C0]/10",
-    fg: "text-[#1565C0]",
-    dot: "bg-[#1565C0]",
-  },
-  in_review: {
-    bg: "bg-[#1565C0]/10",
-    fg: "text-[#1565C0]",
-    dot: "bg-[#1565C0]",
-  },
-  approved: {
-    bg: "bg-success-08",
-    fg: "text-[#1B5E20]",
-    dot: "bg-success",
-  },
-  non_par_credentialed: {
-    bg: "bg-warning-08",
-    fg: "text-[#7a4f00]",
-    dot: "bg-warning",
-  },
-  completed: {
-    bg: "bg-success-08",
-    fg: "text-[#1B5E20]",
-    dot: "bg-success",
-  },
-};
-
 export function StatusPill({
   status,
   muted = false,
@@ -60,17 +28,17 @@ export function StatusPill({
       </span>
     );
   }
-  const t = PILL_TONES[status];
+  const t = STATUS_COLORS[status];
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em]",
-        t.bg,
-        t.fg,
+        t.classes.bgTint,
+        t.classes.text,
         className,
       )}
     >
-      <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", t.dot)} />
+      <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", t.classes.dot)} />
       {STATUS_LABELS[status]}
     </span>
   );

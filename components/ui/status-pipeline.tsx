@@ -1,13 +1,13 @@
 import {
   Check,
   Eye,
-  FileCheck2,
   type LucideIcon,
   Pencil,
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EnrollmentStatus } from "@/db/schema/enums";
+import { STATUS_COLORS } from "@/lib/enrollment/status-colors";
 
 // Linear pipeline order — matches `pipelineDisplayOrder()` in state-machine.ts.
 const PIPELINE: ReadonlyArray<{ key: EnrollmentStatus; label: string; Icon: LucideIcon }> = [
@@ -15,7 +15,6 @@ const PIPELINE: ReadonlyArray<{ key: EnrollmentStatus; label: string; Icon: Luci
   { key: "submitted", label: "Submitted", Icon: Send },
   { key: "in_review", label: "In Review", Icon: Eye },
   { key: "approved", label: "Approved", Icon: Check },
-  { key: "completed", label: "Completed", Icon: FileCheck2 },
 ];
 
 // Terminal off-rail outcome (renders as an overlay tag dimming the rail).
@@ -37,7 +36,9 @@ export function StatusPipeline({
     ? PIPELINE.findIndex((s) => s.key === "approved")
     : PIPELINE.findIndex((s) => s.key === status);
 
-  // Fill track to the midpoint of the current stage (matches portal master card).
+  // Fill the brand-teal track up to the midpoint of the current stage.
+  // The per-stage palette colors live only on the circles + labels; the
+  // progress rail itself stays neutral teal (brand color) end-to-end.
   const filledPct =
     currentIdx >= 0 ? ((currentIdx + 0.5) / PIPELINE.length) * 100 : 0;
 
@@ -52,10 +53,10 @@ export function StatusPipeline({
       ) : null}
 
       <ol
-        className={cn("relative grid grid-cols-5 gap-2", dimmed && "opacity-40")}
+        className={cn("relative grid grid-cols-4 gap-2", dimmed && "opacity-40")}
         aria-label="Status pipeline"
       >
-        {/* Continuous track — grey baseline + teal fill up to current */}
+        {/* Continuous baseline track + teal fill up to current stage. */}
         <span
           aria-hidden
           className="pointer-events-none absolute left-5 right-5 top-5 h-0.5 -translate-y-1/2 bg-grey/50"
@@ -70,6 +71,7 @@ export function StatusPipeline({
           const isPast = currentIdx > -1 && i < currentIdx;
           const isCurrent = currentIdx === i;
           const StageIcon = stage.Icon;
+          const palette = STATUS_COLORS[stage.key];
           return (
             <li
               key={stage.key}
@@ -79,8 +81,9 @@ export function StatusPipeline({
               <span
                 className={cn(
                   "relative z-10 flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                  isPast && "bg-success text-white",
-                  isCurrent && "bg-teal text-white ring-4 ring-teal-12",
+                  isPast && `${palette.classes.bgSolid} text-white`,
+                  isCurrent &&
+                    `${palette.classes.bgSolid} text-white ring-4 ${palette.classes.ring}`,
                   !isPast &&
                     !isCurrent &&
                     "border-2 border-grey/60 bg-white text-navy/40",
@@ -95,13 +98,15 @@ export function StatusPipeline({
               <span
                 className={cn(
                   "mt-2 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.12em]",
-                  isCurrent ? "text-navy" : isPast ? "text-success" : "text-navy/40",
+                  (isCurrent || isPast) ? palette.classes.text : "text-navy/40",
                 )}
               >
                 {stage.label}
               </span>
               {isCurrent && subStatus ? (
-                <span className="mt-1 text-[11px] italic text-teal/85">{subStatus}</span>
+                <span className={cn("mt-1 text-[11px] italic", palette.classes.text, "opacity-85")}>
+                  {subStatus}
+                </span>
               ) : null}
             </li>
           );

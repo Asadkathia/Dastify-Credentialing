@@ -33,15 +33,13 @@ export function AppShell({
           href={homeHref}
           className="flex items-center gap-3 px-5 pt-[18px] pb-4"
         >
-          <span
-            aria-hidden
-            className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px]"
-            style={{
-              background: "linear-gradient(135deg, hsl(var(--teal)) 0%, hsl(var(--aqua)) 100%)",
-            }}
-          >
-            <ShieldCheckMark />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/dastify-logo.svg"
+            alt="Dastify"
+            className="h-[36px] w-auto select-none"
+            draggable={false}
+          />
           <span className="flex flex-col leading-tight">
             <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-white">
               Dastify
@@ -148,25 +146,6 @@ function getInitials(name: string) {
   if (parts.length === 0) return "—";
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
-}
-
-function ShieldCheckMark() {
-  return (
-    <svg
-      aria-hidden
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="white"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
 }
 
 function SettingsLockIcon() {

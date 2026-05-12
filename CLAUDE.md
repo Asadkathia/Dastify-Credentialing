@@ -72,10 +72,10 @@ These are the rules you must never break. If a request requires breaking one, st
 
 ### Status lifecycle
 
-17. **Status is a closed enum**: `prep`, `submitted`, `in_review`, `approved`, `non_par_credentialed`, `completed`. Linear happy path: `prep → submitted → in_review → approved → completed`. `non_par_credentialed` is the off-rail terminal (provider credentialed but not in-network). The schema defines `TERMINAL_STATUSES = {completed, non_par_credentialed}` for guard logic.
+17. **Status is a closed enum**: `prep`, `submitted`, `in_review`, `approved`, `non_par_credentialed`. Linear happy path: `prep → submitted → in_review → approved` (4 stages). `non_par_credentialed` is the off-rail terminal (provider credentialed but not in-network). The schema defines `TERMINAL_STATUSES = {approved, non_par_credentialed}` for guard logic.
 18. **`sub_status` is free-form `text`, not an enum.** UI may surface a curated list of common phrases as suggestions, but the column accepts any string and `status_history` records both `from_sub_status` and `to_sub_status` as text.
 19. **State transitions are validated server-side.** A transition that violates the documented machine returns `{ ok: false, error }`; it does not silently succeed. Each transition writes one row to `status_history` (append-only, enforced by `trg_status_history_no_update`).
-20. **Setting status to `submitted` for the first time sets `submitted_at`** automatically. `effective_date` is no longer auto-computed — the column remains for manual override only.
+20. **Setting status to `submitted` for the first time sets `submitted_at`** automatically. `effective_date` is no longer auto-computed — the column remains for manual override only (set when a payer assigns a network-effective date).
 21. **There is no recredentialing module.** Migrations 0009 + 0010 removed `next_recred_due_date`, `parent_enrollment_id`, `cycle_number`, `denied_reason`, `payers.recred_cycle_months`, the `compute_recred_due_date()` trigger, and the `recred-check` Inngest job. If recred work needs to come back later, it is a fresh feature with a fresh data model.
 
 ### UX bars
@@ -85,7 +85,7 @@ These are the rules you must never break. If a request requires breaking one, st
 24. **The .xlsx export must reproduce the existing template format exactly**: banner row (configurable from `client_settings.disclaimer_banner_text`), `States | Payers | Participation Request Status | Comments` header, one row per enrollment. The user has clients trained on this layout — do not "improve" it without permission.
 25. **The disclaimer banner text is per-client and stored** at `client_settings.disclaimer_banner_text` (default: `"All Insurances take up to 90-120 business days for processing."`). Render it on every client-portal screen and at the top of the .xlsx export.
 26. **UI must replicate the design files in `/Dastify-Crendentialing/`** while honoring the data model above. Where a mockup field disagrees with the schema (provider Tax ID, single `name` field, `sub_status` as enum, recredentialing surfaces), the schema wins — adjust the rendering, not the column.
-27. **Admin dashboards are per-status KPI bands.** Each of the 6 statuses gets its own card with the live count and a click-through to `/admin/enrollments?status=X` (or `/portal/enrollments?status=X`). No recreds-due KPI, no time-to-effective KPI — those concepts no longer exist.
+27. **Admin dashboards are per-status KPI bands.** Each of the 5 statuses gets its own card with the live count and a click-through to `/admin/enrollments?status=X` (or `/portal/enrollments?status=X`). No recreds-due KPI, no time-to-effective KPI — those concepts no longer exist.
 
 ---
 
@@ -144,15 +144,15 @@ Locked v1 scope. The screens in `/Dastify-Crendentialing/` are the visual target
 - Auth + admin-provisioned client invites (Supabase Auth, magic-link). No password, no SSO, no 2FA in v1 (the design's password/SSO/2FA chrome is illustrative; ship magic-link only).
 - Multi-tenant data model per `docs/DESIGN.md` §3 and `db/schema/*`.
 - **Admin portal**:
-  - Dashboard — 6 status KPI cards (one per enum value), each clickable to `/admin/enrollments?status=X`. Status distribution donut, non-par-credentialed rate by payer, 12-month enrollment-creations bar, recently-updated table, "Monthly report" Excel download.
+  - Dashboard — 5 status KPI cards (one per enum value), each clickable to `/admin/enrollments?status=X`. Status distribution donut, non-par-credentialed rate by payer, 12-month enrollment-creations bar, recently-updated table, "Monthly report" Excel download.
   - Clients / Providers / Payers — separate list pages with detail panes.
-  - Enrollments list — cross-client, with status filter chips (6 chips), payer + state filters, pagination.
+  - Enrollments list — cross-client, with status filter chips (5 chips), payer + state filters, pagination.
   - Enrollment detail — status pipeline visualization, Overview / Status History / Documents / Comments / Internal Notes / Activity tabs.
   - Status Transition modal — valid-transition gating per the new state machine, free-form reason capture.
   - New Enrollment — one (provider × payer × state) per row (no cycle concept).
   - Documents (cross-client) + Audit Log (cross-client).
-- **Client portal** — read access scoped via RLS to their own client's data; comment posting; .xlsx export. Mirrors admin Dashboard (6 status KPI cards, status donut, 12-month creations bar, recently-updated, recent comments). Internal notes and internal documents never appear; non-par rate is admin-only.
-- Status pipeline (6 statuses) with server-side transition validation.
+- **Client portal** — read access scoped via RLS to their own client's data; comment posting; .xlsx export. Mirrors admin Dashboard (5 status KPI cards, status donut, 12-month creations bar, recently-updated, recent comments). Internal notes and internal documents never appear; non-par rate is admin-only.
+- Status pipeline (5 statuses, 4 linear stages) with server-side transition validation.
 - Documents with admin-extensible runtime categories (`document_categories` table), expiration tracking, internal/public flag, virus scanning hook.
 - Audit log: `status_history` + `activity_events`, append-only, visible per-enrollment and globally on `/admin/audit`.
 - .xlsx export matching the existing Excel template — plus a monthly cross-client report at `/api/export/monthly-enrollments.xlsx`.
@@ -220,7 +220,7 @@ Ask the user. Do not invent a product decision (status names, role permissions, 
 - ❌ Modeling document categories as an enum extension — extend the `document_categories` table instead (rule 15).
 - ❌ Importing `documentCategoryEnum` in new code — it exists only for the deprecated `legacy_category` column.
 - ❌ Re-introducing `next_recred_due_date`, `parent_enrollment_id`, `cycle_number`, `denied_reason`, or `payers.recred_cycle_months` — the recred module is gone (rule 21). If recredentialing comes back later, it's a new feature with a fresh data model.
-- ❌ Referencing the old status enum values in new code (`intake`, `info_requested`, `denied`, `effective`, `closed`, `withdrawn`) — they no longer exist. Use the 6 new values.
+- ❌ Referencing the old status enum values in new code (`intake`, `info_requested`, `denied`, `effective`, `closed`, `withdrawn`, `completed`) — they no longer exist. Use the 5 current values (`prep`, `submitted`, `in_review`, `approved`, `non_par_credentialed`).
 - ❌ Implementing live tickers, presence indicators, or WebSocket subscriptions — v1 is request/response only (out of scope).
 - ❌ Implementing the Inbox screen or Recreds Pipeline for v1 — both deferred / removed.
 - ❌ Wiring Google / Microsoft / SSO buttons on the login screen — magic-link only in v1.
@@ -261,4 +261,4 @@ These are operational settings that can't be applied via SQL/MCP and must be fli
 
 ---
 
-**Last updated**: 2026-05-12 (status enum redesign — 6 values; recredentialing module fully removed; dashboards rebuilt as per-status KPI bands)
+**Last updated**: 2026-05-12 (status pipeline shrunk to 5 values / 4 linear stages — `completed` dropped, `approved` is now the terminal happy-path)

@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { RowOpenLink } from "@/components/ui/row-open-link";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
+import { STATUS_COLORS } from "@/lib/enrollment/status-colors";
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -220,12 +222,7 @@ export default async function PortalEnrollmentsPage({
                         {format(new Date(e.updated_at), "PP")}
                       </td>
                       <td className="text-right">
-                        <Link
-                          href={`/portal/enrollments/${e.id}`}
-                          className="text-[12px] font-semibold uppercase tracking-wider text-teal hover:text-[#0E7475]"
-                        >
-                          View →
-                        </Link>
+                        <RowOpenLink href={`/portal/enrollments/${e.id}`} label="View" />
                       </td>
                     </tr>
                   );
@@ -289,13 +286,15 @@ function FilterChip({
   label: string;
   href: string;
   active: boolean;
-  tone?: "neutral" | "teal" | "amber" | "green" | "danger" | "grey";
+  tone?: "neutral" | "blue" | "teal" | "yellow" | "green" | "amber" | "danger" | "grey";
 }) {
-  const activeClass = {
+  const activeClass: Record<NonNullable<typeof tone>, string> = {
     neutral: "border-navy bg-navy text-white",
-    teal: "border-teal bg-teal-08 text-navy",
-    amber: "border-warning bg-warning-08 text-[#7a4f00]",
+    blue: "border-[#1565C0] bg-[#1565C0]/10 text-[#1565C0]",
+    teal: "border-teal bg-teal-08 text-teal",
+    yellow: "border-[#EAB308] bg-[#EAB308]/12 text-[#854D0E]",
     green: "border-success bg-success-08 text-[#1B5E20]",
+    amber: "border-warning bg-warning-08 text-[#7a4f00]",
     danger: "border-danger bg-danger-08 text-danger",
     grey: "border-grey bg-lightgrey text-navy/65",
   };
@@ -315,11 +314,8 @@ function FilterChip({
   );
 }
 
-function statusTone(s: EnrollmentStatus): "teal" | "amber" | "green" | "grey" {
-  if (s === "non_par_credentialed") return "amber";
-  if (s === "approved" || s === "completed") return "green";
-  if (s === "prep") return "grey";
-  return "teal";
+function statusTone(s: EnrollmentStatus): "blue" | "teal" | "yellow" | "green" | "amber" {
+  return STATUS_COLORS[s].toneName;
 }
 
 function parseStatusFilter(raw: string | string[] | undefined): EnrollmentStatus[] {

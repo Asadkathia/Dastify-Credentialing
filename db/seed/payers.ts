@@ -6,7 +6,6 @@ type SeedPayer = {
   name: string;
   payerType: "commercial" | "medicare" | "medicaid" | "tricare" | "other";
   statesActive: string[];
-  recredCycleMonths: number;
 };
 
 const ALL_STATES = [
@@ -19,34 +18,34 @@ const ALL_STATES = [
 
 export const payers: SeedPayer[] = [
   // National commercial
-  { name: "Aetna", payerType: "commercial", statesActive: ALL_STATES, recredCycleMonths: 36 },
-  { name: "Cigna", payerType: "commercial", statesActive: ALL_STATES, recredCycleMonths: 36 },
-  { name: "Humana", payerType: "commercial", statesActive: ALL_STATES, recredCycleMonths: 36 },
-  { name: "UnitedHealthcare", payerType: "commercial", statesActive: ALL_STATES, recredCycleMonths: 36 },
+  { name: "Aetna", payerType: "commercial", statesActive: ALL_STATES },
+  { name: "Cigna", payerType: "commercial", statesActive: ALL_STATES },
+  { name: "Humana", payerType: "commercial", statesActive: ALL_STATES },
+  { name: "UnitedHealthcare", payerType: "commercial", statesActive: ALL_STATES },
 
   // BCBS — federation; one entry per state plan (most common ones)
-  { name: "Blue Cross Blue Shield of Texas", payerType: "commercial", statesActive: ["TX"], recredCycleMonths: 36 },
-  { name: "Blue Shield of California", payerType: "commercial", statesActive: ["CA"], recredCycleMonths: 36 },
-  { name: "Anthem Blue Cross (CA)", payerType: "commercial", statesActive: ["CA"], recredCycleMonths: 36 },
-  { name: "Empire BlueCross BlueShield (NY)", payerType: "commercial", statesActive: ["NY"], recredCycleMonths: 36 },
-  { name: "BCBS of Illinois", payerType: "commercial", statesActive: ["IL"], recredCycleMonths: 36 },
-  { name: "BCBS of Florida (Florida Blue)", payerType: "commercial", statesActive: ["FL"], recredCycleMonths: 36 },
+  { name: "Blue Cross Blue Shield of Texas", payerType: "commercial", statesActive: ["TX"] },
+  { name: "Blue Shield of California", payerType: "commercial", statesActive: ["CA"] },
+  { name: "Anthem Blue Cross (CA)", payerType: "commercial", statesActive: ["CA"] },
+  { name: "Empire BlueCross BlueShield (NY)", payerType: "commercial", statesActive: ["NY"] },
+  { name: "BCBS of Illinois", payerType: "commercial", statesActive: ["IL"] },
+  { name: "BCBS of Florida (Florida Blue)", payerType: "commercial", statesActive: ["FL"] },
 
   // Medicare / Medicaid (federal + state)
-  { name: "Medicare (CMS)", payerType: "medicare", statesActive: ALL_STATES, recredCycleMonths: 60 },
-  { name: "Medicare Advantage (UHC)", payerType: "medicare", statesActive: ALL_STATES, recredCycleMonths: 36 },
+  { name: "Medicare (CMS)", payerType: "medicare", statesActive: ALL_STATES },
+  { name: "Medicare Advantage (UHC)", payerType: "medicare", statesActive: ALL_STATES },
 
-  { name: "Texas Medicaid", payerType: "medicaid", statesActive: ["TX"], recredCycleMonths: 36 },
-  { name: "California Medi-Cal", payerType: "medicaid", statesActive: ["CA"], recredCycleMonths: 36 },
-  { name: "New York Medicaid", payerType: "medicaid", statesActive: ["NY"], recredCycleMonths: 36 },
-  { name: "Florida Medicaid", payerType: "medicaid", statesActive: ["FL"], recredCycleMonths: 36 },
+  { name: "Texas Medicaid", payerType: "medicaid", statesActive: ["TX"] },
+  { name: "California Medi-Cal", payerType: "medicaid", statesActive: ["CA"] },
+  { name: "New York Medicaid", payerType: "medicaid", statesActive: ["NY"] },
+  { name: "Florida Medicaid", payerType: "medicaid", statesActive: ["FL"] },
 
   // TRICARE
-  { name: "TRICARE East (Humana Military)", payerType: "tricare", statesActive: ALL_STATES, recredCycleMonths: 36 },
-  { name: "TRICARE West (Health Net)", payerType: "tricare", statesActive: ALL_STATES, recredCycleMonths: 36 },
+  { name: "TRICARE East (Humana Military)", payerType: "tricare", statesActive: ALL_STATES },
+  { name: "TRICARE West (Health Net)", payerType: "tricare", statesActive: ALL_STATES },
 
   // Other major
-  { name: "Molina Healthcare", payerType: "commercial", statesActive: ALL_STATES, recredCycleMonths: 36 },
-  { name: "Centene / Ambetter", payerType: "commercial", statesActive: ALL_STATES, recredCycleMonths: 36 },
-  { name: "Kaiser Permanente", payerType: "commercial", statesActive: ["CA", "CO", "GA", "HI", "MD", "OR", "VA", "WA", "DC"], recredCycleMonths: 36 },
+  { name: "Molina Healthcare", payerType: "commercial", statesActive: ALL_STATES },
+  { name: "Centene / Ambetter", payerType: "commercial", statesActive: ALL_STATES },
+  { name: "Kaiser Permanente", payerType: "commercial", statesActive: ["CA", "CO", "GA", "HI", "MD", "OR", "VA", "WA", "DC"] },
 ];

@@ -20,7 +20,6 @@ import { MiniPipeline } from "@/components/ui/mini-pipeline";
 import { PayerMark } from "@/components/ui/payer-mark";
 import { SensitiveField } from "@/components/ui/sensitive-field";
 import { StatusChip } from "@/components/ui/status-chip";
-import { DocumentsPanel } from "@/components/documents-panel";
 import { ProviderEditForm } from "./_components/provider-edit-form";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 import { cn } from "@/lib/utils";
@@ -33,47 +32,30 @@ export default async function ProviderDetailPage({
   const { clientId, providerId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: client }, { data: provider }, { data: enrollments }, { data: documents }, { data: docCategories }] =
-    await Promise.all([
-      supabase.from("clients").select("display_name").eq("id", clientId).maybeSingle(),
-      supabase
-        .from("providers")
-        .select(
-          `id, client_id, first_name, middle_name, last_name, suffix, npi,
-           primary_specialty, secondary_specialty, caqh_id, email, phone,
-           license_states, created_at,
-           dea_number_encrypted, ssn_last4_encrypted, dob_encrypted`,
-        )
-        .eq("id", providerId)
-        .eq("client_id", clientId)
-        .is("deleted_at", null)
-        .maybeSingle(),
-      supabase
-        .from("enrollments")
-        .select(
-          `id, state, status, sub_status, effective_date,
-           payer:payer_id (id, name)`,
-        )
-        .eq("provider_id", providerId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("documents")
-        .select(
-          `id, file_name, category_id, size_bytes, mime_type, expiration_date, is_internal,
-           virus_scan_status, created_at,
-           category:category_id (id, name, label, is_default)`,
-        )
-        .eq("owner_type", "provider")
-        .eq("owner_id", providerId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("document_categories")
-        .select("id, name, label, is_default")
-        .order("sort_order"),
-    ]);
+  const [{ data: client }, { data: provider }, { data: enrollments }] = await Promise.all([
+    supabase.from("clients").select("display_name").eq("id", clientId).maybeSingle(),
+    supabase
+      .from("providers")
+      .select(
+        `id, client_id, first_name, middle_name, last_name, suffix, npi,
+         primary_specialty, secondary_specialty, caqh_id, email, phone,
+         license_states, created_at,
+         dea_number_encrypted, ssn_last4_encrypted, dob_encrypted`,
+      )
+      .eq("id", providerId)
+      .eq("client_id", clientId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("enrollments")
+      .select(
+        `id, state, status, sub_status, effective_date,
+         payer:payer_id (id, name)`,
+      )
+      .eq("provider_id", providerId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+  ]);
 
   if (!provider) notFound();
 
@@ -89,7 +71,7 @@ export default async function ProviderDetailPage({
   const licenseStates = Array.isArray(provider.license_states) ? provider.license_states : [];
   const enrollmentCount = enrollments?.length ?? 0;
   const approvedCount =
-    enrollments?.filter((e) => e.status === "approved" || e.status === "completed").length ?? 0;
+    enrollments?.filter((e) => e.status === "approved").length ?? 0;
 
   // Profile completeness — 10 binary checks, 10% each.
   // Sensitive bytea fields are checked for presence only — values are never read here.
@@ -243,24 +225,6 @@ export default async function ProviderDetailPage({
             )}
           </section>
 
-          {/* Documents */}
-          <section className="surface">
-            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-              <h2 className="text-[15px] font-semibold text-navy">Provider documents</h2>
-              <span className="label-sm">{documents?.length ?? 0}</span>
-            </header>
-            <div className="px-5 py-5">
-              <DocumentsPanel
-                clientId={clientId}
-                ownerType="provider"
-                ownerId={providerId}
-                documents={documents ?? []}
-                categories={docCategories ?? []}
-                canManage
-                defaultCategoryName="license"
-              />
-            </div>
-          </section>
         </div>
 
         {/* Side rail */}

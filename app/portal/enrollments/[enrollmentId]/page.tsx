@@ -8,7 +8,6 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { StatusPipeline } from "@/components/ui/status-pipeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentsThread } from "@/app/admin/clients/[clientId]/enrollments/[enrollmentId]/_components/comments-thread";
-import { DocumentsPanel } from "@/components/documents-panel";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
@@ -50,7 +49,7 @@ export default async function ClientEnrollmentDetailPage({
     ? `${provider.last_name}, ${provider.first_name}`
     : (groupEntity?.legal_name ?? "—");
 
-  const [{ data: comments }, { data: history }, { data: documents }, { data: docCategories }, { data: activity }] =
+  const [{ data: comments }, { data: history }, { data: activity }] =
     await Promise.all([
       supabase
         .from("comments")
@@ -67,22 +66,6 @@ export default async function ClientEnrollmentDetailPage({
         .eq("enrollment_id", enrollmentId)
         .order("changed_at", { ascending: false })
         .limit(50),
-      // RLS hides internal documents from client roles — additionally filter
-      // is_internal=false here as defense in depth.
-      supabase
-        .from("documents")
-        .select(
-          `id, file_name, category_id, size_bytes, mime_type, expiration_date, is_internal,
-           virus_scan_status, created_at,
-           category:category_id (id, name, label, is_default)`,
-        )
-        .eq("owner_type", "enrollment")
-        .eq("owner_id", enrollmentId)
-        .eq("is_internal", false)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase.from("document_categories").select("id, name, label, is_default").order("sort_order"),
       supabase
         .from("activity_events")
         .select("id, action, target_table, target_id, summary, occurred_at, actor_user_id")
@@ -140,12 +123,6 @@ export default async function ClientEnrollmentDetailPage({
             Status History
             <span className="ml-1.5 rounded-full bg-lightgrey px-1.5 py-px text-[10px] font-semibold tnum text-navy/65">
               {history?.length ?? 0}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="documents">
-            Documents
-            <span className="ml-1.5 rounded-full bg-lightgrey px-1.5 py-px text-[10px] font-semibold tnum text-navy/65">
-              {documents?.length ?? 0}
             </span>
           </TabsTrigger>
           <TabsTrigger value="comments">
@@ -259,26 +236,6 @@ export default async function ClientEnrollmentDetailPage({
                 })}
               </ol>
             )}
-          </section>
-        </TabsContent>
-
-        {/* Documents — read-only (canManage=false) */}
-        <TabsContent value="documents">
-          <section className="surface">
-            <header className="border-b border-border-subtle px-5 py-4">
-              <h2 className="text-[15px] font-semibold text-navy">Documents</h2>
-            </header>
-            <div className="px-5 py-5">
-              <DocumentsPanel
-                clientId={enrollment.client_id}
-                ownerType="enrollment"
-                ownerId={enrollmentId}
-                documents={documents ?? []}
-                categories={docCategories ?? []}
-                canManage={false}
-                defaultCategoryName="payer_letter"
-              />
-            </div>
           </section>
         </TabsContent>
 

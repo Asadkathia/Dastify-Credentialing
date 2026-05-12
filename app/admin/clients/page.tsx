@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatTile } from "@/components/ui/stat-tile";
+import { RowOpenLink } from "@/components/ui/row-open-link";
 import { ClientsFilterDrawer } from "./_components/clients-filter-drawer";
 
 type SearchParams = Promise<{
@@ -425,14 +426,10 @@ export default async function AdminClientsListPage({
                         <StatusDot active={c.is_active} />
                       </td>
                       <td className="text-right">
-                        <Link
+                        <RowOpenLink
                           href={`/admin/clients/${c.id}`}
-                          aria-label={`Open ${c.display_name}`}
-                          className="inline-flex items-center gap-1 rounded-md bg-navy px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-navy/85"
-                        >
-                          Open
-                          <ChevronRight size={12} strokeWidth={2} />
-                        </Link>
+                          ariaLabel={`Open ${c.display_name}`}
+                        />
                       </td>
                     </tr>
                   );

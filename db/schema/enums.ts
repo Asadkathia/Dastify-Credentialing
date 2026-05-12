@@ -6,7 +6,6 @@ export const enrollmentStatusEnum = pgEnum("enrollment_status", [
   "in_review",
   "approved",
   "non_par_credentialed",
-  "completed",
 ]);
 
 export type EnrollmentStatus = (typeof enrollmentStatusEnum.enumValues)[number];
@@ -14,10 +13,10 @@ export type EnrollmentStatus = (typeof enrollmentStatusEnum.enumValues)[number];
 export const ENROLLMENT_STATUSES = enrollmentStatusEnum.enumValues;
 
 // Terminal states — no further transitions allowed.
-// `completed` is the linear happy-path end; `non_par_credentialed` is the
+// `approved` is the linear happy-path end; `non_par_credentialed` is the
 // off-rail terminal (provider credentialed but not in-network).
 export const TERMINAL_STATUSES: ReadonlySet<EnrollmentStatus> = new Set([
-  "completed",
+  "approved",
   "non_par_credentialed",
 ]);
 

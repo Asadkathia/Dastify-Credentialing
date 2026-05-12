@@ -3,6 +3,7 @@ import { UserCircle2 } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { RowOpenLink } from "@/components/ui/row-open-link";
 
 type SearchParams = Promise<{
   q?: string;
@@ -215,12 +216,9 @@ export default async function AdminProvidersPage({
                       </td>
                       <td className="text-right">
                         {client ? (
-                          <Link
+                          <RowOpenLink
                             href={`/admin/clients/${client.id}/providers/${p.id}`}
-                            className="text-[12px] font-semibold uppercase tracking-wider text-teal hover:text-[#0E7475]"
-                          >
-                            Open →
-                          </Link>
+                          />
                         ) : null}
                       </td>
                     </tr>

@@ -33,12 +33,11 @@ async function main() {
 
   for (const p of payerSeed) {
     await sql`
-      INSERT INTO payers (name, payer_type, states_active, recred_cycle_months)
+      INSERT INTO payers (name, payer_type, states_active)
       VALUES (
         ${p.name},
         ${p.payerType}::payer_type,
-        ${JSON.stringify(p.statesActive)}::jsonb,
-        ${p.recredCycleMonths}
+        ${JSON.stringify(p.statesActive)}::jsonb
       )
       ON CONFLICT (name) DO NOTHING
     `;

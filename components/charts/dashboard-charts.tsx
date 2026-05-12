@@ -397,4 +397,6 @@ export const CHART_COLORS = {
   amber: "#F4A300",
   red: "#B3261E",
   green: "#2E7D32",
+  blue: "#1565C0",
+  yellow: "#EAB308",
 };

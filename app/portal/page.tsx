@@ -5,56 +5,33 @@ import {
   CheckCircle2,
   Download,
   Eye,
-  FileCheck2,
   FilePlus2,
   Info,
   MessageSquare,
   Send,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { requireClient } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  BarChart,
-  Donut,
-  CHART_COLORS,
-} from "@/components/charts/dashboard-charts";
 import { MiniPipeline } from "@/components/ui/mini-pipeline";
 import { PayerMark } from "@/components/ui/payer-mark";
 import { StatusChip } from "@/components/ui/status-chip";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
+import { STATUS_COLORS } from "@/lib/enrollment/status-colors";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
 import type { LucideIcon } from "lucide-react";
-
-const STATUS_DOT: Record<EnrollmentStatus, string> = {
-  prep: CHART_COLORS.aqua,
-  submitted: CHART_COLORS.teal,
-  in_review: CHART_COLORS.teal,
-  approved: CHART_COLORS.green,
-  non_par_credentialed: CHART_COLORS.amber,
-  completed: CHART_COLORS.green,
-};
 
 export default async function ClientPortalDashboardPage() {
   const session = await requireClient();
   const supabase = await createSupabaseServerClient();
   const today = new Date();
 
-  // 12 monthly buckets ending in the current month.
-  const months: Array<{ label: string; start: Date; end: Date; count: number }> = [];
-  for (let i = 11; i >= 0; i--) {
-    const start = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    const end = new Date(today.getFullYear(), today.getMonth() - i + 1, 1);
-    months.push({ label: format(start, "MMM"), start, end, count: 0 });
-  }
-  const earliestMonthStart = months[0]!.start;
-
   // RLS scopes every query below to this client_id automatically.
   const [
     { data: settings },
     { data: allEnrollments },
-    { data: createdInWindow },
     { data: recentlyUpdated },
     { data: recentComments },
   ] = await Promise.all([
@@ -75,12 +52,6 @@ export default async function ClientPortalDashboardPage() {
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(50),
-
-    supabase
-      .from("enrollments")
-      .select("created_at")
-      .gte("created_at", earliestMonthStart.toISOString())
-      .is("deleted_at", null),
 
     supabase
       .from("enrollments")
@@ -119,19 +90,6 @@ export default async function ClientPortalDashboardPage() {
   });
   const totalEnrollments = (allEnrollments ?? []).length;
 
-  (createdInWindow ?? []).forEach((e) => {
-    const at = new Date(e.created_at);
-    const bucket = months.find((m) => at >= m.start && at < m.end);
-    if (bucket) bucket.count += 1;
-  });
-
-  const donutData = ENROLLMENT_STATUSES.map((s) => ({
-    key: s,
-    label: STATUS_LABELS[s],
-    value: statusCounts[s],
-    color: STATUS_DOT[s],
-  }));
-
   return (
     <div>
       {/* Disclaimer banner — per CLAUDE.md rule 26 */}
@@ -167,14 +125,9 @@ export default async function ClientPortalDashboardPage() {
       <MasterStatusCard
         statusCounts={statusCounts}
         totalEnrollments={totalEnrollments}
-        enrollments={allEnrollments ?? []}
       />
 
-      {/* Non-par credentialed — terminal off-rail card sits below the
-          linear timeline, visually offset (warning-amber accent). */}
-      <NonParCard count={statusCounts.non_par_credentialed} />
-
-      {/* Recently updated + Recent comments — directly under the timeline */}
+      {/* Recently updated + Recent comments — directly under the master pipeline */}
       <div className="mb-6 grid gap-4 xl:grid-cols-2">
         <section className="surface">
           <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
@@ -301,64 +254,21 @@ export default async function ClientPortalDashboardPage() {
         </section>
       </div>
 
-      {/* Status donut + 12-month creations bar — secondary analytics row */}
-      <div className="mb-6 grid gap-4 xl:grid-cols-[1fr_1.4fr]">
-        <ChartCard
-          title="Status distribution"
-          caption={`Snapshot — ${totalEnrollments} total enrollments`}
-        >
-          <div className="flex flex-col items-center gap-4">
-            <Donut data={donutData} total={totalEnrollments} totalLabel="Total" />
-            <ul className="w-full space-y-1 border-t border-border-subtle pt-3">
-              {donutData.map((d) => {
-                const pct =
-                  totalEnrollments > 0 ? Math.round((d.value / totalEnrollments) * 100) : 0;
-                return (
-                  <li
-                    key={d.key}
-                    className="flex items-center justify-between gap-2 rounded px-1 py-[3px] text-[12px]"
-                  >
-                    <span className="flex items-center gap-2 truncate text-charcoal">
-                      <span
-                        aria-hidden
-                        className="h-2 w-2 shrink-0 rounded-[2px]"
-                        style={{ background: d.color }}
-                      />
-                      {d.label}
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span className="min-w-[36px] text-right font-semibold tnum text-charcoal">
-                        {d.value}
-                      </span>
-                      <span className="min-w-[42px] text-right tnum text-[11px] text-navy/55">
-                        {pct}%
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </ChartCard>
-
-        <ChartCard
-          title="Enrollments created · last 12 months"
-          caption="New enrollment rows per calendar month."
-        >
-          <BarChart
-            data={months.map((m) => ({ label: m.label, value: m.count, color: CHART_COLORS.teal }))}
-          />
-        </ChartCard>
+      {/* All-enrollments pipeline-position listing + Non-par credentialed card
+          — 50/50 split row below the recently-updated section. */}
+      <div className="mb-6 grid gap-4 xl:grid-cols-2">
+        <AllEnrollmentsListing enrollments={allEnrollments ?? []} />
+        <NonParCard count={statusCounts.non_par_credentialed} />
       </div>
     </div>
   );
 }
 
 // ─── Pipeline data ─────────────────────────────────────────────────────────
-// Linear path — 5 stages. Each circle + label is a Link to
-// /portal/enrollments?status=X. Non-par credentialed sits below as the
-// terminal off-rail (see schema rule 17). Avg-progress = stage_idx / 5 per
-// linear enrollment, averaged across the linear set; non-par is excluded
+// Linear path — 4 stages. Each circle + label is a Link to
+// /portal/enrollments?status=X. Non-par credentialed sits in the row below
+// as the terminal off-rail (see schema rule 17). Avg-progress = stage_idx / 4
+// per linear enrollment, averaged across the linear set; non-par is excluded
 // from the progress calc since it doesn't sit on the rail.
 
 type LinearStageKey = Exclude<EnrollmentStatus, "non_par_credentialed">;
@@ -377,8 +287,7 @@ const LINEAR_PIPELINE: ReadonlyArray<PipelineStage> = [
   },
   { key: "submitted", description: "Application sent to the insurer", icon: Send },
   { key: "in_review", description: "Payer is verifying credentials", icon: Eye },
-  { key: "approved", description: "Payer has accepted the provider", icon: CheckCircle2 },
-  { key: "completed", description: "Provider is active in-network", icon: FileCheck2 },
+  { key: "approved", description: "Provider is active in-network", icon: CheckCircle2 },
 ];
 
 type MasterEnrollmentRow = {
@@ -393,11 +302,9 @@ type MasterEnrollmentRow = {
 function MasterStatusCard({
   statusCounts,
   totalEnrollments,
-  enrollments,
 }: {
   statusCounts: Record<EnrollmentStatus, number>;
   totalEnrollments: number;
-  enrollments: MasterEnrollmentRow[];
 }) {
   // Linear-only counts feed the timeline + avg-progress math.
   const linearTotal = LINEAR_PIPELINE.reduce((sum, s) => sum + statusCounts[s.key], 0);
@@ -409,17 +316,9 @@ function MasterStatusCard({
   const avgProgressPct =
     linearTotal > 0 ? Math.round((weighted / (linearTotal * LINEAR_PIPELINE.length)) * 100) : 0;
 
-  // Track-fill — teal up to the right-most non-empty stage; grey thereafter.
-  // (Visual hint for "the cohort has gotten this far at least somewhere.")
-  const rightmostIdx = LINEAR_PIPELINE.reduce<number>(
-    (m, s, i) => (statusCounts[s.key] > 0 ? i : m),
-    -1,
-  );
-  // Fill to the midpoint of the rightmost active stage so stage-1 reads ~10%,
-  // stage-5 reads ~90%. The previous (rightmostIdx / 4) formula gave 0% for
-  // stage 1, which looked wrong against the design.
-  const filledPct =
-    rightmostIdx >= 0 ? ((rightmostIdx + 0.5) / LINEAR_PIPELINE.length) * 100 : 0;
+  // This pipeline is a categorization view (all enrollments bucketed by
+  // status), not a journey for a single enrollment — every stage is
+  // permanently rendered in its assigned color regardless of count.
 
   return (
     <section className="surface mb-6 overflow-hidden">
@@ -453,9 +352,11 @@ function MasterStatusCard({
             </p>
           </div>
 
-          <div className="grid shrink-0 grid-cols-4 gap-x-6 gap-y-2">
+          <div className="grid shrink-0 grid-cols-3 gap-x-6 gap-y-2 md:grid-cols-6">
             <HeroStat label="Total" value={totalEnrollments} />
             <HeroStat label="In Prep" value={statusCounts.prep} />
+            <HeroStat label="Submitted" value={statusCounts.submitted} />
+            <HeroStat label="In Review" value={statusCounts.in_review} />
             <HeroStat label="Approved" value={statusCounts.approved} />
             <HeroStat
               label="Avg Progress"
@@ -471,23 +372,20 @@ function MasterStatusCard({
         <p className="label-sm mb-6">Pipeline overview — total across all enrollments</p>
 
         <ol
-          className="relative grid grid-cols-2 gap-y-8 md:grid-cols-3 xl:grid-cols-5 xl:gap-y-0"
+          className="relative grid grid-cols-2 gap-y-8 md:grid-cols-4 xl:grid-cols-4 xl:gap-y-0"
           aria-label="Enrollment pipeline"
         >
-          {/* Connector track — only painted on xl+ where the row is horizontal */}
+          {/* Connector track — always painted in brand teal, end-to-end.
+              Stage-specific color lives only on the circles; the rail itself
+              stays neutral teal so the visual hierarchy reads circles first. */}
           <span
             aria-hidden
-            className="pointer-events-none absolute left-7 right-7 top-7 hidden h-0.5 bg-grey/40 xl:block"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-7 top-7 hidden h-0.5 bg-teal xl:block"
-            style={{ width: `calc((100% - 56px) * ${filledPct / 100})` }}
+            className="pointer-events-none absolute left-7 right-7 top-7 hidden h-0.5 bg-teal xl:block"
           />
 
           {LINEAR_PIPELINE.map((stage, i) => {
             const count = statusCounts[stage.key];
-            const isActive = count > 0;
+            const palette = STATUS_COLORS[stage.key];
             return (
               <li key={stage.key} className="relative">
                 <Link
@@ -495,27 +393,27 @@ function MasterStatusCard({
                   aria-label={`${STATUS_LABELS[stage.key]} — ${count} enrollments`}
                   className="group flex flex-col items-center text-center"
                 >
-                  {/* Stage circle */}
+                  {/* Stage circle — every stage is permanently rendered in
+                      its assigned status color, regardless of count. */}
                   <span
                     aria-hidden
-                    className={
-                      "relative z-10 mb-3 flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all group-hover:scale-105 " +
-                      (isActive
-                        ? "border-teal bg-teal text-white shadow-[0_0_0_4px_var(--teal-12)]"
-                        : "border-grey/60 bg-white text-navy/40 group-hover:border-teal/60")
-                    }
+                    className={cn(
+                      "relative z-10 mb-3 flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all group-hover:scale-105",
+                      palette.classes.border,
+                      palette.classes.bgSolid,
+                      "text-white ring-4",
+                      palette.classes.ring,
+                    )}
                   >
                     <stage.icon size={20} strokeWidth={1.8} />
                   </span>
 
                   {/* Stage name */}
                   <span
-                    className={
-                      "text-[14px] font-semibold transition-colors " +
-                      (isActive
-                        ? "text-teal"
-                        : "text-navy/45 group-hover:text-navy")
-                    }
+                    className={cn(
+                      "text-[14px] font-semibold",
+                      palette.classes.text,
+                    )}
                   >
                     {STATUS_LABELS[stage.key]}
                   </span>
@@ -525,95 +423,104 @@ function MasterStatusCard({
                     {stage.description}
                   </span>
 
-                  {/* Count pill */}
+                  {/* Count pill — always tinted in the stage's color. */}
                   <span
-                    className={
-                      "mt-3 inline-flex h-7 min-w-[28px] items-center justify-center rounded-full px-2 text-[12px] font-semibold tnum transition-colors " +
-                      (isActive
-                        ? "bg-teal-08 text-teal"
-                        : "bg-lightgrey text-navy/35")
-                    }
+                    className={cn(
+                      "mt-3 inline-flex h-7 min-w-[28px] items-center justify-center rounded-full px-2 text-[12px] font-semibold tnum",
+                      palette.classes.bgTint,
+                      palette.classes.text,
+                    )}
                   >
                     {count}
                   </span>
 
                   {/* Hover arrow */}
-                  <span className="mt-2 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-teal opacity-0 transition-opacity group-hover:opacity-100">
+                  <span
+                    className={cn(
+                      "mt-2 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.06em] opacity-0 transition-opacity group-hover:opacity-100",
+                      palette.classes.text,
+                    )}
+                  >
                     View
                     <ArrowRight size={11} strokeWidth={1.8} />
                   </span>
                 </Link>
 
-                {/* Stage index (1..5) at the bottom of each item for screen readers */}
+                {/* Stage index (1..4) at the bottom of each item for screen readers */}
                 <span className="sr-only">Stage {i + 1} of {LINEAR_PIPELINE.length}</span>
               </li>
             );
           })}
         </ol>
-
-        {/* Mini-enrollment table — every row showing its mini-pipeline position. */}
-        {enrollments.length > 0 ? (
-          <div className="mt-8 overflow-hidden rounded-md border border-border-subtle">
-            <div className="flex items-center justify-between border-b border-border-subtle bg-lightgrey/60 px-4 py-2.5">
-              <p className="label-sm">All enrollments — pipeline position</p>
-              <span className="tnum text-[11px] text-navy/55">{enrollments.length} total</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th className="w-[44px]">#</th>
-                    <th>Provider</th>
-                    <th>Payer</th>
-                    <th className="w-[60px]">State</th>
-                    <th className="w-[180px]">Pipeline</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enrollments.map((e, i) => {
-                    const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
-                    const groupEntity = Array.isArray(e.group_entity)
-                      ? e.group_entity[0]
-                      : e.group_entity;
-                    const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
-                    const subject = provider
-                      ? `${provider.last_name}, ${provider.first_name}`
-                      : (groupEntity?.legal_name ?? "—");
-                    const status = e.status as EnrollmentStatus;
-                    return (
-                      <tr key={e.id}>
-                        <td className="tnum text-[11px] text-navy/45">{i + 1}</td>
-                        <td>
-                          <Link
-                            href={`/portal/enrollments/${e.id}`}
-                            className="text-[13px] font-medium text-navy hover:text-teal"
-                          >
-                            {subject}
-                          </Link>
-                        </td>
-                        <td>
-                          <span className="inline-flex items-center gap-2">
-                            <PayerMark name={payer?.name ?? "??"} size={22} />
-                            <span className="text-navy/85">{payer?.name ?? "—"}</span>
-                          </span>
-                        </td>
-                        <td className="font-mono text-[12px] text-navy/70 tnum">{e.state}</td>
-                        <td>
-                          <MiniPipeline status={status} />
-                        </td>
-                        <td>
-                          <StatusChip status={status} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : null}
       </div>
+    </section>
+  );
+}
+
+function AllEnrollmentsListing({ enrollments }: { enrollments: MasterEnrollmentRow[] }) {
+  return (
+    <section className="surface flex min-h-0 flex-col overflow-hidden">
+      <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+        <h2 className="text-[15px] font-semibold text-navy">
+          All enrollments — pipeline position
+        </h2>
+        <span className="tnum text-[11px] text-navy/55">{enrollments.length} total</span>
+      </header>
+      {enrollments.length === 0 ? (
+        <p className="px-5 py-10 text-center text-[13px] text-navy/55">No enrollments yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Payer</th>
+                <th className="w-[56px]">State</th>
+                <th className="w-[150px]">Pipeline</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {enrollments.map((e) => {
+                const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
+                const groupEntity = Array.isArray(e.group_entity)
+                  ? e.group_entity[0]
+                  : e.group_entity;
+                const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
+                const subject = provider
+                  ? `${provider.last_name}, ${provider.first_name}`
+                  : (groupEntity?.legal_name ?? "—");
+                const status = e.status as EnrollmentStatus;
+                return (
+                  <tr key={e.id}>
+                    <td>
+                      <Link
+                        href={`/portal/enrollments/${e.id}`}
+                        className="text-[13px] font-medium text-navy hover:text-teal"
+                      >
+                        {subject}
+                      </Link>
+                    </td>
+                    <td>
+                      <span className="inline-flex items-center gap-2">
+                        <PayerMark name={payer?.name ?? "??"} size={22} />
+                        <span className="text-navy/85">{payer?.name ?? "—"}</span>
+                      </span>
+                    </td>
+                    <td className="font-mono text-[12px] text-navy/70 tnum">{e.state}</td>
+                    <td>
+                      <MiniPipeline status={status} />
+                    </td>
+                    <td>
+                      <StatusChip status={status} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
@@ -651,7 +558,7 @@ function NonParCard({ count }: { count: number }) {
       href="/portal/enrollments?status=non_par_credentialed"
       aria-label={`Non-par credentialed — ${count} enrollments`}
       className={
-        "group mb-6 flex items-center gap-5 rounded-md border-l-[3px] bg-white px-5 py-4 shadow-[var(--shadow-xs)] transition-all hover:-translate-y-[1px] hover:shadow-[var(--shadow-sm)] " +
+        "group flex h-full items-center gap-5 rounded-md border-l-[3px] bg-white px-5 py-4 shadow-[var(--shadow-xs)] transition-all hover:-translate-y-[1px] hover:shadow-[var(--shadow-sm)] " +
         (hasItems
           ? "border-l-warning border-y border-r border-warning/30"
           : "border-l-grey border-y border-r border-border-subtle")
@@ -692,25 +599,5 @@ function NonParCard({ count }: { count: number }) {
         </span>
       </div>
     </Link>
-  );
-}
-
-function ChartCard({
-  title,
-  caption,
-  children,
-}: {
-  title: string;
-  caption?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-h-0 flex-col rounded-md border border-border-subtle bg-white px-5 py-4 shadow-[var(--shadow-xs)]">
-      <header className="mb-3">
-        <h3 className="text-[14px] font-semibold leading-5 text-navy">{title}</h3>
-        {caption ? <p className="mt-0.5 text-[12px] leading-[18px] text-navy/55">{caption}</p> : null}
-      </header>
-      <div className="pt-2">{children}</div>
-    </div>
   );
 }

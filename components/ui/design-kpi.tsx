@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
  * KPI card matching the design files — white surface, colored top accent
  * stripe, label + icon-tile row, large value, one-line hint underneath.
  *
- * Tones map to: teal (in-progress), amber (needs attention),
- * blue (informational), green (success), navy (neutral).
+ * Tones map to: teal (submitted), amber (non-par), blue (prep),
+ * yellow (in-review), green (approved), navy (neutral).
  */
-type Tone = "teal" | "amber" | "blue" | "green" | "navy";
+type Tone = "teal" | "amber" | "blue" | "yellow" | "green" | "navy";
 
 const TONE_STYLES: Record<
   Tone,
@@ -30,6 +30,12 @@ const TONE_STYLES: Record<
     accent: "bg-[#1565C0]",
     iconBg: "bg-[#1565C0]/10",
     iconText: "text-[#1565C0]",
+    valueText: "text-navy",
+  },
+  yellow: {
+    accent: "bg-[#EAB308]",
+    iconBg: "bg-[#EAB308]/12",
+    iconText: "text-[#854D0E]",
     valueText: "text-navy",
   },
   green: {

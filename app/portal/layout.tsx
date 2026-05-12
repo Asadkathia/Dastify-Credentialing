@@ -15,7 +15,6 @@ export default async function PortalLayout({ children }: { children: React.React
     { href: "/portal", label: "Dashboard", icon: "dashboard" },
     { href: "/portal/providers", label: "Providers", icon: "providers" },
     { href: "/portal/enrollments", label: "Enrollments", icon: "enrollments" },
-    { href: "/portal/documents", label: "Documents", icon: "documents" },
   ];
 
   const navItems: NavItem[] =
@@ -32,7 +31,6 @@ export default async function PortalLayout({ children }: { children: React.React
         clientName: client?.display_name ?? "",
       }}
       nav={navItems}
-      workspaceLabel={client?.display_name ?? "Workspace"}
     >
       {children}
     </AppShell>

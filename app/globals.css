@@ -25,6 +25,28 @@
   --success: 123 46% 34%;
   --warning: 40 100% 48%;
 
+  /* ── Enrollment status palette ─────────────────────────────────────────
+     The 5 status colors that appear on chips, pills, pipeline circles,
+     KPI cards, and donut slices throughout the portal. Each status has a
+     solid color + a deep on-color text color + an 8-10% tinted surface.
+     Keep these in lockstep with lib/enrollment/status-colors.ts.
+     ────────────────────────────────────────────────────────────────────── */
+  --status-prep: #1565C0;             /* blue   — prep        */
+  --status-prep-deep: #0D47A1;
+  --status-prep-08: rgba(21, 101, 192, 0.10);
+  --status-submitted: #16C1C2;        /* teal   — submitted   */
+  --status-submitted-deep: #0E7475;
+  --status-submitted-08: rgba(22, 193, 194, 0.10);
+  --status-in-review: #EAB308;        /* yellow — in_review   */
+  --status-in-review-deep: #854D0E;
+  --status-in-review-08: rgba(234, 179, 8, 0.12);
+  --status-approved: #2E7D32;         /* green  — approved    */
+  --status-approved-deep: #1B5E20;
+  --status-approved-08: rgba(46, 125, 50, 0.10);
+  --status-non-par: #F4A300;          /* amber  — non-par     */
+  --status-non-par-deep: #7A4F00;
+  --status-non-par-08: rgba(244, 163, 0, 0.10);
+
   /* ── shadcn contract → Dastify intent ─────────────────────────────────── */
   --background: var(--lightgrey);
   --foreground: var(--charcoal);
