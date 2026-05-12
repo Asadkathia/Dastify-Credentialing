@@ -154,6 +154,62 @@ export default async function ProviderDetailPage({
         className="mb-6"
       />
 
+      {/* Profile completeness — promoted to a full-width banner directly below the
+          hero so the score is visible without scrolling. Navy card with teal
+          accent stripe matches the original sidebar treatment; checklist is laid
+          out horizontally to fit the wider container. */}
+      <section className="relative mb-6 overflow-hidden rounded-md bg-navy shadow-[var(--shadow-xs)]">
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-teal via-aqua to-teal/30"
+        />
+        <div className="px-5 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
+              <ClipboardList size={13} strokeWidth={1.8} className="text-teal" />
+              Profile Completeness
+            </div>
+            <div className="text-[12px] font-semibold text-teal tnum">
+              {completenessPct}% complete
+            </div>
+          </div>
+          <div
+            className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
+            role="progressbar"
+            aria-valuenow={completenessPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className="h-full rounded-full bg-teal transition-[width]"
+              style={{ width: `${completenessPct}%` }}
+            />
+          </div>
+          <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
+            {completeness.map((c) => (
+              <li
+                key={c.label}
+                className={cn(
+                  "flex items-center gap-2 text-[11px]",
+                  c.done ? "text-white/80" : "text-white/40",
+                )}
+              >
+                {c.done ? (
+                  <CheckCircle2
+                    size={13}
+                    strokeWidth={1.8}
+                    className="shrink-0 text-success"
+                  />
+                ) : (
+                  <Circle size={13} strokeWidth={1.8} className="shrink-0 text-white/30" />
+                )}
+                <span className="truncate">{c.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {/* Edit form */}
@@ -348,57 +404,6 @@ export default async function ProviderDetailPage({
             </div>
           </section>
 
-          {/* Profile completeness — navy bg with teal accent stripe, mirrors the
-              design in attachments/client-provider-detail.html. */}
-          <section className="relative overflow-hidden rounded-md bg-navy shadow-[var(--shadow-xs)]">
-            <span
-              aria-hidden
-              className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-teal via-aqua to-teal/30"
-            />
-            <div className="px-5 py-5">
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
-                <ClipboardList size={13} strokeWidth={1.8} className="text-teal" />
-                Profile Completeness
-              </div>
-              <div
-                className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
-                role="progressbar"
-                aria-valuenow={completenessPct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="h-full rounded-full bg-teal transition-[width]"
-                  style={{ width: `${completenessPct}%` }}
-                />
-              </div>
-              <div className="mt-2.5 text-[12px] font-semibold text-teal tnum">
-                {completenessPct}% complete
-              </div>
-              <ul className="mt-4 space-y-2">
-                {completeness.map((c) => (
-                  <li
-                    key={c.label}
-                    className={cn(
-                      "flex items-center gap-2 text-[11px]",
-                      c.done ? "text-white/80" : "text-white/40",
-                    )}
-                  >
-                    {c.done ? (
-                      <CheckCircle2
-                        size={13}
-                        strokeWidth={1.8}
-                        className="shrink-0 text-success"
-                      />
-                    ) : (
-                      <Circle size={13} strokeWidth={1.8} className="shrink-0 text-white/30" />
-                    )}
-                    <span className="truncate">{c.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
         </aside>
       </div>
     </div>

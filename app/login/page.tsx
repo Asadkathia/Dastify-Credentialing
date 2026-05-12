@@ -95,53 +95,49 @@ export default async function LoginPage({
           </span>
         </div>
 
-        <div className="relative z-10 mt-auto max-w-[460px]">
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.34em] text-teal">
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-teal" />
-            Credentialing Portal
-          </p>
-          <h2
-            className="mt-4 font-semibold leading-[1.1] tracking-[-0.018em]"
-            style={{ fontSize: "clamp(34px, 3.2vw, 50px)" }}
-          >
-            Every payer.{" "}
-            <em className="font-semibold not-italic text-teal italic">Every state.</em>{" "}
-            Every cycle.
-          </h2>
-          <span aria-hidden className="mt-6 block h-[2px] w-12 bg-teal" />
-          <p className="mt-5 text-[15px] leading-[1.55] text-white/70">
+        <div className="relative z-10 mt-auto w-full text-center">
+          <div className="mx-auto text-center">
+            <h1
+              className="whitespace-nowrap font-semibold leading-[1.1] tracking-[-0.018em] text-teal"
+              style={{ fontSize: "clamp(38px, 4.4vw, 68px)" }}
+            >
+              Credentialing Portal
+            </h1>
+          </div>
+          <span aria-hidden className="mx-auto mt-7 block h-[2px] w-16 bg-teal" />
+          <p className="mx-auto mt-6 max-w-[640px] text-center text-[18px] leading-[1.55] text-white/70">
             The operational core for Dastify&apos;s payer-enrollment service — multi-tenant,
             multi-state, and accountable from intake to effective.
           </p>
 
           {/* Stats strip */}
-          <dl className="mt-7 hidden border-t border-white/8 pt-7 md:flex">
-            <div className="flex-1 border-r border-white/10 pr-6">
+          <dl className="mt-8 hidden border-t border-white/8 pt-8 md:flex">
+            <div className="flex-1 border-r border-white/10 pr-6 text-center">
               <dt className="sr-only">First-Pass Rate</dt>
-              <dd className="text-[22px] font-bold leading-none text-teal tnum">97.4%</dd>
+              <dd className="text-[30px] font-bold leading-none text-teal tnum">98.5%</dd>
               <p
                 aria-hidden
-                className="mt-1.5 text-[10px] font-normal uppercase tracking-[0.15em] text-white/35"
+                className="mt-2 text-[12px] font-normal uppercase tracking-[0.15em] text-white/35"
               >
                 First-Pass Rate
               </p>
             </div>
-            <div className="flex-1 border-r border-white/10 px-6">
+            <div className="flex-1 border-r border-white/10 px-6 text-center">
               <dt className="sr-only">Payers Covered</dt>
-              <dd className="text-[22px] font-bold leading-none text-teal tnum">500+</dd>
+              <dd className="text-[30px] font-bold leading-none text-teal tnum">500+</dd>
               <p
                 aria-hidden
-                className="mt-1.5 text-[10px] font-normal uppercase tracking-[0.15em] text-white/35"
+                className="mt-2 text-[12px] font-normal uppercase tracking-[0.15em] text-white/35"
               >
                 Payers Covered
               </p>
             </div>
-            <div className="flex-1 pl-6">
+            <div className="flex-1 pl-6 text-center">
               <dt className="sr-only">States Active</dt>
-              <dd className="text-[22px] font-bold leading-none text-teal tnum">50</dd>
+              <dd className="text-[30px] font-bold leading-none text-teal tnum">50</dd>
               <p
                 aria-hidden
-                className="mt-1.5 text-[10px] font-normal uppercase tracking-[0.15em] text-white/35"
+                className="mt-2 text-[12px] font-normal uppercase tracking-[0.15em] text-white/35"
               >
                 States Active
               </p>
@@ -149,7 +145,7 @@ export default async function LoginPage({
           </dl>
         </div>
 
-        <div className="relative z-10 mt-10 flex gap-5 text-[11px] text-white/40">
+        <div className="relative z-10 mt-10 flex justify-center gap-5 text-[11px] text-white/40">
           <span>© Dastify Solutions</span>
           <a href="#" className="text-white/65 hover:text-white">
             Compliance
