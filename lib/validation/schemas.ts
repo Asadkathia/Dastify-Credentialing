@@ -15,6 +15,18 @@ export const createClientSchema = z.object({
 });
 export type CreateClientInput = z.infer<typeof createClientSchema>;
 
+export const updateClientSchema = z.object({
+  clientId: z.string().uuid(),
+  legalName: z.string().min(2).max(200).trim(),
+  displayName: z.string().min(2).max(120).trim(),
+  primaryContactName: z.string().max(120).trim().optional().or(z.literal("")),
+  primaryContactEmail: emailSchema.optional().or(z.literal("")),
+  primaryContactPhone: z.string().max(40).trim().optional().or(z.literal("")),
+  notes: z.string().max(2000).optional().or(z.literal("")),
+  isActive: z.boolean().default(true),
+});
+export type UpdateClientInput = z.infer<typeof updateClientSchema>;
+
 export const createPayerSchema = z.object({
   name: z.string().min(2).max(120).trim(),
   payerType: z.enum(["commercial", "medicare", "medicaid", "tricare", "other"]).default("commercial"),

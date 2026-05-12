@@ -20,6 +20,8 @@ import {
   Donut,
   CHART_COLORS,
 } from "@/components/charts/dashboard-charts";
+import { MiniPipeline } from "@/components/ui/mini-pipeline";
+import { PayerMark } from "@/components/ui/payer-mark";
 import { StatusChip } from "@/components/ui/status-chip";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
@@ -64,8 +66,15 @@ export default async function ClientPortalDashboardPage() {
 
     supabase
       .from("enrollments")
-      .select("id, status")
-      .is("deleted_at", null),
+      .select(
+        `id, state, status,
+         provider:provider_id (first_name, last_name),
+         group_entity:group_entity_id (legal_name),
+         payer:payer_id (name)`,
+      )
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(50),
 
     supabase
       .from("enrollments")
@@ -138,7 +147,7 @@ export default async function ClientPortalDashboardPage() {
         subtitle={
           <>
             Enrollment counts by status across all your providers and payers. Updated{" "}
-            <span className="font-mono tnum">{format(today, "PP")}</span>.
+            <span className="font-semibold text-teal tnum">{format(today, "PP")}</span>.
           </>
         }
         actions={
@@ -158,6 +167,7 @@ export default async function ClientPortalDashboardPage() {
       <MasterStatusCard
         statusCounts={statusCounts}
         totalEnrollments={totalEnrollments}
+        enrollments={allEnrollments ?? []}
       />
 
       {/* Non-par credentialed — terminal off-rail card sits below the
@@ -371,12 +381,23 @@ const LINEAR_PIPELINE: ReadonlyArray<PipelineStage> = [
   { key: "completed", description: "Provider is active in-network", icon: FileCheck2 },
 ];
 
+type MasterEnrollmentRow = {
+  id: string;
+  state: string;
+  status: string;
+  provider: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null;
+  group_entity: { legal_name: string } | { legal_name: string }[] | null;
+  payer: { name: string } | { name: string }[] | null;
+};
+
 function MasterStatusCard({
   statusCounts,
   totalEnrollments,
+  enrollments,
 }: {
   statusCounts: Record<EnrollmentStatus, number>;
   totalEnrollments: number;
+  enrollments: MasterEnrollmentRow[];
 }) {
   // Linear-only counts feed the timeline + avg-progress math.
   const linearTotal = LINEAR_PIPELINE.reduce((sum, s) => sum + statusCounts[s.key], 0);
@@ -394,8 +415,11 @@ function MasterStatusCard({
     (m, s, i) => (statusCounts[s.key] > 0 ? i : m),
     -1,
   );
+  // Fill to the midpoint of the rightmost active stage so stage-1 reads ~10%,
+  // stage-5 reads ~90%. The previous (rightmostIdx / 4) formula gave 0% for
+  // stage 1, which looked wrong against the design.
   const filledPct =
-    rightmostIdx >= 0 ? (rightmostIdx / (LINEAR_PIPELINE.length - 1)) * 100 : 0;
+    rightmostIdx >= 0 ? ((rightmostIdx + 0.5) / LINEAR_PIPELINE.length) * 100 : 0;
 
   return (
     <section className="surface mb-6 overflow-hidden">
@@ -526,6 +550,69 @@ function MasterStatusCard({
             );
           })}
         </ol>
+
+        {/* Mini-enrollment table — every row showing its mini-pipeline position. */}
+        {enrollments.length > 0 ? (
+          <div className="mt-8 overflow-hidden rounded-md border border-border-subtle">
+            <div className="flex items-center justify-between border-b border-border-subtle bg-lightgrey/60 px-4 py-2.5">
+              <p className="label-sm">All enrollments — pipeline position</p>
+              <span className="tnum text-[11px] text-navy/55">{enrollments.length} total</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th className="w-[44px]">#</th>
+                    <th>Provider</th>
+                    <th>Payer</th>
+                    <th className="w-[60px]">State</th>
+                    <th className="w-[180px]">Pipeline</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrollments.map((e, i) => {
+                    const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
+                    const groupEntity = Array.isArray(e.group_entity)
+                      ? e.group_entity[0]
+                      : e.group_entity;
+                    const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
+                    const subject = provider
+                      ? `${provider.last_name}, ${provider.first_name}`
+                      : (groupEntity?.legal_name ?? "—");
+                    const status = e.status as EnrollmentStatus;
+                    return (
+                      <tr key={e.id}>
+                        <td className="tnum text-[11px] text-navy/45">{i + 1}</td>
+                        <td>
+                          <Link
+                            href={`/portal/enrollments/${e.id}`}
+                            className="text-[13px] font-medium text-navy hover:text-teal"
+                          >
+                            {subject}
+                          </Link>
+                        </td>
+                        <td>
+                          <span className="inline-flex items-center gap-2">
+                            <PayerMark name={payer?.name ?? "??"} size={22} />
+                            <span className="text-navy/85">{payer?.name ?? "—"}</span>
+                          </span>
+                        </td>
+                        <td className="font-mono text-[12px] text-navy/70 tnum">{e.state}</td>
+                        <td>
+                          <MiniPipeline status={status} />
+                        </td>
+                        <td>
+                          <StatusChip status={status} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );

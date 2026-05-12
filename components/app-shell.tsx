@@ -1,6 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, HelpCircle, Search } from "lucide-react";
 import { AppSidebarNav, type NavItem } from "@/components/app-sidebar-nav";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -17,98 +16,126 @@ export function AppShell({
   variant: "admin" | "client";
   user: { fullName: string; email: string; clientName?: string };
   nav: NavItem[];
-  /** Sidebar section header — e.g. "Workspace" for admin, client display name for portal. */
   workspaceLabel?: string;
-  /** Optional breadcrumb rendered in the top bar (visible on >=md). */
   breadcrumb?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const homeHref = variant === "admin" ? "/admin" : "/portal";
   const initials = getInitials(user.fullName);
-  const roleLabel = variant === "admin" ? "Dastify · Admin" : "Client · Admin";
+  const roleLabel = variant === "admin" ? "Dastify · Admin" : "Client · Viewer";
 
   return (
-    <div className="min-h-screen">
-      {/* ── Top bar ────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-white/5 bg-navy px-6 text-white">
-        <div className="flex items-center gap-7">
-          <Link href={homeHref} className="flex items-center gap-2.5">
-            <Image
-              src="/dastify-logo-on-dark.svg"
-              alt="Dastify"
-              width={107}
-              height={50}
-              priority
-              className="h-[26px] w-auto"
-            />
-            <span className="ml-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
-              Credentialing
-            </span>
-          </Link>
-          {breadcrumb ? (
-            <nav
-              aria-label="Breadcrumb"
-              className="hidden items-center gap-1.5 text-[13px] md:flex"
-            >
-              {breadcrumb}
-            </nav>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Search affordance — visual only for now; Cmd+K is not wired in v1. */}
-          <button
-            type="button"
-            className="hidden h-9 min-w-[300px] items-center gap-2 rounded-md border border-white/10 bg-white/8 px-[10px] text-[12px] text-white/65 transition-colors hover:bg-white/12 hover:text-white md:flex"
+    <div className="min-h-screen lg:flex">
+      {/* ── Sidebar (navy, fixed full-height on lg+) ───────────────────── */}
+      <aside className="hidden w-[220px] shrink-0 flex-col self-stretch bg-navy text-white lg:flex">
+        {/* Brand block */}
+        <Link
+          href={homeHref}
+          className="flex items-center gap-3 px-5 pt-[18px] pb-4"
+        >
+          <span
+            aria-hidden
+            className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px]"
+            style={{
+              background: "linear-gradient(135deg, hsl(var(--teal)) 0%, hsl(var(--aqua)) 100%)",
+            }}
           >
-            <Search size={14} strokeWidth={1.6} />
-            <span>Search clients, providers, payers…</span>
-            <kbd className="ml-auto rounded bg-white/10 px-[5px] py-px font-mono text-[10px] text-white/70">
-              ⌘K
-            </kbd>
-          </button>
-
-          {/* User pill */}
-          <div className="flex items-center gap-2.5 rounded-md px-2.5 py-1 transition-colors hover:bg-white/6">
-            <span
-              aria-hidden
-              className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-teal text-[11px] font-semibold text-navy"
-            >
-              {initials}
+            <ShieldCheckMark />
+          </span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-white">
+              Dastify
             </span>
-            <div className="hidden leading-tight sm:block">
-              <div className="text-[12px] font-medium text-white">{user.fullName}</div>
-              <div className="text-[10px] uppercase tracking-[0.06em] text-white/55">
-                {variant === "admin" ? roleLabel : (user.clientName ?? "Client")}
-              </div>
-            </div>
-            <ChevronDown size={12} className="text-white/50" />
-          </div>
+            <span className="text-[8px] font-normal uppercase tracking-[0.25em] text-white/35">
+              {variant === "admin" ? "Credentialing" : "Portal"}
+            </span>
+          </span>
+        </Link>
 
-          <SignOutButton />
+        {/* Section label */}
+        <p className="px-5 pt-4 pb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/20">
+          {workspaceLabel ?? (variant === "client" ? "Logged in as" : "Workspace")}
+        </p>
+        {variant === "client" && user.clientName ? (
+          <p className="px-5 pb-3 text-[13px] font-bold text-white">
+            {user.clientName}
+          </p>
+        ) : null}
+
+        <AppSidebarNav items={nav} />
+
+        <div className="mt-auto px-3 pb-4">
+          <div className="mx-2 mb-3 h-px bg-white/8" />
+          <Link
+            href="#"
+            aria-disabled
+            className="flex items-center gap-3 rounded-md px-3 py-[9px] text-[13px] font-medium text-white/35"
+          >
+            <SettingsLockIcon />
+            <span className="flex-1">Settings</span>
+          </Link>
         </div>
-      </header>
+      </aside>
 
-      {/* ── Body: sidebar + main ───────────────────────────────────────── */}
-      <div className="flex min-h-[calc(100vh-3.5rem)]">
-        <aside className="hidden w-[240px] shrink-0 flex-col border-r border-border-subtle bg-white py-6 lg:flex">
-          <div className="px-6">
-            <p className="label-sm pb-3">{workspaceLabel ?? "Workspace"}</p>
+      {/* ── Right column: topbar + main ──────────────────────────────── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Topbar (white, sticky) */}
+        <header className="sticky top-0 z-50 flex h-[60px] items-center justify-between border-b border-border-subtle bg-white px-6">
+          <div className="flex items-center gap-5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-navy/55">
+              {variant === "admin" ? "Credentialing" : "Portal"}
+            </span>
+            {breadcrumb ? (
+              <nav
+                aria-label="Breadcrumb"
+                className="hidden items-center gap-1.5 text-[13px] md:flex"
+              >
+                {breadcrumb}
+              </nav>
+            ) : null}
           </div>
-          <AppSidebarNav items={nav} />
-          <div className="mx-6 my-4 h-px bg-border-subtle" />
-          <div className="px-3">
-            <Link
-              href="#"
-              aria-disabled
-              className="flex items-center gap-3 rounded-md px-3 py-[9px] text-[13px] font-medium text-navy/40"
+
+          <div className="flex items-center gap-3">
+            {variant === "admin" ? (
+              <button
+                type="button"
+                className="hidden h-9 min-w-[300px] items-center gap-2 rounded-md bg-lightgrey px-3 text-[12px] text-navy/55 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-teal/30 hover:bg-grey/30 md:flex"
+              >
+                <Search size={14} strokeWidth={1.6} className="text-navy/45" />
+                <span>Search clients, providers, payers…</span>
+                <kbd className="ml-auto rounded bg-white px-[5px] py-px font-mono text-[10px] text-navy/45 shadow-[var(--shadow-xs)]">
+                  ⌘K
+                </kbd>
+              </button>
+            ) : null}
+
+            <button
+              type="button"
+              aria-label="Help"
+              className="flex h-9 w-9 items-center justify-center rounded-md text-navy/55 transition-colors hover:bg-lightgrey hover:text-navy"
             >
-              {/* Settings — placeholder until §A17 ships */}
-              <SettingsLockIcon />
-              <span className="flex-1">Settings</span>
-            </Link>
+              <HelpCircle size={16} strokeWidth={1.6} />
+            </button>
+
+            <div className="flex items-center gap-2.5 rounded-md px-2 py-1 transition-colors hover:bg-lightgrey">
+              <span
+                aria-hidden
+                className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-teal text-[11px] font-semibold text-navy"
+              >
+                {initials}
+              </span>
+              <div className="hidden leading-tight sm:block">
+                <div className="text-[12px] font-medium text-navy">{user.fullName}</div>
+                <div className="text-[9px] uppercase tracking-[0.2em] text-navy/50">
+                  {variant === "admin" ? roleLabel : (user.clientName ?? "Client")}
+                </div>
+              </div>
+              <ChevronDown size={12} className="text-navy/40" />
+            </div>
+
+            <SignOutButton />
           </div>
-        </aside>
+        </header>
 
         <main className="min-w-0 flex-1 px-8 pt-8 pb-16">{children}</main>
       </div>
@@ -121,6 +148,25 @@ function getInitials(name: string) {
   if (parts.length === 0) return "—";
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
+function ShieldCheckMark() {
+  return (
+    <svg
+      aria-hidden
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="white"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
 }
 
 function SettingsLockIcon() {

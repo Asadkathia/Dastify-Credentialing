@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { createClientSchema, inviteClientUserSchema } from "@/lib/validation/schemas";
+import {
+  createClientSchema,
+  inviteClientUserSchema,
+  updateClientSchema,
+} from "@/lib/validation/schemas";
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
 
 export async function createClientAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
@@ -55,6 +59,67 @@ export async function createClientAction(formData: FormData): Promise<ActionResu
 
   revalidatePath("/admin");
   return ok({ id: client.id });
+}
+
+export async function updateClientAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
+  const session = await requireAdmin();
+
+  const parsed = updateClientSchema.safeParse({
+    clientId: formData.get("clientId"),
+    legalName: formData.get("legalName"),
+    displayName: formData.get("displayName"),
+    primaryContactName: formData.get("primaryContactName") || "",
+    primaryContactEmail: formData.get("primaryContactEmail") || "",
+    primaryContactPhone: formData.get("primaryContactPhone") || "",
+    notes: formData.get("notes") || "",
+    isActive: formData.get("isActive") === "on" || formData.get("isActive") === "true",
+  });
+  if (!parsed.success) {
+    return fail("Invalid input", parsed.error.flatten().fieldErrors);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", parsed.data.clientId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (fetchErr || !existing) return fail("Client not found");
+
+  const { error: updateErr } = await supabase
+    .from("clients")
+    .update({
+      legal_name: parsed.data.legalName,
+      display_name: parsed.data.displayName,
+      primary_contact_name: parsed.data.primaryContactName || null,
+      primary_contact_email: parsed.data.primaryContactEmail || null,
+      primary_contact_phone: parsed.data.primaryContactPhone || null,
+      notes: parsed.data.notes || null,
+      is_active: parsed.data.isActive,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", parsed.data.clientId);
+  if (updateErr) {
+    return fail(`Failed to update client: ${updateErr.message}`);
+  }
+
+  await supabase.from("activity_events").insert({
+    client_id: parsed.data.clientId,
+    actor_user_id: session.userId,
+    action: "update",
+    target_table: "clients",
+    target_id: parsed.data.clientId,
+    summary: `Updated client ${parsed.data.displayName}`,
+  });
+
+  revalidatePath(`/admin/clients/${parsed.data.clientId}`);
+  revalidatePath("/admin/clients");
+  revalidatePath("/admin");
+  return ok({ id: parsed.data.clientId });
 }
 
 export async function createClientAndRedirect(formData: FormData): Promise<void> {

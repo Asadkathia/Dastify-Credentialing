@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Lock, ShieldCheck, Award } from "lucide-react";
 import { LoginForm } from "./_components/login-form";
 
@@ -14,7 +13,7 @@ export default async function LoginPage({
       <aside
         className="relative hidden overflow-hidden bg-navy px-12 py-12 text-white md:flex md:flex-col"
       >
-        {/* Dot-grid background */}
+        {/* Dot-grid */}
         <span
           aria-hidden
           className="pointer-events-none absolute inset-0 z-0"
@@ -25,28 +24,40 @@ export default async function LoginPage({
           }}
         />
 
-        {/* Subtle brand glows */}
+        {/* Radial brand glows — both teal, per design */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 z-0 h-[520px] w-[520px] rounded-full"
+          className="pointer-events-none absolute z-0 rounded-full"
           style={{
+            top: "-10%",
+            right: "-10%",
+            width: "70%",
+            height: "70%",
             background:
-              "radial-gradient(circle, rgba(22,193,194,0.18) 0%, rgba(22,193,194,0) 70%)",
+              "radial-gradient(circle, rgba(22,193,194,0.12) 0%, rgba(22,193,194,0) 70%)",
           }}
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute -bottom-44 -left-44 z-0 h-[480px] w-[480px] rounded-full"
+          className="pointer-events-none absolute z-0 rounded-full"
           style={{
+            bottom: "-5%",
+            left: "5%",
+            width: "50%",
+            height: "50%",
             background:
-              "radial-gradient(circle, rgba(78,206,209,0.14) 0%, rgba(78,206,209,0) 70%)",
+              "radial-gradient(circle, rgba(22,193,194,0.07) 0%, rgba(22,193,194,0) 70%)",
           }}
         />
 
-        {/* ECG line — drawn on load, sits behind content near the bottom */}
+        {/* Floating medical shapes — soft ambience behind copy */}
+        <FloatingShapes />
+
+        {/* ECG line — drawn on load */}
         <span
           aria-hidden
           className="pointer-events-none absolute inset-x-0 bottom-[28%] z-0 h-[80px]"
+          style={{ opacity: 0.08 }}
         >
           <svg
             viewBox="0 0 1000 80"
@@ -61,41 +72,50 @@ export default async function LoginPage({
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
-              opacity={0.4}
             />
           </svg>
         </span>
 
-        <div className="relative z-10 flex items-center">
-          <Image
-            src="/dastify-logo-on-dark.svg"
+        {/* Brand mark — hero logo */}
+        <div className="relative z-10 flex flex-col items-start gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/dastify-logo.svg"
             alt="Dastify"
-            width={172}
-            height={80}
-            priority
-            className="h-10 w-auto"
+            className="h-[112px] w-auto select-none drop-shadow-[0_8px_28px_rgba(22,193,194,0.18)]"
+            draggable={false}
           />
+          <span className="flex flex-col leading-tight">
+            <span className="text-[16px] font-bold uppercase tracking-[0.08em] text-white">
+              Dastify
+            </span>
+            <span className="text-[10px] font-normal uppercase tracking-[0.36em] text-white/40">
+              Solutions
+            </span>
+          </span>
         </div>
 
         <div className="relative z-10 mt-auto max-w-[460px]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal">
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.34em] text-teal">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-teal" />
             Credentialing Portal
           </p>
-          <h2 className="mt-3 text-[36px] font-semibold leading-[1.1] tracking-[-0.018em]">
+          <h2
+            className="mt-4 font-semibold leading-[1.1] tracking-[-0.018em]"
+            style={{ fontSize: "clamp(34px, 3.2vw, 50px)" }}
+          >
             Every payer.{" "}
-            <span className="bg-gradient-to-r from-teal to-aqua bg-clip-text text-transparent">
-              Every state.
-            </span>{" "}
+            <em className="font-semibold not-italic text-teal italic">Every state.</em>{" "}
             Every cycle.
           </h2>
-          <p className="mt-4 text-[15px] leading-[1.55] text-white/70">
+          <span aria-hidden className="mt-6 block h-[2px] w-12 bg-teal" />
+          <p className="mt-5 text-[15px] leading-[1.55] text-white/70">
             The operational core for Dastify&apos;s payer-enrollment service — multi-tenant,
-            multi-state,
-            and accountable from intake to effective.
+            multi-state, and accountable from intake to effective.
           </p>
 
           {/* Stats strip */}
-          <dl className="mt-8 hidden md:flex">
+          <dl className="mt-7 hidden border-t border-white/8 pt-7 md:flex">
             <div className="flex-1 border-r border-white/10 pr-6">
               <dt className="sr-only">First-Pass Rate</dt>
               <dd className="text-[22px] font-bold leading-none text-teal tnum">97.4%</dd>
@@ -137,6 +157,9 @@ export default async function LoginPage({
           <a href="#" className="text-white/65 hover:text-white">
             Support
           </a>
+          <a href="#" className="text-white/65 hover:text-white">
+            Privacy
+          </a>
         </div>
       </aside>
 
@@ -173,5 +196,84 @@ export default async function LoginPage({
         </div>
       </main>
     </div>
+  );
+}
+
+function FloatingShapes() {
+  return (
+    <>
+      {/* Rounded plus (top-left) */}
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute z-0 floatA"
+        style={{ top: "12%", left: "8%", opacity: 0.05 }}
+        width="120"
+        height="120"
+        viewBox="0 0 120 120"
+        fill="none"
+      >
+        <rect
+          x="48"
+          y="12"
+          width="24"
+          height="96"
+          rx="8"
+          fill="white"
+        />
+        <rect
+          x="12"
+          y="48"
+          width="96"
+          height="24"
+          rx="8"
+          fill="white"
+        />
+      </svg>
+      {/* Shield with check (mid-right) */}
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute z-0 floatB"
+        style={{ top: "32%", right: "10%", opacity: 0.045 }}
+        width="140"
+        height="140"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="white"
+        strokeWidth="1.2"
+      >
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <path d="m9 12 2 2 4-4" />
+      </svg>
+      {/* Dotted bullseye (bottom-left) */}
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute z-0 floatA"
+        style={{ bottom: "16%", left: "12%", opacity: 0.05 }}
+        width="120"
+        height="120"
+        viewBox="0 0 120 120"
+        fill="none"
+        stroke="white"
+        strokeWidth="1.2"
+      >
+        <circle cx="60" cy="60" r="56" strokeDasharray="3 4" />
+        <circle cx="60" cy="60" r="34" />
+        <circle cx="60" cy="60" r="12" fill="white" />
+      </svg>
+      {/* Dashed square (bottom-right) */}
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute z-0 floatB"
+        style={{ bottom: "10%", right: "14%", opacity: 0.04 }}
+        width="80"
+        height="80"
+        viewBox="0 0 80 80"
+        fill="none"
+        stroke="white"
+        strokeWidth="1.4"
+      >
+        <rect x="8" y="8" width="64" height="64" rx="10" strokeDasharray="5 5" />
+      </svg>
+    </>
   );
 }

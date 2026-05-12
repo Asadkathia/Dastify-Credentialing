@@ -1,6 +1,8 @@
 import Link from "next/link";
 import {
   Building2,
+  ChevronLeft,
+  ChevronRight,
   CircleCheck,
   Download,
   FileText,
@@ -162,6 +164,23 @@ export default async function AdminClientsListPage({
     ascending: true,
   });
 
+  // Per-client enrollment counts — single query, bucketed in JS to avoid N+1.
+  const enrollmentCountsByClient = new Map<string, number>();
+  if (clients && clients.length > 0) {
+    const { data: enrolRows } = await supabase
+      .from("enrollments")
+      .select("client_id")
+      .is("deleted_at", null)
+      .in("client_id", clients.map((c) => c.id));
+    for (const r of enrolRows ?? []) {
+      if (!r.client_id) continue;
+      enrollmentCountsByClient.set(
+        r.client_id,
+        (enrollmentCountsByClient.get(r.client_id) ?? 0) + 1,
+      );
+    }
+  }
+
   const visibleCount = clients?.length ?? 0;
   const filtersActive =
     statusFilter !== "all" || q.length > 0 || hasEnrollments || stateFilter.length > 0;
@@ -188,10 +207,10 @@ export default async function AdminClientsListPage({
           </>
         }
         actions={
-          <Button asChild>
+          <Button asChild className="uppercase tracking-[0.16em]">
             <Link href="/admin/clients/new">
               <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
-              New client
+              New Client
             </Link>
           </Button>
         }
@@ -225,8 +244,8 @@ export default async function AdminClientsListPage({
         />
       </div>
 
-      {/* Filter tabs */}
-      <div className="mb-4 flex items-center gap-1 border-b border-border-subtle">
+      {/* Filter tabs — pill switcher (design treatment) */}
+      <div className="mb-4 inline-flex rounded-lg bg-lightgrey p-1">
         <FilterTab
           href={buildHref({
             status: "all",
@@ -284,7 +303,7 @@ export default async function AdminClientsListPage({
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Search by name, legal name, or contact email…"
+            placeholder="Search clients…"
             className="h-9 w-full rounded-md border border-border-subtle bg-white pl-8 pr-3 text-[13px] placeholder:text-navy/40 focus-visible:border-teal focus-visible:outline-none"
           />
         </form>
@@ -338,65 +357,128 @@ export default async function AdminClientsListPage({
       ) : null}
 
       {!error && visibleCount > 0 ? (
-        <div className="surface overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="w-[34%]">Client</th>
-                <th>Legal name</th>
-                <th>Primary contact</th>
-                <th className="w-[110px]">Status</th>
-                <th className="w-[80px] text-right" />
-              </tr>
-            </thead>
-            <tbody>
-              {clients!.map((c) => (
-                <tr key={c.id}>
-                  <td className="font-medium">
-                    <Link
-                      href={`/admin/clients/${c.id}`}
-                      className="flex items-center gap-3 text-navy hover:text-teal"
-                    >
-                      <span
-                        aria-hidden
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-teal-08 text-[11px] font-semibold tracking-[0.04em] text-teal"
-                      >
-                        {initialsFromName(c.display_name)}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-medium leading-tight">
-                          {c.display_name}
-                        </span>
-                        <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.08em] text-navy/45">
-                          # CLT-{shortId(c.id)}
-                        </span>
-                      </span>
-                    </Link>
-                  </td>
-                  <td className="text-navy/60">{c.legal_name}</td>
-                  <td className="text-navy/70">
-                    {c.primary_contact_name || "—"}
-                    {c.primary_contact_email ? (
-                      <span className="block text-[11px] text-navy/45">
-                        {c.primary_contact_email}
-                      </span>
-                    ) : null}
-                  </td>
-                  <td>
-                    <StatusDot active={c.is_active} />
-                  </td>
-                  <td className="text-right">
-                    <Link
-                      href={`/admin/clients/${c.id}`}
-                      className="text-[12px] font-semibold uppercase tracking-wider text-teal hover:text-[#0E7475]"
-                    >
-                      Open →
-                    </Link>
-                  </td>
+        <div className="surface">
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <colgroup>
+                <col style={{ width: "28%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "26%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "8%" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Display name</th>
+                  <th>Legal name</th>
+                  <th>Primary contact</th>
+                  <th>Enrollments</th>
+                  <th>Status</th>
+                  <th className="text-right" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {clients!.map((c) => {
+                  const enrollCount = enrollmentCountsByClient.get(c.id) ?? 0;
+                  return (
+                    <tr key={c.id}>
+                      <td className="font-medium">
+                        <Link
+                          href={`/admin/clients/${c.id}`}
+                          className="flex items-center gap-3 text-navy hover:text-teal"
+                        >
+                          <span
+                            aria-hidden
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-teal-08 text-[13px] font-bold tracking-[0.02em] text-teal"
+                          >
+                            {initialsFromName(c.display_name)}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-[13px] font-medium leading-tight">
+                              {c.display_name}
+                            </span>
+                            <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.08em] text-navy/45">
+                              # CLT-{shortId(c.id)}
+                            </span>
+                          </span>
+                        </Link>
+                      </td>
+                      <td className="text-navy/60">{c.legal_name}</td>
+                      <td className="text-navy/70">
+                        {c.primary_contact_name || "—"}
+                        {c.primary_contact_email ? (
+                          <span className="block text-[11px] text-navy/45">
+                            {c.primary_contact_email}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td>
+                        <span className="block text-[20px] font-bold leading-none tnum text-navy">
+                          {enrollCount}
+                        </span>
+                        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/45">
+                          Active
+                        </span>
+                      </td>
+                      <td>
+                        <StatusDot active={c.is_active} />
+                      </td>
+                      <td className="text-right">
+                        <Link
+                          href={`/admin/clients/${c.id}`}
+                          aria-label={`Open ${c.display_name}`}
+                          className="inline-flex items-center gap-1 rounded-md bg-navy px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-navy/85"
+                        >
+                          Open
+                          <ChevronRight size={12} strokeWidth={2} />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination footer — single-page in v1, but rendered to match design. */}
+          <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
+            <p className="text-[12px] text-navy/55">
+              Showing <span className="font-semibold text-navy tnum">{visibleCount}</span> of{" "}
+              <span className="font-semibold text-navy tnum">
+                {statusFilter === "all"
+                  ? totalClients
+                  : statusFilter === "active"
+                    ? activeClients
+                    : inactiveClients}
+              </span>{" "}
+              {visibleCount === 1 ? "client" : "clients"}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled
+                aria-label="Previous page"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle text-navy/35 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={14} strokeWidth={1.7} />
+              </button>
+              <span
+                aria-current="page"
+                className="flex h-7 min-w-[28px] items-center justify-center rounded-md bg-navy px-2 text-[12px] font-semibold tnum text-white"
+              >
+                1
+              </span>
+              <button
+                type="button"
+                disabled
+                aria-label="Next page"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle text-navy/35 disabled:cursor-not-allowed"
+              >
+                <ChevronRight size={14} strokeWidth={1.7} />
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
@@ -418,17 +500,17 @@ function FilterTab({
     <Link
       href={href}
       className={
-        "relative -mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[13px] transition-colors " +
+        "inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[12px] uppercase tracking-[0.12em] transition-colors " +
         (active
-          ? "border-teal font-semibold text-navy"
-          : "border-transparent font-medium text-navy/65 hover:text-navy")
+          ? "bg-navy font-semibold text-white shadow-[var(--shadow-xs)]"
+          : "font-semibold text-navy/55 hover:text-navy")
       }
     >
       {label}
       <span
         className={
-          "tnum rounded-full px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.04em] " +
-          (active ? "bg-teal-08 text-teal" : "bg-navy-04 text-navy/55")
+          "tnum inline-flex h-[18px] min-w-[22px] items-center justify-center rounded-full px-1 text-[10px] font-semibold tracking-[0.04em] " +
+          (active ? "bg-teal text-navy" : "bg-white text-navy/55")
         }
       >
         {count}
@@ -439,19 +521,27 @@ function FilterTab({
 
 function StatusDot({ active }: { active: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span
+      className={
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] " +
+        (active ? "bg-success-08 text-[#1B5E20]" : "bg-navy-04 text-navy/55")
+      }
+    >
       <span
         aria-hidden
-        className={"h-1.5 w-1.5 rounded-full " + (active ? "bg-success" : "bg-grey")}
-      />
-      <span
         className={
-          "text-[11px] font-semibold uppercase tracking-[0.06em] " +
-          (active ? "text-[#1B5E20]" : "text-navy/50")
+          "relative inline-flex h-1.5 w-1.5 rounded-full " +
+          (active ? "bg-success" : "bg-navy/40")
         }
       >
-        {active ? "Active" : "Inactive"}
+        {active ? (
+          <span
+            aria-hidden
+            className="absolute inset-0 animate-ping rounded-full bg-success opacity-60"
+          />
+        ) : null}
       </span>
+      {active ? "Active" : "Inactive"}
     </span>
   );
 }

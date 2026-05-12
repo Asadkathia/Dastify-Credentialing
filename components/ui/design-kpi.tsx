@@ -77,25 +77,25 @@ export function DesignKpi({
         <span
           aria-hidden
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px]",
             t.iconBg,
             t.iconText,
           )}
         >
-          <Icon size={17} strokeWidth={1.8} />
+          <Icon size={15} strokeWidth={1.8} />
         </span>
       </div>
 
       <p
         className={cn(
-          "mt-4 text-[36px] font-bold leading-none tracking-[-0.01em] tnum",
+          "mt-4 text-[34px] font-bold leading-none tracking-[-0.01em] tnum",
           t.valueText,
         )}
       >
         {value}
       </p>
 
-      {hint ? <p className="mt-3 text-[12px] text-navy/55">{hint}</p> : null}
+      {hint ? <p className="mt-3 text-[11px] text-navy/55">{hint}</p> : null}
     </>
   );
 

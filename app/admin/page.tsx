@@ -18,7 +18,6 @@ import { DesignKpi } from "@/components/ui/design-kpi";
 import {
   BarChart,
   Donut,
-  HorizontalBarList,
   CHART_COLORS,
 } from "@/components/charts/dashboard-charts";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
@@ -72,7 +71,6 @@ export default async function AdminDashboardPage() {
   const [
     { data: allEnrollments },
     { data: createdInWindow },
-    { data: nonParEvents },
     { data: nonParInWindow },
     { data: recentlyUpdated },
   ] = await Promise.all([
@@ -89,15 +87,6 @@ export default async function AdminDashboardPage() {
       .gte("created_at", earliestMonthStart.toISOString())
       .is("deleted_at", null),
 
-    // Used for non-par-credentialed rate by payer.
-    // Anyone who ever passed in_review can end up here; we count transitions
-    // to `non_par_credentialed` vs all transitions out of in_review.
-    supabase
-      .from("status_history")
-      .select(`to_status, enrollment:enrollment_id (payer:payer_id (id, name))`)
-      .in("to_status", ["approved", "non_par_credentialed", "completed"])
-      .limit(5000),
-
     // Used for the 12-month non-par-credentialed bar chart — transitions
     // into `non_par_credentialed` bucketed by month.
     supabase
@@ -107,7 +96,7 @@ export default async function AdminDashboardPage() {
       .gte("created_at", earliestMonthStart.toISOString())
       .limit(5000),
 
-    // Recently updated — last 8.
+    // Recently updated — extended view at the bottom of the dashboard.
     supabase
       .from("enrollments")
       .select(
@@ -119,7 +108,7 @@ export default async function AdminDashboardPage() {
       )
       .is("deleted_at", null)
       .order("updated_at", { ascending: false })
-      .limit(8),
+      .limit(20),
   ]);
 
   // Per-status counts (drives the 6 KPI cards + donut).
@@ -155,40 +144,6 @@ export default async function AdminDashboardPage() {
     if (bucket) bucket.count += 1;
   });
 
-  // Non-par rate by payer = non_par_credentialed transitions / total terminal-ish
-  // transitions out of in_review (approved + completed + non_par_credentialed).
-  const payerStats = new Map<
-    string,
-    { name: string; outcomes: number; nonPar: number }
-  >();
-  (nonParEvents ?? []).forEach((ev) => {
-    const enrollment = Array.isArray(ev.enrollment) ? ev.enrollment[0] : ev.enrollment;
-    const payer = enrollment?.payer
-      ? Array.isArray(enrollment.payer)
-        ? enrollment.payer[0]
-        : enrollment.payer
-      : null;
-    if (!payer?.id) return;
-    const entry = payerStats.get(payer.id) ?? {
-      name: payer.name,
-      outcomes: 0,
-      nonPar: 0,
-    };
-    entry.outcomes += 1;
-    if (ev.to_status === "non_par_credentialed") entry.nonPar += 1;
-    payerStats.set(payer.id, entry);
-  });
-  const nonParRows = Array.from(payerStats.values())
-    .filter((p) => p.outcomes >= 3) // min sample size
-    .map((p) => ({
-      label: p.name,
-      value: Math.round((p.nonPar / p.outcomes) * 1000) / 10,
-      max: 50,
-      suffix: `(${p.outcomes})`,
-    }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 10);
-
   // Donut data — exclude zero-count statuses for visual clarity.
   const donutData = ENROLLMENT_STATUSES.map((s) => ({
     key: s,
@@ -204,7 +159,7 @@ export default async function AdminDashboardPage() {
         subtitle={
           <>
             At-a-glance enrollment counts by status across all clients. Updated{" "}
-            <span className="font-mono tnum">{format(today, "PP")}</span>.
+            <span className="font-semibold text-teal tnum">{format(today, "PP")}</span>.
           </>
         }
         actions={
@@ -240,8 +195,8 @@ export default async function AdminDashboardPage() {
         })}
       </div>
 
-      {/* Row 2 — status donut + non-par rate */}
-      <div className="mb-6 grid gap-4 xl:grid-cols-[1fr_1.4fr]">
+      {/* Charts — 3 equal columns: donut + creations + non-par credentialed */}
+      <div className="mb-6 grid gap-4 xl:grid-cols-3">
         <ChartCard
           title="Status distribution"
           caption={`Snapshot — ${totalEnrollments} total enrollments`}
@@ -281,30 +236,41 @@ export default async function AdminDashboardPage() {
         </ChartCard>
 
         <ChartCard
-          title="Non-par credentialed rate"
-          caption="By payer — share of in-review outcomes that ended off-network. Minimum 3 outcomes."
+          title="Enrollments created · last 12 months"
+          caption="New enrollment rows per calendar month."
+          live
         >
-          {nonParRows.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-navy/55">
-              Not enough data yet — non-par rates appear once payers have 3+ resolved enrollments.
-            </p>
-          ) : (
-            <HorizontalBarList
-              data={nonParRows}
-              formatValue={(v) => `${v.toFixed(1)}%`}
-              barFill={CHART_COLORS.amber}
-            />
-          )}
+          <BarChart
+            data={months.map((m) => ({ label: m.label, value: m.count, color: CHART_COLORS.teal }))}
+          />
+        </ChartCard>
+
+        <ChartCard
+          title="Non-par credentialed · last 12 months"
+          caption="Transitions into non-par credentialed per calendar month."
+        >
+          <BarChart
+            data={nonParMonths.map((m) => ({
+              label: m.label,
+              value: m.count,
+              color: CHART_COLORS.amber,
+            }))}
+          />
         </ChartCard>
       </div>
 
-      {/* Row 3 — recently updated (moved up above the chart row) */}
+      {/* Recently updated — extended table at the bottom */}
       <section className="surface mb-6">
         <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-          <h2 className="text-[15px] font-semibold text-navy">Recently updated</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-[15px] font-semibold text-navy">Recently updated</h2>
+            <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-teal-12 px-1.5 text-[11px] font-semibold text-teal tnum">
+              {recentlyUpdated?.length ?? 0}
+            </span>
+          </div>
           <Link
             href="/admin/enrollments"
-            className="text-[11px] font-semibold uppercase tracking-[0.06em] text-teal hover:text-[#0E7475]"
+            className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal hover:text-[#0E7475]"
           >
             View all →
           </Link>
@@ -361,31 +327,6 @@ export default async function AdminDashboardPage() {
           </table>
         )}
       </section>
-
-      {/* Row 4 — 12-month creations + 12-month non-par credentialed */}
-      <div className="mb-6 grid gap-4 xl:grid-cols-2">
-        <ChartCard
-          title="Enrollments created · last 12 months"
-          caption="New enrollment rows per calendar month."
-        >
-          <BarChart
-            data={months.map((m) => ({ label: m.label, value: m.count, color: CHART_COLORS.teal }))}
-          />
-        </ChartCard>
-
-        <ChartCard
-          title="Non-par credentialed · last 12 months"
-          caption="Transitions into non-par credentialed per calendar month."
-        >
-          <BarChart
-            data={nonParMonths.map((m) => ({
-              label: m.label,
-              value: m.count,
-              color: CHART_COLORS.amber,
-            }))}
-          />
-        </ChartCard>
-      </div>
     </div>
   );
 }
@@ -393,17 +334,27 @@ export default async function AdminDashboardPage() {
 function ChartCard({
   title,
   caption,
+  live,
   children,
 }: {
   title: string;
   caption?: string;
+  live?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex min-h-0 flex-col rounded-md border border-border-subtle bg-white px-5 py-4 shadow-[var(--shadow-xs)]">
-      <header className="mb-3">
-        <h3 className="text-[14px] font-semibold leading-5 text-navy">{title}</h3>
-        {caption ? <p className="mt-0.5 text-[12px] leading-[18px] text-navy/55">{caption}</p> : null}
+      <header className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-[14px] font-semibold leading-5 text-navy">{title}</h3>
+          {caption ? <p className="mt-0.5 text-[12px] font-light leading-[18px] text-navy/40">{caption}</p> : null}
+        </div>
+        {live ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-teal-08 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-teal">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-teal" />
+            Live
+          </span>
+        ) : null}
       </header>
       <div className="pt-2">{children}</div>
     </div>

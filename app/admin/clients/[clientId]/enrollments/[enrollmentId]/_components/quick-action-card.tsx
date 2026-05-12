@@ -3,25 +3,39 @@
 import { StatusTransitionDialog } from "./status-transition-dialog";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
-type QuickActionMessage = { text: string; cta: string };
+type QuickActionMessage = {
+  /** Renders inline. Stage names get rendered teal-bold by inline JSX below. */
+  current: string;
+  next: string;
+  body: string;
+  cta: string;
+};
 
 // Pipeline statuses that have a "next action". Terminal statuses (`completed`,
 // `non_par_credentialed`) are intentionally omitted — the card doesn't render.
 const NEXT_ACTION: Partial<Record<EnrollmentStatus, QuickActionMessage>> = {
   prep: {
-    text: "Currently in Prep. Upload provider documents to advance to Submitted.",
+    current: "Prep",
+    next: "Submitted",
+    body: "Upload provider documents to advance.",
     cta: "Transition to Submitted",
   },
   submitted: {
-    text: "Currently in Submitted. Wait for payer to begin review.",
+    current: "Submitted",
+    next: "In Review",
+    body: "Wait for the payer to begin review.",
     cta: "Move to In Review",
   },
   in_review: {
-    text: "Currently in In Review. Awaiting payer decision.",
+    current: "In Review",
+    next: "Approved",
+    body: "Awaiting payer decision.",
     cta: "Mark as Approved",
   },
   approved: {
-    text: "Currently Approved. Final step: mark as Completed once provider is active in-network.",
+    current: "Approved",
+    next: "Completed",
+    body: "Final step: mark as Completed once provider is active in-network.",
     cta: "Mark as Completed",
   },
 };
@@ -50,7 +64,11 @@ export function QuickActionCard({
       />
       <div className="relative">
         <p className="label-sm mb-2 text-white/40">Next action</p>
-        <p className="mb-4 text-[13px] leading-relaxed text-white/75">{message.text}</p>
+        <p className="mb-4 text-[13px] leading-relaxed text-white/75">
+          Currently in <span className="font-semibold text-teal">{message.current}</span>.{" "}
+          {message.body} Advance to{" "}
+          <span className="font-semibold text-teal">{message.next}</span>.
+        </p>
         <StatusTransitionDialog
           enrollmentId={enrollmentId}
           currentStatus={currentStatus}
