@@ -8,6 +8,7 @@ import {
   type GroupEntityOption,
   type OrgOption,
 } from "./_components/import-flow";
+import { TemplatePreview } from "./_components/template-preview";
 import type { ImportEntityType } from "@/lib/import/types";
 
 type SearchParams = Promise<{ entity?: string }>;
@@ -120,6 +121,8 @@ export default async function AdminImportPage({
       </div>
 
       <p className="mb-6 text-[13px] text-navy/65">{activeTab.description}</p>
+
+      <TemplatePreview entity={entity} />
 
       <ImportFlow
         entity={entity}
