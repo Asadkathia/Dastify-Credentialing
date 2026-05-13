@@ -286,6 +286,14 @@ export function NewEnrollmentForm({
       ) : null}
 
       <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-5">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => router.push(`/admin/clients/${clientId}`)}
+          disabled={submitting}
+        >
+          Cancel
+        </Button>
         <Button type="submit" disabled={submitting || !selectedPayerId}>
           {submitting ? "Creating enrollment…" : "Create enrollment"}
         </Button>
