@@ -156,13 +156,14 @@ Locked v1 scope. The screens in `/Dastify-Crendentialing/` are the visual target
 - Documents with admin-extensible runtime categories (`document_categories` table), expiration tracking, internal/public flag, virus scanning hook.
 - Audit log: `status_history` + `activity_events`, append-only, visible per-enrollment and globally on `/admin/audit`.
 - .xlsx export matching the existing Excel template — plus a monthly cross-client report at `/api/export/monthly-enrollments.xlsx`.
+- **Bulk xlsx import** at `/admin/import` (admin-only). Three entity tabs: Enrollments (legacy 4-column `States | Payers | Participation Request Status | Comments` template; admin picks org + client/group before upload; multi-state cells expand into one row per state), Clients (clinicians, scoped to one org), Organizations. Two-step flow: parse + preview (row-by-row valid/error/duplicate) → confirm → atomic insert. Duplicates are detected against enrollment unique-key / NPI / legal name and skipped with warning. Caps: 5 MB / 5000 rows. Audit row written as `activity_events.action = 'import'` (added in migration 0014).
 - Email notifications (Resend): status change, client-comment-to-admin, daily/weekly digest (`organization_settings.digest_email_frequency`), expiration alerts (`organization_settings.expiration_alert_days_before`).
 - Configurable per-client disclaimer banner from `organization_settings`.
 - Login + audit-logged sessions.
 
 ### Out of scope for v1 — push back if asked
 
-AI/agent features, real-time collaboration / live tickers / WebSocket presence, PDF export, in-app notification bell beyond the Inbox screen, SMS, SAML/OIDC SSO (no Google/Microsoft buttons), 2FA, CAQH/NPPES integrations, public API/webhooks, mobile native apps, multi-tier admin roles, white-label branding, bulk CSV/XLSX import, staff productivity / per-biller performance metrics, **recredentialing** (entire module removed in migration 0009 — see rule 21).
+AI/agent features, real-time collaboration / live tickers / WebSocket presence, PDF export, in-app notification bell beyond the Inbox screen, SMS, SAML/OIDC SSO (no Google/Microsoft buttons), 2FA, CAQH/NPPES integrations, public API/webhooks, mobile native apps, multi-tier admin roles, white-label branding, staff productivity / per-biller performance metrics, **recredentialing** (entire module removed in migration 0009 — see rule 21).
 
 The Inbox screen (`/Dastify-Crendentialing/Inbox.html`) and Recreds Pipeline screen are **deferred**: the design files include them but v1 doesn't ship either. Email notifications cover the inbox use case; recreds is out entirely.
 
@@ -263,4 +264,4 @@ These are operational settings that can't be applied via SQL/MCP and must be fli
 
 ---
 
-**Last updated**: 2026-05-14 (rename: `clients` table → `organizations` for tenant; `providers` → `clients` for individual clinicians; `client_users` → `organization_users`; role values `client_admin`/`client_viewer` → `org_admin`/`org_viewer`; JWT claim `client_id` → `organization_id`). Migration 0013 applied.
+**Last updated**: 2026-05-14 (rename: `clients` table → `organizations` for tenant; `providers` → `clients` for individual clinicians; `client_users` → `organization_users`; role values `client_admin`/`client_viewer` → `org_admin`/`org_viewer`; JWT claim `client_id` → `organization_id`). Migration 0013 applied. **2026-05-14 (later)**: bulk xlsx import added at `/admin/import` (enrollments + clients + organizations). Migration 0014 adds `'import'` to the `activity_action` enum.

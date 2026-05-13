@@ -76,4 +76,5 @@ export const activityActionEnum = pgEnum("activity_action", [
   "user_invite",
   "user_login",
   "export",
+  "import",
 ]);
