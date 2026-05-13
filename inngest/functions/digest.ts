@@ -8,8 +8,11 @@ import { inngest } from "../client";
  * lib/email/client.ts using digestEmail template.
  */
 export const weeklyDigest = inngest.createFunction(
-  { id: "digest-weekly", name: "Weekly client digest" },
-  { cron: "0 14 * * 1" },
+  {
+    id: "digest-weekly",
+    name: "Weekly client digest",
+    triggers: [{ cron: "0 14 * * 1" }],
+  },
   async () => {
     return { sent: 0, todo: "Implement digest rollup + send" };
   },
@@ -19,8 +22,11 @@ export const weeklyDigest = inngest.createFunction(
  * Daily digest email — same logic, daily clients only.
  */
 export const dailyDigest = inngest.createFunction(
-  { id: "digest-daily", name: "Daily client digest" },
-  { cron: "0 14 * * *" },
+  {
+    id: "digest-daily",
+    name: "Daily client digest",
+    triggers: [{ cron: "0 14 * * *" }],
+  },
   async () => {
     return { sent: 0, todo: "Implement daily digest rollup + send" };
   },

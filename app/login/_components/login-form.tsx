@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, Eye, EyeOff, KeyRound, Lock, Mail, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 type Mode = "password" | "magic_link";
 
@@ -22,6 +23,7 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
     setError(null);
     startTransition(async () => {
       const supabase = createSupabaseBrowserClient();
+      const safeNext = safeNextPath(next);
 
       if (mode === "password") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -29,12 +31,12 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
           setError(error.message);
           return;
         }
-        window.location.href = next ?? "/";
+        window.location.href = safeNext;
         return;
       }
 
       const redirectTo = `${window.location.origin}/auth/callback${
-        next ? `?next=${encodeURIComponent(next)}` : ""
+        safeNext !== "/" ? `?next=${encodeURIComponent(safeNext)}` : ""
       }`;
       const { error } = await supabase.auth.signInWithOtp({
         email,

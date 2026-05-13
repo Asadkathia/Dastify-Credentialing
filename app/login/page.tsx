@@ -1,5 +1,6 @@
 import { Lock, ShieldCheck, Award } from "lucide-react";
 import { LoginForm } from "./_components/login-form";
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 export default async function LoginPage({
   searchParams,
@@ -7,6 +8,7 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; next?: string }>;
 }) {
   const params = await searchParams;
+  const nextPath = params.next ? safeNextPath(params.next, "") : "";
   return (
     <div className="grid min-h-screen md:grid-cols-2">
       {/* Brand panel */}
@@ -170,7 +172,7 @@ export default async function LoginPage({
               Choose your sign-in method. Self sign-up is disabled.
             </p>
           </div>
-          <LoginForm next={params.next} initialError={params.error} />
+          <LoginForm next={nextPath || undefined} initialError={params.error} />
 
           {/* Trust badges */}
           <div className="mt-6 flex items-center justify-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-navy/45">

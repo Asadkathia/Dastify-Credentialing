@@ -8,8 +8,11 @@ import { inngest } from "../client";
  * email to admins + client_admins per client per day.
  */
 export const expirationAlert = inngest.createFunction(
-  { id: "expiration-alert", name: "Daily document expiration alert" },
-  { cron: "0 4 * * *" },
+  {
+    id: "expiration-alert",
+    name: "Daily document expiration alert",
+    triggers: [{ cron: "0 4 * * *" }],
+  },
   async () => {
     return { alerted: 0, todo: "Implement expiration query + email send" };
   },

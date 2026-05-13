@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 /**
  * Magic-link landing route. Supabase appends a `code` query param; we exchange
@@ -8,7 +9,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next");
+  const next = safeNextPath(url.searchParams.get("next"));
 
   if (!code) {
     return NextResponse.redirect(new URL("/login?error=expired", request.url));
@@ -21,5 +22,5 @@ export async function GET(request: NextRequest) {
   }
 
   // Defer to middleware to route the user to /admin or /portal.
-  return NextResponse.redirect(new URL(next ?? "/", request.url));
+  return NextResponse.redirect(new URL(next, request.url));
 }
