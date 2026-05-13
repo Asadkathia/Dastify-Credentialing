@@ -11,6 +11,7 @@ export function AppShell({
   nav,
   workspaceLabel,
   breadcrumb,
+  topbarSlot,
   children,
 }: {
   variant: "admin" | "organization";
@@ -18,6 +19,9 @@ export function AppShell({
   nav: NavItem[];
   workspaceLabel?: string;
   breadcrumb?: React.ReactNode;
+  /** Slot rendered in the topbar between the search and help icon. Use for
+   *  page-level actions like a global "+ New Enrollment" button. */
+  topbarSlot?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const homeHref = variant === "admin" ? "/admin" : "/portal";
@@ -50,7 +54,6 @@ export function AppShell({
           </span>
         </Link>
 
-        {/* Section label */}
         <p className="px-5 pt-4 pb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/20">
           {workspaceLabel ?? (variant === "organization" ? "Logged in as" : "Workspace")}
         </p>
@@ -75,9 +78,7 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* ── Right column: topbar + main ──────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Topbar (white, sticky) */}
         <header className="sticky top-0 z-50 flex h-[60px] items-center justify-between border-b border-border-subtle bg-white px-6">
           <div className="flex items-center gap-5">
             <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-navy/55">
@@ -106,6 +107,8 @@ export function AppShell({
                 </kbd>
               </button>
             ) : null}
+
+            {topbarSlot}
 
             <button
               type="button"

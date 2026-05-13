@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth/session";
 import { AppShell, type NavItem } from "@/components/app-shell";
+import { NewEnrollmentLauncher } from "@/components/admin/new-enrollment-launcher";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAdmin();
@@ -19,6 +20,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       user={{ fullName: session.fullName, email: session.email }}
       nav={nav}
       workspaceLabel="Workspace"
+      topbarSlot={
+        <NewEnrollmentLauncher
+          triggerLabel="New Enrollment"
+          triggerSize="sm"
+          triggerClassName="hidden h-9 uppercase tracking-[0.12em] md:inline-flex"
+        />
+      }
     >
       {children}
     </AppShell>
