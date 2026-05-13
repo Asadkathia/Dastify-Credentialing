@@ -60,7 +60,7 @@ function shortId(id: string): string {
   return id.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
 
-export default async function AdminClientsListPage({
+export default async function AdminOrganizationsListPage({
   searchParams,
 }: {
   searchParams: SearchParams;
@@ -75,14 +75,12 @@ export default async function AdminClientsListPage({
   const supabase = await createSupabaseServerClient();
 
   // --- Stat strip queries (parallel, head-only counts) ---
-  // For "Total Enrollments" and "Providers Linked" we count globally (admin sees
-  // everything; RLS handles non-admin elsewhere).
   const [
-    totalClientsRes,
+    totalOrgsRes,
     activeRes,
     inactiveRes,
     totalEnrollmentsRes,
-    providersLinkedRes,
+    totalClientsRes,
   ] = await Promise.all([
     supabase
       .from("organizations")
@@ -108,17 +106,14 @@ export default async function AdminClientsListPage({
       .is("deleted_at", null),
   ]);
 
-  const totalClients = totalClientsRes.count ?? 0;
-  const activeClients = activeRes.count ?? 0;
-  const inactiveClients = inactiveRes.count ?? 0;
+  const totalOrgs = totalOrgsRes.count ?? 0;
+  const activeOrgs = activeRes.count ?? 0;
+  const inactiveOrgs = inactiveRes.count ?? 0;
   const totalEnrollments = totalEnrollmentsRes.count ?? 0;
-  const providersLinked = providersLinkedRes.count ?? 0;
+  const totalClients = totalClientsRes.count ?? 0;
 
-  // --- Optional pre-filtering for the drawer's "Has enrollments" / "State" ---
-  // Both filter against the enrollments table. We pull a distinct list of
-  // organization_ids matching the criteria, then constrain the clients query with
-  // `.in("id", ...)`. This is fine in v1 where the enrollment set is bounded.
-  let restrictToClientIds: string[] | null = null;
+  // Optional pre-filtering for the drawer's "Has enrollments" / "State" filter.
+  let restrictToOrgIds: string[] | null = null;
   if (hasEnrollments || stateFilter) {
     let eq = supabase
       .from("enrollments")
@@ -130,15 +125,13 @@ export default async function AdminClientsListPage({
     for (const r of enrolRows ?? []) {
       if (r.organization_id) ids.add(r.organization_id);
     }
-    restrictToClientIds = Array.from(ids);
-    // If no enrollments matched, force empty result early to avoid building a
-    // contradictory query.
-    if (restrictToClientIds.length === 0) {
-      restrictToClientIds = ["00000000-0000-0000-0000-000000000000"];
+    restrictToOrgIds = Array.from(ids);
+    if (restrictToOrgIds.length === 0) {
+      restrictToOrgIds = ["00000000-0000-0000-0000-000000000000"];
     }
   }
 
-  // --- Main clients query ---
+  // --- Main organizations query ---
   let query = supabase
     .from("organizations")
     .select(
@@ -150,43 +143,57 @@ export default async function AdminClientsListPage({
   if (statusFilter === "inactive") query = query.eq("is_active", false);
 
   if (q) {
-    // Escape % and , for PostgREST `or` clause syntax.
     const safe = q.replace(/[%,()]/g, " ");
     query = query.or(
       `display_name.ilike.%${safe}%,legal_name.ilike.%${safe}%,primary_contact_email.ilike.%${safe}%`,
     );
   }
 
-  if (restrictToClientIds) {
-    query = query.in("id", restrictToClientIds);
+  if (restrictToOrgIds) {
+    query = query.in("id", restrictToOrgIds);
   }
 
-  const { data: clients, error } = await query.order("display_name", {
+  const { data: organizations, error } = await query.order("display_name", {
     ascending: true,
   });
 
-  // Per-client enrollment counts — single query, bucketed in JS to avoid N+1.
-  const enrollmentCountsByClient = new Map<string, number>();
-  if (clients && clients.length > 0) {
-    const { data: enrolRows } = await supabase
-      .from("enrollments")
-      .select("organization_id")
-      .is("deleted_at", null)
-      .in("organization_id", clients.map((c) => c.id));
+  // Per-org enrollment + client (clinician) counts — single aggregate queries.
+  const enrollmentCountsByOrg = new Map<string, number>();
+  const clientCountsByOrg = new Map<string, number>();
+  if (organizations && organizations.length > 0) {
+    const orgIds = organizations.map((o) => o.id);
+    const [{ data: enrolRows }, { data: clientRows }] = await Promise.all([
+      supabase
+        .from("enrollments")
+        .select("organization_id")
+        .is("deleted_at", null)
+        .in("organization_id", orgIds),
+      supabase
+        .from("clients")
+        .select("organization_id")
+        .is("deleted_at", null)
+        .in("organization_id", orgIds),
+    ]);
     for (const r of enrolRows ?? []) {
       if (!r.organization_id) continue;
-      enrollmentCountsByClient.set(
+      enrollmentCountsByOrg.set(
         r.organization_id,
-        (enrollmentCountsByClient.get(r.organization_id) ?? 0) + 1,
+        (enrollmentCountsByOrg.get(r.organization_id) ?? 0) + 1,
+      );
+    }
+    for (const r of clientRows ?? []) {
+      if (!r.organization_id) continue;
+      clientCountsByOrg.set(
+        r.organization_id,
+        (clientCountsByOrg.get(r.organization_id) ?? 0) + 1,
       );
     }
   }
 
-  const visibleCount = clients?.length ?? 0;
+  const visibleCount = organizations?.length ?? 0;
   const filtersActive =
     statusFilter !== "all" || q.length > 0 || hasEnrollments || stateFilter.length > 0;
 
-  // Export URL preserves all current user-facing filters.
   const exportSp = new URLSearchParams();
   if (statusFilter !== "all") exportSp.set("status", statusFilter);
   if (q) exportSp.set("q", q);
@@ -199,19 +206,19 @@ export default async function AdminClientsListPage({
   return (
     <div>
       <PageHeader
-        title="Clients"
+        title="Organizations"
         subtitle={
           <>
-            <span className="tnum font-semibold text-charcoal">{totalClients}</span>{" "}
-            {totalClients === 1 ? "practice" : "practices"} Dastify provides
-            credentialing services to.
+            <span className="tnum font-semibold text-charcoal">{totalOrgs}</span>{" "}
+            {totalOrgs === 1 ? "practice" : "practices"} Dastify provides credentialing services
+            to.
           </>
         }
         actions={
           <Button asChild className="uppercase tracking-[0.16em]">
             <Link href="/admin/organizations/new">
               <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
-              New Client
+              New Organization
             </Link>
           </Button>
         }
@@ -220,14 +227,14 @@ export default async function AdminClientsListPage({
       {/* Stat strip */}
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatTile
-          label="TOTAL CLIENTS"
-          value={totalClients}
+          label="ORGANIZATIONS"
+          value={totalOrgs}
           icon={Building2}
           tone="teal"
         />
         <StatTile
           label="ACTIVE"
-          value={activeClients}
+          value={activeOrgs}
           icon={CircleCheck}
           tone="green"
         />
@@ -238,47 +245,32 @@ export default async function AdminClientsListPage({
           tone="amber"
         />
         <StatTile
-          label="PROVIDERS LINKED"
-          value={providersLinked}
+          label="CLIENTS LINKED"
+          value={totalClients}
           icon={Stethoscope}
           tone="navy"
         />
       </div>
 
-      {/* Filter tabs — pill switcher (design treatment) */}
+      {/* Filter tabs */}
       <div className="mb-4 inline-flex rounded-lg bg-lightgrey p-1">
         <FilterTab
-          href={buildHref({
-            status: "all",
-            q,
-            hasEnrollments,
-            state: stateFilter,
-          })}
+          href={buildHref({ status: "all", q, hasEnrollments, state: stateFilter })}
           active={statusFilter === "all"}
           label="All"
-          count={totalClients}
+          count={totalOrgs}
         />
         <FilterTab
-          href={buildHref({
-            status: "active",
-            q,
-            hasEnrollments,
-            state: stateFilter,
-          })}
+          href={buildHref({ status: "active", q, hasEnrollments, state: stateFilter })}
           active={statusFilter === "active"}
           label="Active"
-          count={activeClients}
+          count={activeOrgs}
         />
         <FilterTab
-          href={buildHref({
-            status: "inactive",
-            q,
-            hasEnrollments,
-            state: stateFilter,
-          })}
+          href={buildHref({ status: "inactive", q, hasEnrollments, state: stateFilter })}
           active={statusFilter === "inactive"}
           label="Inactive"
-          count={inactiveClients}
+          count={inactiveOrgs}
         />
       </div>
 
@@ -289,7 +281,6 @@ export default async function AdminClientsListPage({
           method="get"
           className="relative w-full sm:max-w-sm"
         >
-          {/* Persist current tab / drawer filters through the search submit. */}
           {statusFilter !== "all" ? (
             <input type="hidden" name="status" value={statusFilter} />
           ) : null}
@@ -304,7 +295,7 @@ export default async function AdminClientsListPage({
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Search clients…"
+            placeholder="Search organizations…"
             className="h-9 w-full rounded-md border border-border-subtle bg-white pl-8 pr-3 text-[13px] placeholder:text-navy/40 focus-visible:border-teal focus-visible:outline-none"
           />
         </form>
@@ -327,18 +318,18 @@ export default async function AdminClientsListPage({
 
       {error ? (
         <div className="rounded-md border border-danger/20 bg-danger-08 px-4 py-3 text-[13px] text-danger">
-          Failed to load clients: {error.message}
+          Failed to load organizations: {error.message}
         </div>
       ) : null}
 
       {!error && visibleCount === 0 ? (
         <EmptyState
           icon={<Building2 size={32} strokeWidth={1.4} />}
-          title={filtersActive ? "No clients match these filters" : "No clients yet"}
+          title={filtersActive ? "No organizations match these filters" : "No organizations yet"}
           description={
             filtersActive
               ? "Try widening the filters, clearing the search, or starting from All."
-              : "Add the first practice Dastify provides credentialing services to. You can manage their providers, enrollments, and documents once they're set up."
+              : "Add the first practice Dastify provides credentialing services to. You can manage its clients, enrollments, and documents once it's set up."
           }
           action={
             filtersActive ? (
@@ -349,7 +340,7 @@ export default async function AdminClientsListPage({
               <Button asChild>
                 <Link href="/admin/organizations/new">
                   <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
-                  New client
+                  New organization
                 </Link>
               </Button>
             )
@@ -362,11 +353,12 @@ export default async function AdminClientsListPage({
           <div className="overflow-x-auto">
             <table className="data-table">
               <colgroup>
-                <col style={{ width: "28%" }} />
-                <col style={{ width: "18%" }} />
                 <col style={{ width: "26%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "22%" }} />
                 <col style={{ width: "10%" }} />
                 <col style={{ width: "10%" }} />
+                <col style={{ width: "8%" }} />
                 <col style={{ width: "8%" }} />
               </colgroup>
               <thead>
@@ -374,45 +366,55 @@ export default async function AdminClientsListPage({
                   <th>Display name</th>
                   <th>Legal name</th>
                   <th>Primary contact</th>
+                  <th>Clients</th>
                   <th>Enrollments</th>
                   <th>Status</th>
                   <th className="text-right" />
                 </tr>
               </thead>
               <tbody>
-                {clients!.map((c) => {
-                  const enrollCount = enrollmentCountsByClient.get(c.id) ?? 0;
+                {organizations!.map((o) => {
+                  const enrollCount = enrollmentCountsByOrg.get(o.id) ?? 0;
+                  const clientCount = clientCountsByOrg.get(o.id) ?? 0;
                   return (
-                    <tr key={c.id}>
+                    <tr key={o.id}>
                       <td className="font-medium">
                         <Link
-                          href={`/admin/organizations/${c.id}`}
+                          href={`/admin/organizations/${o.id}`}
                           className="flex items-center gap-3 text-navy hover:text-teal"
                         >
                           <span
                             aria-hidden
                             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-teal-08 text-[13px] font-bold tracking-[0.02em] text-teal"
                           >
-                            {initialsFromName(c.display_name)}
+                            {initialsFromName(o.display_name)}
                           </span>
                           <span className="min-w-0">
                             <span className="block truncate text-[13px] font-medium leading-tight">
-                              {c.display_name}
+                              {o.display_name}
                             </span>
                             <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.08em] text-navy/45">
-                              # CLT-{shortId(c.id)}
+                              # ORG-{shortId(o.id)}
                             </span>
                           </span>
                         </Link>
                       </td>
-                      <td className="text-navy/60">{c.legal_name}</td>
+                      <td className="text-navy/60">{o.legal_name}</td>
                       <td className="text-navy/70">
-                        {c.primary_contact_name || "—"}
-                        {c.primary_contact_email ? (
+                        {o.primary_contact_name || "—"}
+                        {o.primary_contact_email ? (
                           <span className="block text-[11px] text-navy/45">
-                            {c.primary_contact_email}
+                            {o.primary_contact_email}
                           </span>
                         ) : null}
+                      </td>
+                      <td>
+                        <span className="block text-[20px] font-bold leading-none tnum text-navy">
+                          {clientCount}
+                        </span>
+                        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/45">
+                          Clinicians
+                        </span>
                       </td>
                       <td>
                         <span className="block text-[20px] font-bold leading-none tnum text-navy">
@@ -423,12 +425,12 @@ export default async function AdminClientsListPage({
                         </span>
                       </td>
                       <td>
-                        <StatusDot active={c.is_active} />
+                        <StatusDot active={o.is_active} />
                       </td>
                       <td className="text-right">
                         <RowOpenLink
-                          href={`/admin/organizations/${c.id}`}
-                          ariaLabel={`Open ${c.display_name}`}
+                          href={`/admin/organizations/${o.id}`}
+                          ariaLabel={`Open ${o.display_name}`}
                         />
                       </td>
                     </tr>
@@ -438,18 +440,17 @@ export default async function AdminClientsListPage({
             </table>
           </div>
 
-          {/* Pagination footer — single-page in v1, but rendered to match design. */}
           <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
             <p className="text-[12px] text-navy/55">
               Showing <span className="font-semibold text-navy tnum">{visibleCount}</span> of{" "}
               <span className="font-semibold text-navy tnum">
                 {statusFilter === "all"
-                  ? totalClients
+                  ? totalOrgs
                   : statusFilter === "active"
-                    ? activeClients
-                    : inactiveClients}
+                    ? activeOrgs
+                    : inactiveOrgs}
               </span>{" "}
-              {visibleCount === 1 ? "client" : "clients"}
+              {visibleCount === 1 ? "organization" : "organizations"}
             </p>
             <div className="flex items-center gap-1">
               <button

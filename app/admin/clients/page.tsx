@@ -7,21 +7,21 @@ import { RowOpenLink } from "@/components/ui/row-open-link";
 
 type SearchParams = Promise<{
   q?: string;
-  client?: string;
+  organization?: string;
   specialty?: string;
   page?: string;
 }>;
 
 const PAGE_SIZE = 50;
 
-export default async function AdminProvidersPage({
+export default async function AdminClientsPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
   const q = (params.q ?? "").trim();
-  const clientFilter = (params.client ?? "").trim();
+  const orgFilter = (params.organization ?? "").trim();
   const specialtyFilter = (params.specialty ?? "").trim();
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
 
@@ -32,49 +32,44 @@ export default async function AdminProvidersPage({
     .select(
       `id, organization_id, first_name, middle_name, last_name, suffix, npi, primary_specialty,
        secondary_specialty, caqh_id,
-       client:organization_id (id, display_name)`,
+       organization:organization_id (id, display_name)`,
       { count: "exact" },
     )
     .is("deleted_at", null);
 
   if (q) {
-    // Search by name or NPI
-    query = query.or(
-      `last_name.ilike.%${q}%,first_name.ilike.%${q}%,npi.ilike.%${q}%`,
-    );
+    query = query.or(`last_name.ilike.%${q}%,first_name.ilike.%${q}%,npi.ilike.%${q}%`);
   }
   if (specialtyFilter) {
     query = query.ilike("primary_specialty", `%${specialtyFilter}%`);
   }
-  if (clientFilter) {
-    query = query.eq("organization_id", clientFilter);
+  if (orgFilter) {
+    query = query.eq("organization_id", orgFilter);
   }
 
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  const { data: providers, count, error } = await query
-    .order("last_name")
-    .range(from, to);
+  const { data: clients, count, error } = await query.order("last_name").range(from, to);
 
-  // Side query: enrollment counts per provider (small N — fine for v1).
-  const ids = (providers ?? []).map((p) => p.id);
+  // Enrollment counts per client (clinician). Counts all non-soft-deleted rows;
+  // a row in any of the 5 enrollment statuses contributes.
+  const ids = (clients ?? []).map((c) => c.id);
   let enrollmentCounts: Record<string, number> = {};
   if (ids.length > 0) {
     const { data: enrollments } = await supabase
       .from("enrollments")
       .select("client_id")
       .in("client_id", ids)
-      .is("deleted_at", null)
-      .not("status", "in", "(closed,withdrawn)");
+      .is("deleted_at", null);
     enrollmentCounts = (enrollments ?? []).reduce<Record<string, number>>((acc, e) => {
       if (e.client_id) acc[e.client_id] = (acc[e.client_id] ?? 0) + 1;
       return acc;
     }, {});
   }
 
-  // Side query: full client list for the filter dropdown
-  const { data: clientList } = await supabase
+  // Organization filter dropdown options.
+  const { data: orgList } = await supabase
     .from("organizations")
     .select("id, display_name")
     .is("deleted_at", null)
@@ -82,22 +77,21 @@ export default async function AdminProvidersPage({
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const hasFilters = Boolean(q || clientFilter || specialtyFilter);
+  const hasFilters = Boolean(q || orgFilter || specialtyFilter);
 
   return (
     <div>
       <PageHeader
-        title="Providers"
+        title="Clients"
         subtitle={
           <>
             <span className="tnum font-semibold text-charcoal">{total}</span> total across all
-            clients
+            organizations
             {hasFilters ? " (filtered)" : ""}
           </>
         }
       />
 
-      {/* Filter bar */}
       <form
         action="/admin/clients"
         method="get"
@@ -111,14 +105,14 @@ export default async function AdminProvidersPage({
           className="h-8 w-[240px] rounded-sm border border-border-subtle bg-white px-2.5 text-[12px] focus-visible:border-teal focus-visible:outline-none"
         />
         <select
-          name="client"
-          defaultValue={clientFilter}
+          name="organization"
+          defaultValue={orgFilter}
           className="h-8 rounded-sm border border-border-subtle bg-white px-2.5 text-[12px] focus-visible:border-teal focus-visible:outline-none"
         >
-          <option value="">All clients</option>
-          {(clientList ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.display_name}
+          <option value="">All organizations</option>
+          {(orgList ?? []).map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.display_name}
             </option>
           ))}
         </select>
@@ -147,16 +141,16 @@ export default async function AdminProvidersPage({
 
       {error ? (
         <div className="rounded-md border border-danger/20 bg-danger-08 px-4 py-3 text-[13px] text-danger">
-          Failed to load providers: {error.message}
+          Failed to load clients: {error.message}
         </div>
-      ) : (providers ?? []).length === 0 ? (
+      ) : (clients ?? []).length === 0 ? (
         <EmptyState
           icon={<UserCircle2 size={32} strokeWidth={1.4} />}
-          title={hasFilters ? "No providers match these filters" : "No providers yet"}
+          title={hasFilters ? "No clients match these filters" : "No clients yet"}
           description={
             hasFilters
               ? "Try widening the filters, or clear them to see everything."
-              : "Providers are added per-client. Open a client and add a provider to see them here."
+              : "Clients are added per-organization. Open an organization and add a client to see them here."
           }
         />
       ) : (
@@ -166,59 +160,57 @@ export default async function AdminProvidersPage({
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Client</th>
+                  <th>Organization</th>
                   <th className="w-[140px]">NPI</th>
                   <th>Specialty</th>
-                  <th className="w-[140px]">Active enrollments</th>
+                  <th className="w-[140px]">Enrollments</th>
                   <th className="w-[60px] text-right" />
                 </tr>
               </thead>
               <tbody>
-                {providers!.map((p) => {
-                  const client = Array.isArray(p.client) ? p.client[0] : p.client;
+                {clients!.map((c) => {
+                  const org = Array.isArray(c.organization) ? c.organization[0] : c.organization;
                   const display =
-                    `${p.last_name}, ${p.first_name}` +
-                    (p.middle_name ? ` ${p.middle_name[0]}.` : "") +
-                    (p.suffix ? `, ${p.suffix}` : "");
-                  const activeN = enrollmentCounts[p.id] ?? 0;
+                    `${c.last_name}, ${c.first_name}` +
+                    (c.middle_name ? ` ${c.middle_name[0]}.` : "") +
+                    (c.suffix ? `, ${c.suffix}` : "");
+                  const enrollN = enrollmentCounts[c.id] ?? 0;
                   return (
-                    <tr key={p.id}>
+                    <tr key={c.id}>
                       <td className="font-medium text-navy">{display}</td>
                       <td>
-                        {client ? (
+                        {org ? (
                           <Link
-                            href={`/admin/organizations/${client.id}`}
+                            href={`/admin/organizations/${org.id}`}
                             className="text-navy/85 hover:text-teal"
                           >
-                            {client.display_name}
+                            {org.display_name}
                           </Link>
                         ) : (
                           <span className="text-navy/45">—</span>
                         )}
                       </td>
-                      <td className="font-mono text-[12px] tnum text-navy/70">{p.npi ?? "—"}</td>
+                      <td className="font-mono text-[12px] tnum text-navy/70">{c.npi ?? "—"}</td>
                       <td className="text-navy/70">
-                        {p.primary_specialty || <span className="text-navy/45">—</span>}
-                        {p.secondary_specialty ? (
+                        {c.primary_specialty || <span className="text-navy/45">—</span>}
+                        {c.secondary_specialty ? (
                           <span className="block text-[11px] text-navy/45">
-                            {p.secondary_specialty}
+                            {c.secondary_specialty}
                           </span>
                         ) : null}
                       </td>
                       <td>
-                        {activeN > 0 ? (
+                        {enrollN > 0 ? (
                           <span className="inline-flex items-center gap-1.5 rounded-sm bg-teal-08 px-2 py-0.5 text-[11px] font-semibold tnum text-navy">
-                            {activeN}
+                            {enrollN}
                           </span>
                         ) : (
                           <span className="text-[11px] text-navy/45">0</span>
                         )}
                       </td>
                       <td className="text-right">
-                        {client ? (
-                          <RowOpenLink
-                            href={`/admin/organizations/${client.id}/providers/${p.id}`}
-                          />
+                        {org ? (
+                          <RowOpenLink href={`/admin/organizations/${org.id}/clients/${c.id}`} />
                         ) : null}
                       </td>
                     </tr>
@@ -235,7 +227,14 @@ export default async function AdminProvidersPage({
               from={from + 1}
               to={Math.min(to + 1, total)}
               total={total}
-              hrefFor={(p) => `/admin/clients?${buildQs({ q, client: clientFilter, specialty: specialtyFilter, page: String(p) })}`}
+              hrefFor={(p) =>
+                `/admin/clients?${buildQs({
+                  q,
+                  organization: orgFilter,
+                  specialty: specialtyFilter,
+                  page: String(p),
+                })}`
+              }
             />
           ) : null}
         </>

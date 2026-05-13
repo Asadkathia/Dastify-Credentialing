@@ -13,8 +13,8 @@ export function AppShell({
   breadcrumb,
   children,
 }: {
-  variant: "admin" | "client";
-  user: { fullName: string; email: string; clientName?: string };
+  variant: "admin" | "organization";
+  user: { fullName: string; email: string; organizationName?: string };
   nav: NavItem[];
   workspaceLabel?: string;
   breadcrumb?: React.ReactNode;
@@ -22,7 +22,7 @@ export function AppShell({
 }) {
   const homeHref = variant === "admin" ? "/admin" : "/portal";
   const initials = getInitials(user.fullName);
-  const roleLabel = variant === "admin" ? "Dastify · Admin" : "Client · Viewer";
+  const roleLabel = variant === "admin" ? "Dastify · Admin" : "Organization · Viewer";
 
   return (
     <div className="min-h-screen lg:flex">
@@ -52,11 +52,11 @@ export function AppShell({
 
         {/* Section label */}
         <p className="px-5 pt-4 pb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/20">
-          {workspaceLabel ?? (variant === "client" ? "Logged in as" : "Workspace")}
+          {workspaceLabel ?? (variant === "organization" ? "Logged in as" : "Workspace")}
         </p>
-        {variant === "client" && user.clientName ? (
+        {variant === "organization" && user.organizationName ? (
           <p className="px-5 pb-3 text-[13px] font-bold text-white">
-            {user.clientName}
+            {user.organizationName}
           </p>
         ) : null}
 
@@ -100,7 +100,7 @@ export function AppShell({
                 className="hidden h-9 min-w-[300px] items-center gap-2 rounded-md bg-lightgrey px-3 text-[12px] text-navy/55 transition-colors focus-within:bg-white focus-within:ring-2 focus-within:ring-teal/30 hover:bg-grey/30 md:flex"
               >
                 <Search size={14} strokeWidth={1.6} className="text-navy/45" />
-                <span>Search clients, providers, payers…</span>
+                <span>Search organizations, clients, payers…</span>
                 <kbd className="ml-auto rounded bg-white px-[5px] py-px font-mono text-[10px] text-navy/45 shadow-[var(--shadow-xs)]">
                   ⌘K
                 </kbd>
@@ -125,7 +125,7 @@ export function AppShell({
               <div className="hidden leading-tight sm:block">
                 <div className="text-[12px] font-medium text-navy">{user.fullName}</div>
                 <div className="text-[9px] uppercase tracking-[0.2em] text-navy/50">
-                  {variant === "admin" ? roleLabel : (user.clientName ?? "Client")}
+                  {variant === "admin" ? roleLabel : (user.organizationName ?? "Organization")}
                 </div>
               </div>
               <ChevronDown size={12} className="text-navy/40" />

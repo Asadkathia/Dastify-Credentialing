@@ -5,7 +5,7 @@ import { AppShell, type NavItem } from "@/components/app-shell";
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await requireOrganization();
   const supabase = await createSupabaseServerClient();
-  const { data: client } = await supabase
+  const { data: org } = await supabase
     .from("organizations")
     .select("display_name")
     .eq("id", session.organizationId)
@@ -13,7 +13,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
   const baseNav: NavItem[] = [
     { href: "/portal", label: "Dashboard", icon: "dashboard" },
-    { href: "/portal/clients", label: "Providers", icon: "providers" },
+    { href: "/portal/clients", label: "Clients", icon: "clients" },
     { href: "/portal/enrollments", label: "Enrollments", icon: "enrollments" },
   ];
 
@@ -24,11 +24,11 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <AppShell
-      variant="client"
+      variant="organization"
       user={{
         fullName: session.fullName,
         email: session.email,
-        clientName: client?.display_name ?? "",
+        organizationName: org?.display_name ?? "",
       }}
       nav={navItems}
     >
