@@ -10,14 +10,28 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
  *   /portal/* → client_admin / client_viewer only
  *   /login    → public
  *
+ * Role is read from the JWT's `app_metadata.app_role` claim, populated by the
+ * `public.custom_access_token_hook` Postgres function (migration 0012). If the
+ * claim is absent (hook not enabled yet, or a session predating the hook), we
+ * fall back to two parallel Supabase lookups so the gate still works.
+ *
  * This is a coarse first gate; finer authorization happens in server components
  * via `requireAdmin()` / `requireClient()` and at the DB layer via RLS.
  */
 
 const PUBLIC_PATHS = new Set(["/login", "/auth/callback", "/auth/error"]);
 
+type AppRole = "admin" | "client_admin" | "client_viewer";
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
+
+  const { pathname } = request.nextUrl;
+
+  // Public paths and internal asset paths: skip auth entirely.
+  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/_next") || pathname.startsWith("/api/health")) {
+    return response;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,13 +58,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-
-  // Public paths: never redirect.
-  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/_next") || pathname.startsWith("/api/health")) {
-    return response;
-  }
-
   // Not authenticated → push to login.
   if (!user) {
     const loginUrl = new URL("/login", request.url);
@@ -60,16 +67,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Coarse role gate: hit the appropriate auth tables to decide which area.
-  // This adds one DB query per protected request, which is fine for v1; cache
-  // via cookie metadata if it shows up in profiling.
-  const [{ data: adminRow }, { data: clientRow }] = await Promise.all([
-    supabase.from("admin_users").select("is_active").eq("id", user.id).maybeSingle(),
-    supabase.from("client_users").select("is_active, role").eq("id", user.id).maybeSingle(),
-  ]);
+  // Fast path: role is stamped into the JWT by the access-token hook.
+  let role: AppRole | null =
+    (user.app_metadata as { app_role?: AppRole } | undefined)?.app_role ?? null;
 
-  const isAdmin = adminRow?.is_active === true;
-  const isClient = clientRow?.is_active === true;
+  // Fallback path: claim missing (hook not enabled / stale session). Probe
+  // both tables in parallel and infer the role.
+  if (!role) {
+    const [{ data: adminRow }, { data: clientRow }] = await Promise.all([
+      supabase.from("admin_users").select("is_active").eq("id", user.id).maybeSingle(),
+      supabase.from("client_users").select("is_active, role").eq("id", user.id).maybeSingle(),
+    ]);
+    if (adminRow?.is_active === true) {
+      role = "admin";
+    } else if (clientRow?.is_active === true) {
+      role = clientRow.role as AppRole;
+    }
+  }
+
+  const isAdmin = role === "admin";
+  const isClient = role === "client_admin" || role === "client_viewer";
 
   // Orphaned auth session (user exists in auth.users but no app row) → log out.
   if (!isAdmin && !isClient) {

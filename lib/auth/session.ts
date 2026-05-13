@@ -36,12 +36,63 @@ export const getCurrentSession = cache(async (): Promise<Session | null> => {
 
   if (error || !user) return null;
 
-  // Try admin first.
-  const { data: adminRow } = await supabase
-    .from("admin_users")
-    .select("id, email, full_name, is_active")
-    .eq("id", user.id)
-    .maybeSingle();
+  // The JWT custom access token hook (migration 0012) stamps `app_role` and
+  // `client_id` into app_metadata, so we know which side to query without a
+  // probe. If claims are missing (hook disabled / pre-hook session), fall back
+  // to looking in both tables in parallel.
+  const appRole = (user.app_metadata as { app_role?: string } | undefined)?.app_role;
+
+  if (appRole === "admin") {
+    const { data: adminRow } = await supabase
+      .from("admin_users")
+      .select("id, email, full_name, is_active")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (adminRow && adminRow.is_active) {
+      return {
+        role: "admin",
+        userId: adminRow.id,
+        email: adminRow.email,
+        fullName: adminRow.full_name,
+      };
+    }
+    return null;
+  }
+
+  if (appRole === "client_admin" || appRole === "client_viewer") {
+    const { data: clientRow } = await supabase
+      .from("client_users")
+      .select("id, email, full_name, role, client_id, is_active")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (clientRow && clientRow.is_active) {
+      return {
+        role: clientRow.role as "client_admin" | "client_viewer",
+        userId: clientRow.id,
+        email: clientRow.email,
+        fullName: clientRow.full_name,
+        clientId: clientRow.client_id,
+      };
+    }
+    return null;
+  }
+
+  // Fallback path — JWT claim absent. Probe both tables in parallel rather
+  // than serially.
+  const [{ data: adminRow }, { data: clientRow }] = await Promise.all([
+    supabase
+      .from("admin_users")
+      .select("id, email, full_name, is_active")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("client_users")
+      .select("id, email, full_name, role, client_id, is_active")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
 
   if (adminRow && adminRow.is_active) {
     return {
@@ -51,13 +102,6 @@ export const getCurrentSession = cache(async (): Promise<Session | null> => {
       fullName: adminRow.full_name,
     };
   }
-
-  // Then client user.
-  const { data: clientRow } = await supabase
-    .from("client_users")
-    .select("id, email, full_name, role, client_id, is_active")
-    .eq("id", user.id)
-    .maybeSingle();
 
   if (clientRow && clientRow.is_active) {
     return {
@@ -69,7 +113,6 @@ export const getCurrentSession = cache(async (): Promise<Session | null> => {
     };
   }
 
-  // Authenticated but no matching app-side user row → orphaned session.
   return null;
 });
 
