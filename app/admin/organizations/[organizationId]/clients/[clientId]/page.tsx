@@ -20,30 +20,30 @@ import { MiniPipeline } from "@/components/ui/mini-pipeline";
 import { PayerMark } from "@/components/ui/payer-mark";
 import { SensitiveField } from "@/components/ui/sensitive-field";
 import { StatusChip } from "@/components/ui/status-chip";
-import { ProviderEditForm } from "./_components/provider-edit-form";
+import { ClientEditForm } from "./_components/client-edit-form";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 import { cn } from "@/lib/utils";
 
 export default async function ProviderDetailPage({
   params,
 }: {
-  params: Promise<{ clientId: string; providerId: string }>;
+  params: Promise<{ organizationId: string; clientId: string }>;
 }) {
-  const { clientId, providerId } = await params;
+  const { organizationId, clientId } = await params;
   const supabase = await createSupabaseServerClient();
 
   const [{ data: client }, { data: provider }, { data: enrollments }] = await Promise.all([
-    supabase.from("clients").select("display_name").eq("id", clientId).maybeSingle(),
+    supabase.from("organizations").select("display_name").eq("id", organizationId).maybeSingle(),
     supabase
-      .from("providers")
+      .from("clients")
       .select(
-        `id, client_id, first_name, middle_name, last_name, suffix, npi,
+        `id, organization_id, first_name, middle_name, last_name, suffix, npi,
          primary_specialty, secondary_specialty, caqh_id, email, phone,
          license_states, created_at,
          dea_number_encrypted, ssn_last4_encrypted, dob_encrypted`,
       )
-      .eq("id", providerId)
-      .eq("client_id", clientId)
+      .eq("id", clientId)
+      .eq("organization_id", organizationId)
       .is("deleted_at", null)
       .maybeSingle(),
     supabase
@@ -52,7 +52,7 @@ export default async function ProviderDetailPage({
         `id, state, status, sub_status, effective_date,
          payer:payer_id (id, name)`,
       )
-      .eq("provider_id", providerId)
+      .eq("client_id", clientId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false }),
   ]);
@@ -98,14 +98,14 @@ export default async function ProviderDetailPage({
     <div>
       <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-[12px]">
         <Link
-          href={`/admin/clients/${clientId}`}
+          href={`/admin/organizations/${organizationId}`}
           className="text-navy/55 hover:text-navy"
         >
           {client?.display_name ?? "Client"}
         </Link>
         <span className="text-navy/30">/</span>
         <Link
-          href={`/admin/clients/${clientId}`}
+          href={`/admin/organizations/${organizationId}`}
           className="text-navy/55 hover:text-navy"
         >
           Providers
@@ -145,7 +145,7 @@ export default async function ProviderDetailPage({
         ]}
         actions={
           <Button asChild>
-            <Link href={`/admin/clients/${clientId}/enrollments/new`}>
+            <Link href={`/admin/organizations/${organizationId}/enrollments/new`}>
               <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
               New enrollment
             </Link>
@@ -218,7 +218,7 @@ export default async function ProviderDetailPage({
               <h2 className="text-[15px] font-semibold text-navy">Provider details</h2>
             </header>
             <div className="px-5 py-5">
-              <ProviderEditForm provider={provider} />
+              <ClientEditForm provider={provider} />
             </div>
           </section>
 
@@ -232,7 +232,7 @@ export default async function ProviderDetailPage({
                 </span>
               </div>
               <Link
-                href={`/admin/clients/${clientId}/enrollments/new`}
+                href={`/admin/organizations/${organizationId}/enrollments/new`}
                 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal hover:text-[#0E7475]"
               >
                 + New
@@ -242,7 +242,7 @@ export default async function ProviderDetailPage({
               <p className="px-5 py-8 text-center text-[13px] text-navy/55">
                 No enrollments yet.{" "}
                 <Link
-                  href={`/admin/clients/${clientId}/enrollments/new`}
+                  href={`/admin/organizations/${organizationId}/enrollments/new`}
                   className="font-semibold text-teal hover:text-[#0E7475]"
                 >
                   Create one →
@@ -256,7 +256,7 @@ export default async function ProviderDetailPage({
                   return (
                     <li key={e.id}>
                       <Link
-                        href={`/admin/clients/${clientId}/enrollments/${e.id}`}
+                        href={`/admin/organizations/${organizationId}/enrollments/${e.id}`}
                         className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-navy-04"
                       >
                         <PayerMark name={payer?.name ?? "??"} size={30} />

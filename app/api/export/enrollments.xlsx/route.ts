@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Streams an .xlsx of enrollments for the requesting client (or for a given
- * client_id when an admin calls it with ?clientId=...). Format reproduces the
+ * organization_id when an admin calls it with ?organizationId=...). Format reproduces the
  * pre-portal Excel template.
  */
 export async function GET(request: Request) {
@@ -21,38 +21,38 @@ export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
 
   const { searchParams } = new URL(request.url);
-  let clientId: string;
+  let organizationId: string;
 
   if (session.role === "admin") {
-    const requested = searchParams.get("clientId");
+    const requested = searchParams.get("organizationId");
     if (!requested) {
       return NextResponse.json(
-        { error: "clientId query param is required for admin exports" },
+        { error: "organizationId query param is required for admin exports" },
         { status: 400 },
       );
     }
-    clientId = requested;
+    organizationId = requested;
   } else {
-    clientId = session.clientId;
+    organizationId = session.organizationId;
   }
 
   // Load banner + enrollments + latest comment per enrollment.
   const [{ data: settings }, { data: client }, { data: enrollments }] = await Promise.all([
     supabase
-      .from("client_settings")
+      .from("organization_settings")
       .select("disclaimer_banner_text")
-      .eq("client_id", clientId)
+      .eq("organization_id", organizationId)
       .maybeSingle(),
-    supabase.from("clients").select("display_name").eq("id", clientId).maybeSingle(),
+    supabase.from("organizations").select("display_name").eq("id", organizationId).maybeSingle(),
     supabase
       .from("enrollments")
       .select(
         `id, state, status, sub_status,
-         provider:provider_id (id, first_name, last_name, npi),
+         provider:client_id (id, first_name, last_name, npi),
          group_entity:group_entity_id (id, legal_name),
          payer:payer_id (id, name)`,
       )
-      .eq("client_id", clientId)
+      .eq("organization_id", organizationId)
       .is("deleted_at", null)
       .order("state"),
   ]);
@@ -137,7 +137,7 @@ export async function GET(request: Request) {
 
   // Log export.
   await supabase.from("activity_events").insert({
-    client_id: clientId,
+    organization_id: organizationId,
     actor_user_id: session.userId,
     action: "export",
     target_table: "enrollments",

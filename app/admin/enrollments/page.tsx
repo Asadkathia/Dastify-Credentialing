@@ -38,8 +38,8 @@ export default async function AdminEnrollmentsPage({
     .from("enrollments")
     .select(
       `id, state, status, sub_status, effective_date, updated_at,
-       client:client_id (id, display_name),
-       provider:provider_id (id, first_name, last_name),
+       client:organization_id (id, display_name),
+       provider:client_id (id, first_name, last_name),
        group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name)`,
       { count: "exact" },
@@ -181,7 +181,7 @@ export default async function AdminEnrollmentsPage({
           }
           action={
             <Button asChild variant="outline">
-              <Link href="/admin/clients">
+              <Link href="/admin/organizations">
                 <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
                 Open Clients
               </Link>
@@ -217,7 +217,7 @@ export default async function AdminEnrollmentsPage({
                     : (groupEntity?.legal_name ?? "—");
                   const status = e.status as EnrollmentStatus;
                   const detailHref = client
-                    ? `/admin/clients/${client.id}/enrollments/${e.id}`
+                    ? `/admin/organizations/${client.id}/enrollments/${e.id}`
                     : "#";
 
                   return (
@@ -225,7 +225,7 @@ export default async function AdminEnrollmentsPage({
                       <td>
                         {client ? (
                           <Link
-                            href={`/admin/clients/${client.id}`}
+                            href={`/admin/organizations/${client.id}`}
                             className="text-[13px] font-medium text-navy hover:text-teal"
                           >
                             {client.display_name}

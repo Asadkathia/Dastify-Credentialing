@@ -27,12 +27,12 @@ const inputClasses = "bg-white text-[13px]";
 const labelClasses = "text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70";
 
 export function NewEnrollmentForm({
-  clientId,
+  organizationId,
   providers,
   groupEntities,
   initialPayers,
 }: {
-  clientId: string;
+  organizationId: string;
   providers: Provider[];
   groupEntities: GroupEntity[];
   initialPayers: Payer[];
@@ -89,23 +89,23 @@ export function NewEnrollmentForm({
       action={(formData) => {
         setError(null);
         startSubmitting(async () => {
-          formData.set("clientId", clientId);
+          formData.set("organizationId", organizationId);
           formData.set("payerId", selectedPayerId);
           const result = await createEnrollmentAction(formData);
           if (!result.ok) {
             setError(result.error);
             return;
           }
-          router.push(`/admin/clients/${clientId}/enrollments/${result.data.id}`);
+          router.push(`/admin/organizations/${organizationId}/enrollments/${result.data.id}`);
         });
       }}
     >
       <FieldGroup label="Subject" hint="Pick a provider OR a group entity — never both (rule 10).">
         <div>
-          <Label htmlFor="providerId" className={labelClasses}>
+          <Label htmlFor="clientId" className={labelClasses}>
             Provider
           </Label>
-          <select id="providerId" name="providerId" className={`mt-2 ${selectClasses}`} defaultValue="">
+          <select id="clientId" name="clientId" className={`mt-2 ${selectClasses}`} defaultValue="">
             <option value="">— Select a provider —</option>
             {providers.map((p) => (
               <option key={p.id} value={p.id}>
@@ -289,7 +289,7 @@ export function NewEnrollmentForm({
         <Button
           type="button"
           variant="ghost"
-          onClick={() => router.push(`/admin/clients/${clientId}`)}
+          onClick={() => router.push(`/admin/organizations/${organizationId}`)}
           disabled={submitting}
         >
           Cancel

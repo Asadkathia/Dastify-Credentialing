@@ -88,9 +88,9 @@ export default async function AdminDashboardPage() {
     supabase
       .from("enrollments")
       .select(
-        `id, client_id, state, status, sub_status, updated_at,
-         client:client_id (id, display_name),
-         provider:provider_id (first_name, last_name),
+        `id, organization_id, state, status, sub_status, updated_at,
+         client:organization_id (id, display_name),
+         provider:client_id (first_name, last_name),
          group_entity:group_entity_id (legal_name),
          payer:payer_id (name)`,
       )
@@ -288,7 +288,7 @@ export default async function AdminDashboardPage() {
                   ? `${provider.last_name}, ${provider.first_name}`
                   : (groupEntity?.legal_name ?? "—");
                 const detailHref = client
-                  ? `/admin/clients/${client.id}/enrollments/${r.id}`
+                  ? `/admin/organizations/${client.id}/enrollments/${r.id}`
                   : "#";
                 return (
                   <tr key={r.id}>

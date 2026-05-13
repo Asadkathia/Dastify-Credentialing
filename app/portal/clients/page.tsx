@@ -1,53 +1,49 @@
 import Link from "next/link";
 import { UserCircle2 } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireOrganization } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RowOpenLink } from "@/components/ui/row-open-link";
 
 type SearchParams = Promise<{
   q?: string;
-  client?: string;
   specialty?: string;
   page?: string;
 }>;
 
 const PAGE_SIZE = 50;
 
-export default async function AdminProvidersPage({
+export default async function PortalProvidersPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
+  await requireOrganization();
   const params = await searchParams;
   const q = (params.q ?? "").trim();
-  const clientFilter = (params.client ?? "").trim();
   const specialtyFilter = (params.specialty ?? "").trim();
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
 
   const supabase = await createSupabaseServerClient();
 
+  // RLS scopes to caller's organization_id.
   let query = supabase
-    .from("providers")
+    .from("clients")
     .select(
-      `id, client_id, first_name, middle_name, last_name, suffix, npi, primary_specialty,
-       secondary_specialty, caqh_id,
-       client:client_id (id, display_name)`,
+      `id, first_name, middle_name, last_name, suffix, npi, primary_specialty,
+       secondary_specialty, caqh_id`,
       { count: "exact" },
     )
     .is("deleted_at", null);
 
   if (q) {
-    // Search by name or NPI
     query = query.or(
       `last_name.ilike.%${q}%,first_name.ilike.%${q}%,npi.ilike.%${q}%`,
     );
   }
   if (specialtyFilter) {
     query = query.ilike("primary_specialty", `%${specialtyFilter}%`);
-  }
-  if (clientFilter) {
-    query = query.eq("client_id", clientFilter);
   }
 
   const from = (page - 1) * PAGE_SIZE;
@@ -57,32 +53,25 @@ export default async function AdminProvidersPage({
     .order("last_name")
     .range(from, to);
 
-  // Side query: enrollment counts per provider (small N — fine for v1).
+  // Active-enrollment counts per provider (small N — fine for v1).
   const ids = (providers ?? []).map((p) => p.id);
   let enrollmentCounts: Record<string, number> = {};
   if (ids.length > 0) {
     const { data: enrollments } = await supabase
       .from("enrollments")
-      .select("provider_id")
-      .in("provider_id", ids)
+      .select("client_id")
+      .in("client_id", ids)
       .is("deleted_at", null)
       .not("status", "in", "(closed,withdrawn)");
     enrollmentCounts = (enrollments ?? []).reduce<Record<string, number>>((acc, e) => {
-      if (e.provider_id) acc[e.provider_id] = (acc[e.provider_id] ?? 0) + 1;
+      if (e.client_id) acc[e.client_id] = (acc[e.client_id] ?? 0) + 1;
       return acc;
     }, {});
   }
 
-  // Side query: full client list for the filter dropdown
-  const { data: clientList } = await supabase
-    .from("clients")
-    .select("id, display_name")
-    .is("deleted_at", null)
-    .order("display_name");
-
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const hasFilters = Boolean(q || clientFilter || specialtyFilter);
+  const hasFilters = Boolean(q || specialtyFilter);
 
   return (
     <div>
@@ -90,16 +79,14 @@ export default async function AdminProvidersPage({
         title="Providers"
         subtitle={
           <>
-            <span className="tnum font-semibold text-charcoal">{total}</span> total across all
-            clients
+            <span className="tnum font-semibold text-charcoal">{total}</span> total
             {hasFilters ? " (filtered)" : ""}
           </>
         }
       />
 
-      {/* Filter bar */}
       <form
-        action="/admin/providers"
+        action="/portal/clients"
         method="get"
         className="surface mb-6 flex flex-wrap items-center gap-2 px-4 py-3"
       >
@@ -110,18 +97,6 @@ export default async function AdminProvidersPage({
           placeholder="Search name or NPI…"
           className="h-8 w-[240px] rounded-sm border border-border-subtle bg-white px-2.5 text-[12px] focus-visible:border-teal focus-visible:outline-none"
         />
-        <select
-          name="client"
-          defaultValue={clientFilter}
-          className="h-8 rounded-sm border border-border-subtle bg-white px-2.5 text-[12px] focus-visible:border-teal focus-visible:outline-none"
-        >
-          <option value="">All clients</option>
-          {(clientList ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.display_name}
-            </option>
-          ))}
-        </select>
         <input
           type="text"
           name="specialty"
@@ -137,7 +112,7 @@ export default async function AdminProvidersPage({
         </button>
         {hasFilters ? (
           <Link
-            href="/admin/providers"
+            href="/portal/clients"
             className="h-8 rounded-sm border border-border-subtle bg-white px-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/65 transition-colors hover:bg-lightgrey"
           >
             Clear
@@ -156,7 +131,7 @@ export default async function AdminProvidersPage({
           description={
             hasFilters
               ? "Try widening the filters, or clear them to see everything."
-              : "Providers are added per-client. Open a client and add a provider to see them here."
+              : "Your providers will appear here once Dastify staff have added them."
           }
         />
       ) : (
@@ -166,7 +141,6 @@ export default async function AdminProvidersPage({
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Client</th>
                   <th className="w-[140px]">NPI</th>
                   <th>Specialty</th>
                   <th className="w-[140px]">Active enrollments</th>
@@ -175,7 +149,6 @@ export default async function AdminProvidersPage({
               </thead>
               <tbody>
                 {providers!.map((p) => {
-                  const client = Array.isArray(p.client) ? p.client[0] : p.client;
                   const display =
                     `${p.last_name}, ${p.first_name}` +
                     (p.middle_name ? ` ${p.middle_name[0]}.` : "") +
@@ -184,18 +157,6 @@ export default async function AdminProvidersPage({
                   return (
                     <tr key={p.id}>
                       <td className="font-medium text-navy">{display}</td>
-                      <td>
-                        {client ? (
-                          <Link
-                            href={`/admin/clients/${client.id}`}
-                            className="text-navy/85 hover:text-teal"
-                          >
-                            {client.display_name}
-                          </Link>
-                        ) : (
-                          <span className="text-navy/45">—</span>
-                        )}
-                      </td>
                       <td className="font-mono text-[12px] tnum text-navy/70">{p.npi ?? "—"}</td>
                       <td className="text-navy/70">
                         {p.primary_specialty || <span className="text-navy/45">—</span>}
@@ -215,11 +176,7 @@ export default async function AdminProvidersPage({
                         )}
                       </td>
                       <td className="text-right">
-                        {client ? (
-                          <RowOpenLink
-                            href={`/admin/clients/${client.id}/providers/${p.id}`}
-                          />
-                        ) : null}
+                        <RowOpenLink href={`/portal/clients/${p.id}`} label="View" />
                       </td>
                     </tr>
                   );
@@ -229,14 +186,34 @@ export default async function AdminProvidersPage({
           </div>
 
           {totalPages > 1 ? (
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              from={from + 1}
-              to={Math.min(to + 1, total)}
-              total={total}
-              hrefFor={(p) => `/admin/providers?${buildQs({ q, client: clientFilter, specialty: specialtyFilter, page: String(p) })}`}
-            />
+            <div className="mt-4 flex items-center justify-between text-[12px] text-navy/65">
+              <p className="tnum">
+                Showing <span className="font-semibold text-charcoal">{from + 1}</span>–
+                <span className="font-semibold text-charcoal">{Math.min(to + 1, total)}</span> of{" "}
+                <span className="font-semibold text-charcoal">{total}</span>
+              </p>
+              <div className="flex items-center gap-2">
+                {page > 1 ? (
+                  <Link
+                    href={buildHref({ q, specialty: specialtyFilter, page: String(page - 1) })}
+                    className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/75 hover:bg-lightgrey"
+                  >
+                    ← Prev
+                  </Link>
+                ) : null}
+                <span className="tnum px-1">
+                  Page {page} / {totalPages}
+                </span>
+                {page < totalPages ? (
+                  <Link
+                    href={buildHref({ q, specialty: specialtyFilter, page: String(page + 1) })}
+                    className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/75 hover:bg-lightgrey"
+                  >
+                    Next →
+                  </Link>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </>
       )}
@@ -244,65 +221,11 @@ export default async function AdminProvidersPage({
   );
 }
 
-function buildQs(params: Record<string, string>): string {
+function buildHref(params: { q?: string; specialty?: string; page?: string }): string {
   const sp = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => {
-    if (v) sp.set(k, v);
-  });
-  return sp.toString();
-}
-
-function Pagination({
-  page,
-  totalPages,
-  from,
-  to,
-  total,
-  hrefFor,
-}: {
-  page: number;
-  totalPages: number;
-  from: number;
-  to: number;
-  total: number;
-  hrefFor: (page: number) => string;
-}) {
-  return (
-    <div className="mt-4 flex items-center justify-between text-[12px] text-navy/65">
-      <p className="tnum">
-        Showing <span className="font-semibold text-charcoal">{from}</span>–
-        <span className="font-semibold text-charcoal">{to}</span> of{" "}
-        <span className="font-semibold text-charcoal">{total}</span>
-      </p>
-      <div className="flex items-center gap-2">
-        {page > 1 ? (
-          <Link
-            href={hrefFor(page - 1)}
-            className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/75 hover:bg-lightgrey"
-          >
-            ← Prev
-          </Link>
-        ) : (
-          <span className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/30">
-            ← Prev
-          </span>
-        )}
-        <span className="tnum px-1">
-          Page {page} / {totalPages}
-        </span>
-        {page < totalPages ? (
-          <Link
-            href={hrefFor(page + 1)}
-            className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/75 hover:bg-lightgrey"
-          >
-            Next →
-          </Link>
-        ) : (
-          <span className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/30">
-            Next →
-          </span>
-        )}
-      </div>
-    </div>
-  );
+  if (params.q) sp.set("q", params.q);
+  if (params.specialty) sp.set("specialty", params.specialty);
+  if (params.page) sp.set("page", params.page);
+  const qs = sp.toString();
+  return qs ? `/portal/clients?${qs}` : "/portal/clients";
 }

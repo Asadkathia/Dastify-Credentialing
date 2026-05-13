@@ -10,7 +10,7 @@ export type AppEvents = {
   "enrollment/status_changed": {
     data: {
       enrollmentId: string;
-      clientId: string;
+      organizationId: string;
       fromStatus: string | null;
       toStatus: string;
     };
@@ -19,11 +19,10 @@ export type AppEvents = {
     data: {
       commentId: string;
       enrollmentId: string;
-      clientId: string;
+      organizationId: string;
       authorUserId: string;
     };
   };
   "digest/cron": { data: { frequency: "daily" | "weekly" } };
-  "recred/check": Record<string, never>;
   "documents/expiration_check": Record<string, never>;
 };

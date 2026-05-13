@@ -3,23 +3,21 @@ import { useState, useTransition } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { updateProviderAction } from "@/lib/actions/providers";
+import { Textarea } from "@/components/ui/textarea";
+import { updateOrganizationAction } from "@/lib/actions/organizations";
 
-type Provider = {
+type Client = {
   id: string;
-  first_name: string;
-  middle_name: string | null;
-  last_name: string;
-  suffix: string | null;
-  npi: string | null;
-  primary_specialty: string | null;
-  secondary_specialty: string | null;
-  caqh_id: string | null;
-  email: string | null;
-  phone: string | null;
+  legal_name: string;
+  display_name: string;
+  primary_contact_name: string | null;
+  primary_contact_email: string | null;
+  primary_contact_phone: string | null;
+  notes: string | null;
+  is_active: boolean;
 };
 
-export function ProviderEditForm({ provider }: { provider: Provider }) {
+export function OrganizationEditForm({ client }: { client: Client }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -29,14 +27,15 @@ export function ProviderEditForm({ provider }: { provider: Provider }) {
     return (
       <div>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <Field label="First name" value={provider.first_name} />
-          <Field label="Last name" value={provider.last_name} />
-          <Field label="Middle name" value={provider.middle_name} />
-          <Field label="Suffix" value={provider.suffix} />
-          <Field label="NPI" value={provider.npi} mono />
-          <Field label="CAQH ID" value={provider.caqh_id} mono />
-          <Field label="Primary specialty" value={provider.primary_specialty} />
-          <Field label="Secondary specialty" value={provider.secondary_specialty} />
+          <Field label="Legal name" value={client.legal_name} />
+          <Field label="Display name" value={client.display_name} />
+          <Field label="Contact name" value={client.primary_contact_name} />
+          <Field label="Contact email" value={client.primary_contact_email} />
+          <Field label="Contact phone" value={client.primary_contact_phone} />
+          <Field label="Status" value={client.is_active ? "Active" : "Inactive"} />
+          <div className="col-span-2">
+            <Field label="Notes" value={client.notes} multiline />
+          </div>
         </dl>
         <div className="mt-5 flex justify-end border-t border-border-subtle pt-4">
           <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
@@ -54,9 +53,9 @@ export function ProviderEditForm({ provider }: { provider: Provider }) {
       action={(formData) => {
         setError(null);
         setSuccess(null);
-        formData.set("providerId", provider.id);
+        formData.set("organizationId", client.id);
         startTransition(async () => {
-          const result = await updateProviderAction(formData);
+          const result = await updateOrganizationAction(formData);
           if (!result.ok) {
             setError(result.error);
           } else {
@@ -66,50 +65,75 @@ export function ProviderEditForm({ provider }: { provider: Provider }) {
         });
       }}
     >
-      <FieldGroup label="Name">
+      <FieldGroup label="Identity">
         <div className="grid grid-cols-2 gap-4">
-          <FormInput label="First name" name="firstName" defaultValue={provider.first_name} required />
-          <FormInput label="Last name" name="lastName" defaultValue={provider.last_name} required />
+          <FormInput
+            label="Legal name"
+            name="legalName"
+            defaultValue={client.legal_name}
+            required
+          />
+          <FormInput
+            label="Display name"
+            name="displayName"
+            defaultValue={client.display_name}
+            required
+          />
+        </div>
+      </FieldGroup>
+
+      <FieldGroup label="Primary contact">
+        <div className="grid grid-cols-2 gap-4">
+          <FormInput
+            label="Contact name"
+            name="primaryContactName"
+            defaultValue={client.primary_contact_name ?? ""}
+          />
+          <FormInput
+            label="Contact email"
+            name="primaryContactEmail"
+            type="email"
+            defaultValue={client.primary_contact_email ?? ""}
+          />
         </div>
         <div className="mt-4 grid grid-cols-2 gap-4">
-          <FormInput label="Middle name" name="middleName" defaultValue={provider.middle_name ?? ""} />
-          <FormInput label="Suffix" name="suffix" defaultValue={provider.suffix ?? ""} />
-        </div>
-      </FieldGroup>
-
-      <FieldGroup label="Identifiers">
-        <div className="grid grid-cols-2 gap-4">
           <FormInput
-            label="NPI"
-            name="npi"
-            defaultValue={provider.npi ?? ""}
-            placeholder="10 digits"
-            mono
-          />
-          <FormInput label="CAQH ID" name="caqhId" defaultValue={provider.caqh_id ?? ""} mono />
-        </div>
-      </FieldGroup>
-
-      <FieldGroup label="Specialty">
-        <div className="grid grid-cols-2 gap-4">
-          <FormInput
-            label="Primary specialty"
-            name="primarySpecialty"
-            defaultValue={provider.primary_specialty ?? ""}
-          />
-          <FormInput
-            label="Secondary specialty"
-            name="secondarySpecialty"
-            defaultValue={provider.secondary_specialty ?? ""}
+            label="Contact phone"
+            name="primaryContactPhone"
+            defaultValue={client.primary_contact_phone ?? ""}
           />
         </div>
       </FieldGroup>
 
-      <FieldGroup label="Contact">
-        <div className="grid grid-cols-2 gap-4">
-          <FormInput label="Email" name="email" type="email" defaultValue={provider.email ?? ""} />
-          <FormInput label="Phone" name="phone" defaultValue={provider.phone ?? ""} />
-        </div>
+      <FieldGroup label="Notes">
+        <Label
+          htmlFor="cf-notes"
+          className="text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70"
+        >
+          Notes
+        </Label>
+        <Textarea
+          id="cf-notes"
+          name="notes"
+          rows={4}
+          defaultValue={client.notes ?? ""}
+          className="mt-2 bg-white text-[13px]"
+        />
+      </FieldGroup>
+
+      <FieldGroup label="Status">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-[13px] text-navy">
+          <input
+            type="checkbox"
+            name="isActive"
+            defaultChecked={client.is_active}
+            className="h-4 w-4 rounded border-border-subtle text-teal focus:ring-teal"
+          />
+          <span>Client is active</span>
+        </label>
+        <p className="mt-1 text-[11px] text-navy/55">
+          Inactive clients are hidden from default lists but data is retained.
+        </p>
       </FieldGroup>
 
       {error ? (
@@ -158,18 +182,18 @@ function FieldGroup({ label, children }: { label: string; children: React.ReactN
 function Field({
   label,
   value,
-  mono,
+  multiline,
 }: {
   label: string;
   value: string | null | undefined;
-  mono?: boolean;
+  multiline?: boolean;
 }) {
   return (
     <div>
       <dt className="label-sm">{label}</dt>
       <dd
         className={
-          "mt-1 text-[13px] " + (mono ? "font-mono tnum text-navy" : "text-charcoal")
+          "mt-1 text-[13px] text-charcoal " + (multiline ? "whitespace-pre-wrap" : "")
         }
       >
         {value || <span className="text-navy/35">—</span>}
@@ -185,9 +209,8 @@ function FormInput(props: {
   type?: string;
   required?: boolean;
   placeholder?: string;
-  mono?: boolean;
 }) {
-  const id = `pf-${props.name}`;
+  const id = `cf-${props.name}`;
   return (
     <div>
       <Label
@@ -204,10 +227,7 @@ function FormInput(props: {
         defaultValue={props.defaultValue}
         required={props.required}
         placeholder={props.placeholder}
-        className={
-          "mt-2 flex h-9 w-full rounded-sm border border-border-subtle bg-white px-3 py-1 text-[13px] placeholder:text-navy/35 focus-visible:border-teal focus-visible:outline-none " +
-          (props.mono ? "font-mono tnum" : "")
-        }
+        className="mt-2 flex h-9 w-full rounded-sm border border-border-subtle bg-white px-3 py-1 text-[13px] placeholder:text-navy/35 focus-visible:border-teal focus-visible:outline-none"
       />
     </div>
   );

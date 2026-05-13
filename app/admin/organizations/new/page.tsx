@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { createClientAndRedirect } from "@/lib/actions/clients";
+import { createOrganizationAndRedirect } from "@/lib/actions/organizations";
 
 export default async function NewClientPage({
   searchParams,
@@ -23,7 +23,7 @@ export default async function NewClientPage({
       />
 
       <form
-        action={createClientAndRedirect}
+        action={createOrganizationAndRedirect}
         className="space-y-5 rounded-md border border-border-subtle bg-white p-6 shadow-[var(--shadow-xs)]"
       >
         <Field id="legalName" label="Legal name" required />

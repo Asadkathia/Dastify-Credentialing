@@ -11,7 +11,7 @@ import {
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { requireClient } from "@/lib/auth/session";
+import { requireOrganization } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -24,11 +24,11 @@ import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
 import type { LucideIcon } from "lucide-react";
 
 export default async function ClientPortalDashboardPage() {
-  const session = await requireClient();
+  const session = await requireOrganization();
   const supabase = await createSupabaseServerClient();
   const today = new Date();
 
-  // RLS scopes every query below to this client_id automatically.
+  // RLS scopes every query below to this organization_id automatically.
   const [
     { data: settings },
     { data: allEnrollments },
@@ -36,16 +36,16 @@ export default async function ClientPortalDashboardPage() {
     { data: recentComments },
   ] = await Promise.all([
     supabase
-      .from("client_settings")
+      .from("organization_settings")
       .select("disclaimer_banner_text")
-      .eq("client_id", session.clientId)
+      .eq("organization_id", session.organizationId)
       .maybeSingle(),
 
     supabase
       .from("enrollments")
       .select(
         `id, state, status,
-         provider:provider_id (first_name, last_name),
+         provider:client_id (first_name, last_name),
          group_entity:group_entity_id (legal_name),
          payer:payer_id (name)`,
       )
@@ -57,7 +57,7 @@ export default async function ClientPortalDashboardPage() {
       .from("enrollments")
       .select(
         `id, state, status, sub_status, updated_at,
-         provider:provider_id (first_name, last_name),
+         provider:client_id (first_name, last_name),
          group_entity:group_entity_id (legal_name),
          payer:payer_id (name)`,
       )
@@ -70,7 +70,7 @@ export default async function ClientPortalDashboardPage() {
       .select(
         `id, body, author_user_id, created_at,
          enrollment:enrollment_id (id, state,
-           provider:provider_id (first_name, last_name),
+           provider:client_id (first_name, last_name),
            payer:payer_id (name))`,
       )
       .is("deleted_at", null)

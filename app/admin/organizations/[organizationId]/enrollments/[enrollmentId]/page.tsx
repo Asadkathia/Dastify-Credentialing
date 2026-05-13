@@ -43,22 +43,22 @@ type LatestActivityEntry =
 export default async function EnrollmentDetailPage({
   params,
 }: {
-  params: Promise<{ clientId: string; enrollmentId: string }>;
+  params: Promise<{ organizationId: string; enrollmentId: string }>;
 }) {
-  const { clientId, enrollmentId } = await params;
+  const { organizationId, enrollmentId } = await params;
   const supabase = await createSupabaseServerClient();
 
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select(
       `*,
-       client:client_id (id, display_name),
-       provider:provider_id (id, first_name, last_name, npi),
+       client:organization_id (id, display_name),
+       provider:client_id (id, first_name, last_name, npi),
        group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name, payer_type)`,
     )
     .eq("id", enrollmentId)
-    .eq("client_id", clientId)
+    .eq("organization_id", organizationId)
     .maybeSingle();
 
   if (!enrollment) notFound();
@@ -161,8 +161,8 @@ export default async function EnrollmentDetailPage({
           </>
         }
         crumbs={[
-          { label: "Clients", href: "/admin/clients" },
-          { label: client?.display_name ?? "Client", href: `/admin/clients/${clientId}` },
+          { label: "Clients", href: "/admin/organizations" },
+          { label: client?.display_name ?? "Client", href: `/admin/organizations/${organizationId}` },
           { label: "Enrollment" },
         ]}
         actions={

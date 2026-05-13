@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireClient } from "@/lib/auth/session";
+import { requireOrganization } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
 import { SensitiveField } from "@/components/ui/sensitive-field";
@@ -11,22 +11,22 @@ import type { EnrollmentStatus } from "@/db/schema/enums";
 export default async function PortalProviderDetailPage({
   params,
 }: {
-  params: Promise<{ providerId: string }>;
+  params: Promise<{ clientId: string }>;
 }) {
-  await requireClient();
-  const { providerId } = await params;
+  await requireOrganization();
+  const { clientId } = await params;
   const supabase = await createSupabaseServerClient();
 
   // RLS hides any other client's providers — null = 404, not "forbidden".
   const [{ data: provider }, { data: enrollments }] = await Promise.all([
     supabase
-      .from("providers")
+      .from("clients")
       .select(
         `id, first_name, middle_name, last_name, suffix, npi,
          primary_specialty, secondary_specialty, caqh_id, email, phone,
          license_states, created_at`,
       )
-      .eq("id", providerId)
+      .eq("id", clientId)
       .is("deleted_at", null)
       .maybeSingle(),
     supabase
@@ -35,7 +35,7 @@ export default async function PortalProviderDetailPage({
         `id, state, status, sub_status, effective_date,
          payer:payer_id (id, name)`,
       )
-      .eq("provider_id", providerId)
+      .eq("client_id", clientId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false }),
   ]);
@@ -64,7 +64,7 @@ export default async function PortalProviderDetailPage({
             ) : null}
           </>
         }
-        crumbs={[{ label: "Providers", href: "/portal/providers" }, { label: displayName }]}
+        crumbs={[{ label: "Providers", href: "/portal/clients" }, { label: displayName }]}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">

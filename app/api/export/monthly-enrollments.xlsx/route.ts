@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * month; pass `?month=YYYY-MM` to override.
  *
  * Same workbook shape as the per-client export (banner row + 4-column header),
- * just unscoped from client_id.
+ * just unscoped from organization_id.
  */
 export async function GET(request: Request) {
   const session = await requireAdmin();
@@ -32,16 +32,16 @@ export async function GET(request: Request) {
   const { data: enrollments, error } = await supabase
     .from("enrollments")
     .select(
-      `id, state, status, sub_status, created_at, client_id,
-       client:client_id (id, display_name),
-       provider:provider_id (id, first_name, last_name, npi),
+      `id, state, status, sub_status, created_at, organization_id,
+       client:organization_id (id, display_name),
+       provider:client_id (id, first_name, last_name, npi),
        group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name)`,
     )
     .gte("created_at", start.toISOString())
     .lt("created_at", end.toISOString())
     .is("deleted_at", null)
-    .order("client_id");
+    .order("organization_id");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

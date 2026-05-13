@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
  * query params (?has_enrollments=1, ?state=TX). Search and tab filters live
  * in the parent page and are preserved through this drawer's apply call.
  */
-export function ClientsFilterDrawer({
+export function OrganizationsFilterDrawer({
   status,
   q,
   hasEnrollments,
@@ -51,7 +51,7 @@ export function ClientsFilterDrawer({
     if (params.hasEnrollments) sp.set("has_enrollments", "1");
     if (params.state) sp.set("state", params.state.toUpperCase());
     const qs = sp.toString();
-    return qs ? `/admin/clients?${qs}` : "/admin/clients";
+    return qs ? `/admin/organizations?${qs}` : "/admin/organizations";
   }
 
   function apply() {

@@ -18,8 +18,8 @@ import { HeroCard } from "@/components/ui/hero-card";
 import { MiniPipeline } from "@/components/ui/mini-pipeline";
 import { PayerMark } from "@/components/ui/payer-mark";
 import { StatusChip } from "@/components/ui/status-chip";
-import { ClientEditForm } from "./_components/client-edit-form";
-import { InviteClientUserForm } from "./_components/invite-user-form";
+import { OrganizationEditForm } from "./_components/organization-edit-form";
+import { InviteOrganizationUserForm } from "./_components/invite-user-form";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
 function initials(name: string | null | undefined): string {
@@ -52,9 +52,9 @@ function ActivePill({ active }: { active: boolean }) {
 export default async function ClientOverviewPage({
   params,
 }: {
-  params: Promise<{ clientId: string }>;
+  params: Promise<{ organizationId: string }>;
 }) {
-  const { clientId } = await params;
+  const { organizationId } = await params;
   const supabase = await createSupabaseServerClient();
 
   const [
@@ -64,46 +64,46 @@ export default async function ClientOverviewPage({
     { data: users },
     { data: activity },
   ] = await Promise.all([
-    supabase.from("clients").select("*").eq("id", clientId).maybeSingle(),
+    supabase.from("organizations").select("*").eq("id", organizationId).maybeSingle(),
     supabase
-      .from("providers")
+      .from("clients")
       .select("id, first_name, last_name, npi, primary_specialty")
-      .eq("client_id", clientId)
+      .eq("organization_id", organizationId)
       .is("deleted_at", null)
       .order("last_name"),
     supabase
       .from("enrollments")
       .select(
         `id, state, status, sub_status,
-         provider:provider_id (id, first_name, last_name),
+         provider:client_id (id, first_name, last_name),
          group_entity:group_entity_id (id, legal_name),
          payer:payer_id (id, name)`,
       )
-      .eq("client_id", clientId)
+      .eq("organization_id", organizationId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(50),
     supabase
-      .from("client_users")
+      .from("organization_users")
       .select("id, email, full_name, role, is_active, invited_at, accepted_at")
-      .eq("client_id", clientId)
+      .eq("organization_id", organizationId)
       .order("invited_at", { ascending: false }),
     supabase
       .from("activity_events")
       .select("id, action, target_table, summary, occurred_at")
-      .eq("client_id", clientId)
+      .eq("organization_id", organizationId)
       .order("occurred_at", { ascending: false })
       .limit(8),
   ]);
 
   if (!client) notFound();
 
-  const idShort = clientId.slice(0, 8).toUpperCase();
+  const idShort = organizationId.slice(0, 8).toUpperCase();
 
   return (
     <div>
       <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-[12px]">
-        <Link href="/admin/clients" className="text-navy/55 hover:text-navy">
+        <Link href="/admin/organizations" className="text-navy/55 hover:text-navy">
           Clients
         </Link>
         <span className="text-navy/30">/</span>
@@ -132,13 +132,13 @@ export default async function ClientOverviewPage({
         actions={
           <>
             <Button asChild variant="outline">
-              <Link href={`/admin/clients/${clientId}/providers/new`}>
+              <Link href={`/admin/organizations/${organizationId}/providers/new`}>
                 <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
                 Provider
               </Link>
             </Button>
             <Button asChild>
-              <Link href={`/admin/clients/${clientId}/enrollments/new`}>
+              <Link href={`/admin/organizations/${organizationId}/enrollments/new`}>
                 <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
                 Enrollment
               </Link>
@@ -159,7 +159,7 @@ export default async function ClientOverviewPage({
                 </span>
               </div>
               <Link
-                href={`/admin/clients/${clientId}/enrollments/new`}
+                href={`/admin/organizations/${organizationId}/enrollments/new`}
                 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal hover:text-[#0E7475]"
               >
                 + New
@@ -185,7 +185,7 @@ export default async function ClientOverviewPage({
                   return (
                     <li key={e.id}>
                       <Link
-                        href={`/admin/clients/${clientId}/enrollments/${e.id}`}
+                        href={`/admin/organizations/${organizationId}/enrollments/${e.id}`}
                         className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-navy-04"
                       >
                         <PayerMark name={payer?.name ?? "??"} size={30} />
@@ -221,7 +221,7 @@ export default async function ClientOverviewPage({
               <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
                 <h2 className="text-[15px] font-semibold text-navy">Audit trail</h2>
                 <Link
-                  href={`/admin/audit?client=${clientId}`}
+                  href={`/admin/audit?client=${organizationId}`}
                   className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal hover:text-[#0E7475]"
                 >
                   View all →
@@ -278,7 +278,7 @@ export default async function ClientOverviewPage({
                 </span>
               </div>
               <Link
-                href={`/admin/clients/${clientId}/providers/new`}
+                href={`/admin/organizations/${organizationId}/providers/new`}
                 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal hover:text-[#0E7475]"
               >
                 + New
@@ -293,7 +293,7 @@ export default async function ClientOverviewPage({
                 providers.map((p) => (
                   <Link
                     key={p.id}
-                    href={`/admin/clients/${clientId}/providers/${p.id}`}
+                    href={`/admin/organizations/${organizationId}/providers/${p.id}`}
                     className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-navy-04"
                   >
                     <span
@@ -339,12 +339,12 @@ export default async function ClientOverviewPage({
                       </div>
                       <div className="shrink-0 text-right">
                         <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70">
-                          {u.role === "client_admin" ? (
+                          {u.role === "org_admin" ? (
                             <Shield size={11} strokeWidth={1.8} />
                           ) : (
                             <Eye size={11} strokeWidth={1.8} />
                           )}
-                          {u.role === "client_admin" ? "Admin" : "Viewer"}
+                          {u.role === "org_admin" ? "Admin" : "Viewer"}
                         </p>
                         <p className="text-[10px] uppercase tracking-[0.06em] text-navy/45">
                           {u.accepted_at ? "Accepted" : "Invited"}
@@ -359,7 +359,7 @@ export default async function ClientOverviewPage({
                 </p>
               )}
               <div className="border-t border-border-subtle pt-4">
-                <InviteClientUserForm clientId={clientId} />
+                <InviteOrganizationUserForm organizationId={organizationId} />
               </div>
             </div>
           </div>
@@ -369,7 +369,7 @@ export default async function ClientOverviewPage({
               <h2 className="text-[15px] font-semibold text-navy">Client details</h2>
             </header>
             <div className="px-5 py-5">
-              <ClientEditForm client={client} />
+              <OrganizationEditForm client={client} />
             </div>
           </div>
         </aside>

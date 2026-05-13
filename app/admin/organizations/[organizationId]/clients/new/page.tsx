@@ -5,30 +5,30 @@ import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { createProviderAction } from "@/lib/actions/providers";
+import { createClientAction } from "@/lib/actions/clients";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function NewProviderPage({
   params,
 }: {
-  params: Promise<{ clientId: string }>;
+  params: Promise<{ organizationId: string }>;
 }) {
-  const { clientId } = await params;
+  const { organizationId } = await params;
 
   const supabase = await createSupabaseServerClient();
   const { data: client } = await supabase
-    .from("clients")
+    .from("organizations")
     .select("display_name")
-    .eq("id", clientId)
+    .eq("id", organizationId)
     .maybeSingle();
 
   async function submit(formData: FormData) {
     "use server";
-    const result = await createProviderAction(formData);
+    const result = await createClientAction(formData);
     if (!result.ok) {
       throw new Error(result.error);
     }
-    redirect(`/admin/clients/${clientId}`);
+    redirect(`/admin/organizations/${organizationId}`);
   }
 
   return (
@@ -38,7 +38,7 @@ export default async function NewProviderPage({
         subtitle="Names are stored as first / middle / last / suffix per the data model."
         crumbs={[
           { label: "Clients", href: "/admin" },
-          { label: client?.display_name ?? "Client", href: `/admin/clients/${clientId}` },
+          { label: client?.display_name ?? "Client", href: `/admin/organizations/${organizationId}` },
           { label: "New provider" },
         ]}
       />
@@ -47,7 +47,7 @@ export default async function NewProviderPage({
         action={submit}
         className="space-y-6 rounded-md border border-border-subtle bg-white p-6 shadow-[var(--shadow-xs)]"
       >
-        <input type="hidden" name="clientId" value={clientId} />
+        <input type="hidden" name="organizationId" value={organizationId} />
 
         <FieldGroup label="Name">
           <div className="grid grid-cols-2 gap-4">
@@ -83,7 +83,7 @@ export default async function NewProviderPage({
 
         <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-5">
           <Button asChild variant="ghost">
-            <Link href={`/admin/clients/${clientId}`}>Cancel</Link>
+            <Link href={`/admin/organizations/${organizationId}`}>Cancel</Link>
           </Button>
           <SubmitButton pendingLabel="Creating provider…">Create provider</SubmitButton>
         </div>

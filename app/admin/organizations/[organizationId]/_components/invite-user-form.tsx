@@ -4,7 +4,7 @@ import { UserPlus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { inviteClientUserAction } from "@/lib/actions/clients";
+import { inviteOrganizationUserAction } from "@/lib/actions/organizations";
 
 type AuthMethod = "magic_link" | "password";
 
@@ -13,7 +13,7 @@ const selectClasses =
   "mt-2 flex h-9 w-full rounded-sm border border-border-subtle bg-white px-3 py-1 text-[13px] text-charcoal focus-visible:border-teal focus-visible:outline-none";
 const inputClasses = "mt-2 bg-white text-[13px]";
 
-export function InviteClientUserForm({ clientId }: { clientId: string }) {
+export function InviteOrganizationUserForm({ organizationId }: { organizationId: string }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{
@@ -94,7 +94,7 @@ export function InviteClientUserForm({ clientId }: { clientId: string }) {
           formData.set("authMethod", authMethod);
           if (authMethod === "password") formData.set("password", password);
           const email = String(formData.get("email") ?? "");
-          const result = await inviteClientUserAction(formData);
+          const result = await inviteOrganizationUserAction(formData);
           if (!result.ok) {
             setError(result.error);
           } else {
@@ -107,7 +107,7 @@ export function InviteClientUserForm({ clientId }: { clientId: string }) {
         });
       }}
     >
-      <input type="hidden" name="clientId" value={clientId} />
+      <input type="hidden" name="organizationId" value={organizationId} />
 
       <p className="label-sm">Invite portal user</p>
 
@@ -138,11 +138,11 @@ export function InviteClientUserForm({ clientId }: { clientId: string }) {
         <select
           id="invite-role"
           name="role"
-          defaultValue="client_viewer"
+          defaultValue="org_viewer"
           className={selectClasses}
         >
-          <option value="client_viewer">Viewer (read + comment)</option>
-          <option value="client_admin">Admin (manage users)</option>
+          <option value="org_viewer">Viewer (read + comment)</option>
+          <option value="org_admin">Admin (manage users)</option>
         </select>
       </div>
 

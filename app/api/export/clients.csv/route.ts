@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Streams a .csv of the admin clients list, honoring the same user-facing
- * filters as `/admin/clients` (status tab, search, has_enrollments, state).
+ * filters as `/admin/organizations` (status tab, search, has_enrollments, state).
  * Columns: Display Name, Legal Name, Primary Contact Name, Primary Contact
  * Email, Primary Contact Phone, Active, Enrollments (count), Created At.
  */
@@ -27,13 +27,13 @@ export async function GET(request: Request) {
   if (hasEnrollments || stateFilter) {
     let eq = supabase
       .from("enrollments")
-      .select("client_id")
+      .select("organization_id")
       .is("deleted_at", null);
     if (stateFilter) eq = eq.eq("state", stateFilter);
     const { data: enrolRows } = await eq;
     const ids = new Set<string>();
     for (const r of enrolRows ?? []) {
-      if (r.client_id) ids.add(r.client_id);
+      if (r.organization_id) ids.add(r.organization_id);
     }
     restrictToClientIds = Array.from(ids);
     if (restrictToClientIds.length === 0) {
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
   }
 
   let query = supabase
-    .from("clients")
+    .from("organizations")
     .select(
       "id, display_name, legal_name, primary_contact_name, primary_contact_email, primary_contact_phone, is_active, created_at",
     )
@@ -71,17 +71,17 @@ export async function GET(request: Request) {
   // Count active enrollments per client in one round-trip — keep it simple in
   // v1; the dataset stays small. We aggregate client-side from a wide select
   // because PostgREST `group by` is awkward through the JS client.
-  const clientIds = (clients ?? []).map((c) => c.id);
+  const organizationIds = (clients ?? []).map((c) => c.id);
   const enrollmentsByClient = new Map<string, number>();
-  if (clientIds.length > 0) {
+  if (organizationIds.length > 0) {
     const { data: enrolRows } = await supabase
       .from("enrollments")
-      .select("client_id")
-      .in("client_id", clientIds)
+      .select("organization_id")
+      .in("organization_id", organizationIds)
       .is("deleted_at", null);
     for (const r of enrolRows ?? []) {
-      if (!r.client_id) continue;
-      enrollmentsByClient.set(r.client_id, (enrollmentsByClient.get(r.client_id) ?? 0) + 1);
+      if (!r.organization_id) continue;
+      enrollmentsByClient.set(r.organization_id, (enrollmentsByClient.get(r.organization_id) ?? 0) + 1);
     }
   }
 
@@ -115,12 +115,12 @@ export async function GET(request: Request) {
   // RFC 4180: CRLF + final CRLF.
   const body = lines.join("\r\n") + "\r\n";
 
-  // Append-only audit row. Note: `client_id` is nullable on activity_events for
+  // Append-only audit row. Note: `organization_id` is nullable on activity_events for
   // global / cross-client admin events like this list export.
   await supabase.from("activity_events").insert({
     actor_user_id: session.userId,
     action: "export",
-    target_table: "clients",
+    target_table: "organizations",
     summary: `Exported ${clients?.length ?? 0} clients to .csv`,
   });
 

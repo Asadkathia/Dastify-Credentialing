@@ -1,20 +1,20 @@
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
-import { requireClient } from "@/lib/auth/session";
+import { requireOrganization } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/page-header";
 
 export default async function TeamPage() {
-  const session = await requireClient();
-  if (session.role !== "client_admin") {
+  const session = await requireOrganization();
+  if (session.role !== "org_admin") {
     redirect("/portal");
   }
 
   const supabase = await createSupabaseServerClient();
   const { data: users } = await supabase
-    .from("client_users")
+    .from("organization_users")
     .select("id, email, full_name, role, is_active, invited_at, accepted_at")
-    .eq("client_id", session.clientId)
+    .eq("organization_id", session.organizationId)
     .order("invited_at", { ascending: false });
 
   const count = users?.length ?? 0;
@@ -54,12 +54,12 @@ export default async function TeamPage() {
                       <span
                         className={
                           "inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] " +
-                          (u.role === "client_admin"
+                          (u.role === "org_admin"
                             ? "bg-teal-08 text-navy"
                             : "bg-lightgrey text-navy/65")
                         }
                       >
-                        {u.role === "client_admin" ? "Admin" : "Viewer"}
+                        {u.role === "org_admin" ? "Admin" : "Viewer"}
                       </span>
                     </td>
                     <td className="tnum text-[12px] text-navy/65">
