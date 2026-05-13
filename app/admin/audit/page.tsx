@@ -55,8 +55,8 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
   let query = supabase
     .from("activity_events")
     .select(
-      `id, client_id, actor_user_id, action, target_table, target_id, summary, occurred_at,
-       client:client_id (id, display_name)`,
+      `id, organization_id, actor_user_id, action, target_table, target_id, summary, occurred_at,
+       client:organization_id (id, display_name)`,
       { count: "exact" },
     );
 
@@ -207,7 +207,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Sea
                       <td>
                         {client ? (
                           <Link
-                            href={`/admin/clients/${client.id}`}
+                            href={`/admin/organizations/${client.id}`}
                             className="text-[13px] text-navy/85 hover:text-teal"
                           >
                             {client.display_name}

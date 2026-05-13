@@ -55,9 +55,9 @@ export const documentOwnerTypeEnum = pgEnum("document_owner_type", [
 
 export const adminRoleEnum = pgEnum("admin_role", ["admin"]);
 
-export const clientUserRoleEnum = pgEnum("client_user_role", [
-  "client_admin",
-  "client_viewer",
+export const organizationUserRoleEnum = pgEnum("organization_user_role", [
+  "org_admin",
+  "org_viewer",
 ]);
 
 export const digestFrequencyEnum = pgEnum("digest_frequency", ["off", "daily", "weekly"]);

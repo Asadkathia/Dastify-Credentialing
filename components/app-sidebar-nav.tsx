@@ -16,8 +16,8 @@ import {
 
 const ICON_MAP = {
   dashboard: LayoutDashboard,
-  clients: Building2,
-  providers: UserCircle2,
+  organizations: Building2,
+  clients: UserCircle2,
   enrollments: ClipboardList,
   payers: Wallet,
   documents: FileText,

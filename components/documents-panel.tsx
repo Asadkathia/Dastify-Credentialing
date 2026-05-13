@@ -74,7 +74,7 @@ function asCategory(value: DocRow["category"]): DocCategory | null {
 }
 
 export function DocumentsPanel({
-  clientId,
+  organizationId,
   ownerType,
   ownerId,
   documents,
@@ -82,7 +82,7 @@ export function DocumentsPanel({
   canManage,
   defaultCategoryName,
 }: {
-  clientId: string;
+  organizationId: string;
   ownerType: OwnerType;
   ownerId: string;
   documents: DocRow[];
@@ -169,7 +169,7 @@ export function DocumentsPanel({
           className="space-y-4 border-t border-border-subtle pt-4"
           action={(formData) => {
             setError(null);
-            formData.set("clientId", clientId);
+            formData.set("organizationId", organizationId);
             formData.set("ownerType", ownerType);
             formData.set("ownerId", ownerId);
             formData.set("categoryId", selectedCategoryId);

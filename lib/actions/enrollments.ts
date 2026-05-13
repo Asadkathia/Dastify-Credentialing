@@ -12,12 +12,12 @@ export async function createEnrollmentAction(
 ): Promise<ActionResult<{ id: string }>> {
   const session = await requireAdmin();
 
-  const providerId = formData.get("providerId");
+  const clientId = formData.get("clientId");
   const groupEntityId = formData.get("groupEntityId");
 
   const parsed = createEnrollmentSchema.safeParse({
-    clientId: formData.get("clientId"),
-    providerId: providerId ? String(providerId) : undefined,
+    organizationId: formData.get("organizationId"),
+    clientId: clientId ? String(clientId) : undefined,
     groupEntityId: groupEntityId ? String(groupEntityId) : undefined,
     payerId: formData.get("payerId"),
     state: String(formData.get("state") ?? "").toUpperCase(),
@@ -32,8 +32,8 @@ export async function createEnrollmentAction(
   const { data: enrollment, error } = await supabase
     .from("enrollments")
     .insert({
-      client_id: parsed.data.clientId,
-      provider_id: parsed.data.providerId ?? null,
+      organization_id: parsed.data.organizationId,
+      client_id: parsed.data.clientId ?? null,
       group_entity_id: parsed.data.groupEntityId ?? null,
       payer_id: parsed.data.payerId,
       state: parsed.data.state,
@@ -48,7 +48,7 @@ export async function createEnrollmentAction(
   }
 
   await supabase.from("activity_events").insert({
-    client_id: parsed.data.clientId,
+    organization_id: parsed.data.organizationId,
     actor_user_id: session.userId,
     action: "create",
     target_table: "enrollments",
@@ -56,7 +56,8 @@ export async function createEnrollmentAction(
     summary: `Created enrollment in ${parsed.data.state}`,
   });
 
-  revalidatePath(`/admin/clients/${parsed.data.clientId}`);
+  revalidatePath(`/admin/organizations/${parsed.data.organizationId}`);
+  revalidatePath("/admin/enrollments");
   return ok({ id: enrollment.id });
 }
 
@@ -79,7 +80,7 @@ export async function transitionStatusAction(
 
   const { data: current, error: fetchErr } = await supabase
     .from("enrollments")
-    .select("id, client_id, status, sub_status")
+    .select("id, organization_id, status, sub_status")
     .eq("id", parsed.data.enrollmentId)
     .maybeSingle();
 
@@ -91,9 +92,6 @@ export async function transitionStatusAction(
   );
   if (!transition.ok) return fail(transition.error);
 
-  // Side-effect: set submitted_at the first time the row enters `submitted`.
-  // effective_date is no longer auto-set (recred module is gone) — admins can
-  // edit it via the standard update path if/when we expose that field again.
   const { error: updateErr } = await supabase
     .from("enrollments")
     .update({
@@ -110,10 +108,8 @@ export async function transitionStatusAction(
     return fail(`Failed to transition status: ${updateErr.message}`);
   }
 
-  // The status_history row is inserted by the audit trigger automatically.
-  // We separately log the activity_event for the high-level feed.
   await supabase.from("activity_events").insert({
-    client_id: current.client_id,
+    organization_id: current.organization_id,
     actor_user_id: session.userId,
     action: "status_change",
     target_table: "enrollments",
@@ -125,6 +121,6 @@ export async function transitionStatusAction(
     },
   });
 
-  revalidatePath(`/admin/clients/${current.client_id}/enrollments/${parsed.data.enrollmentId}`);
+  revalidatePath(`/admin/organizations/${current.organization_id}/enrollments/${parsed.data.enrollmentId}`);
   return ok({ enrollmentId: parsed.data.enrollmentId, toStatus: parsed.data.toStatus });
 }

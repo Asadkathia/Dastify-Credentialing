@@ -1,15 +1,15 @@
 import { pgTable, uuid, text, timestamp, index } from "drizzle-orm/pg-core";
-import { clients } from "./clients";
+import { organizations } from "./organizations";
 import { enrollments } from "./enrollments";
 
-// Client-visible threaded comments on an enrollment row.
+// Organization-visible threaded comments on an enrollment row.
 export const comments = pgTable(
   "comments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientId: uuid("client_id")
+    organizationId: uuid("organization_id")
       .notNull()
-      .references(() => clients.id, { onDelete: "cascade" }),
+      .references(() => organizations.id, { onDelete: "cascade" }),
     enrollmentId: uuid("enrollment_id")
       .notNull()
       .references(() => enrollments.id, { onDelete: "cascade" }),
@@ -21,19 +21,19 @@ export const comments = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => ({
-    clientIdx: index("comments_client_id_idx").on(t.clientId),
+    organizationIdx: index("comments_organization_id_idx").on(t.organizationId),
     enrollmentIdx: index("comments_enrollment_id_idx").on(t.enrollmentId),
   }),
 );
 
-// Admin-only notes on an enrollment, parallel to comments. Never returned to client sessions.
+// Admin-only notes on an enrollment, parallel to comments. Never returned to org sessions.
 export const internalNotes = pgTable(
   "internal_notes",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientId: uuid("client_id")
+    organizationId: uuid("organization_id")
       .notNull()
-      .references(() => clients.id, { onDelete: "cascade" }),
+      .references(() => organizations.id, { onDelete: "cascade" }),
     enrollmentId: uuid("enrollment_id")
       .notNull()
       .references(() => enrollments.id, { onDelete: "cascade" }),
@@ -45,7 +45,7 @@ export const internalNotes = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => ({
-    clientIdx: index("internal_notes_client_id_idx").on(t.clientId),
+    organizationIdx: index("internal_notes_organization_id_idx").on(t.organizationId),
     enrollmentIdx: index("internal_notes_enrollment_id_idx").on(t.enrollmentId),
   }),
 );

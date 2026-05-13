@@ -2,12 +2,12 @@ import { notFound } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 import { Activity, ArrowRight } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireClient } from "@/lib/auth/session";
+import { requireOrganization } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
 import { StatusPipeline } from "@/components/ui/status-pipeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CommentsThread } from "@/app/admin/clients/[clientId]/enrollments/[enrollmentId]/_components/comments-thread";
+import { CommentsThread } from "@/app/admin/organizations/[organizationId]/enrollments/[enrollmentId]/_components/comments-thread";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
@@ -16,18 +16,18 @@ export default async function ClientEnrollmentDetailPage({
 }: {
   params: Promise<{ enrollmentId: string }>;
 }) {
-  await requireClient();
+  await requireOrganization();
   const { enrollmentId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  // RLS enforces tenant isolation; if the enrollment isn't for this client_id,
+  // RLS enforces tenant isolation; if the enrollment isn't for this organization_id,
   // the query returns null and we 404 (NOT 403 — per CLAUDE.md, denied access
   // surfaces as not-found).
   const { data: enrollment } = await supabase
     .from("enrollments")
     .select(
       `*,
-       provider:provider_id (id, first_name, last_name),
+       provider:client_id (id, first_name, last_name),
        group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name)`,
     )

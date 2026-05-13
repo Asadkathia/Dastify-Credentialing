@@ -1,34 +1,34 @@
-import { requireClient } from "@/lib/auth/session";
+import { requireOrganization } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppShell, type NavItem } from "@/components/app-shell";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireClient();
+  const session = await requireOrganization();
   const supabase = await createSupabaseServerClient();
-  const { data: client } = await supabase
-    .from("clients")
+  const { data: org } = await supabase
+    .from("organizations")
     .select("display_name")
-    .eq("id", session.clientId)
+    .eq("id", session.organizationId)
     .maybeSingle();
 
   const baseNav: NavItem[] = [
     { href: "/portal", label: "Dashboard", icon: "dashboard" },
-    { href: "/portal/providers", label: "Providers", icon: "providers" },
+    { href: "/portal/clients", label: "Clients", icon: "clients" },
     { href: "/portal/enrollments", label: "Enrollments", icon: "enrollments" },
   ];
 
   const navItems: NavItem[] =
-    session.role === "client_admin"
+    session.role === "org_admin"
       ? [...baseNav, { href: "/portal/team", label: "Team", icon: "team" }]
       : baseNav;
 
   return (
     <AppShell
-      variant="client"
+      variant="organization"
       user={{
         fullName: session.fullName,
         email: session.email,
-        clientName: client?.display_name ?? "",
+        organizationName: org?.display_name ?? "",
       }}
       nav={navItems}
     >

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { ClipboardList, Download } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireClient } from "@/lib/auth/session";
+import { requireOrganization } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -26,7 +26,7 @@ export default async function PortalEnrollmentsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requireClient();
+  await requireOrganization();
   const params = await searchParams;
   const statusFilter = parseStatusFilter(params.status);
   const payerFilter = params.payer?.trim() ?? "";
@@ -35,12 +35,12 @@ export default async function PortalEnrollmentsPage({
 
   const supabase = await createSupabaseServerClient();
 
-  // RLS scopes this query to the caller's client_id automatically.
+  // RLS scopes this query to the caller's organization_id automatically.
   let query = supabase
     .from("enrollments")
     .select(
       `id, state, status, sub_status, effective_date, updated_at,
-       provider:provider_id (id, first_name, last_name),
+       provider:client_id (id, first_name, last_name),
        group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name)`,
       { count: "exact" },

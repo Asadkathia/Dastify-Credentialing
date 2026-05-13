@@ -1,10 +1,11 @@
 import { pgTable, uuid, text, timestamp, integer, date, boolean, index } from "drizzle-orm/pg-core";
-import { clients } from "./clients";
+import { organizations } from "./organizations";
 import { documentOwnerTypeEnum } from "./enums";
 import { documentCategories } from "./document_categories";
 
-// Polymorphic document table — owned by provider, enrollment, group_entity, or client.
-// File contents live in Supabase Storage; this row is the metadata.
+// Polymorphic document table — owned by client (formerly provider), enrollment,
+// group_entity, or organization. File contents live in Supabase Storage; this
+// row is the metadata.
 //
 // `categoryId` references document_categories (admin-extensible at runtime).
 // `legacyCategory` is the old enum value, retained for one release for recovery
@@ -13,9 +14,9 @@ export const documents = pgTable(
   "documents",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientId: uuid("client_id")
+    organizationId: uuid("organization_id")
       .notNull()
-      .references(() => clients.id, { onDelete: "cascade" }),
+      .references(() => organizations.id, { onDelete: "cascade" }),
     ownerType: documentOwnerTypeEnum("owner_type").notNull(),
     ownerId: uuid("owner_id").notNull(),
     categoryId: uuid("category_id")
@@ -37,7 +38,7 @@ export const documents = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => ({
-    clientIdx: index("documents_client_id_idx").on(t.clientId),
+    organizationIdx: index("documents_organization_id_idx").on(t.organizationId),
     ownerIdx: index("documents_owner_idx").on(t.ownerType, t.ownerId),
     expirationIdx: index("documents_expiration_idx").on(t.expirationDate),
     categoryIdx: index("documents_category_id_idx").on(t.categoryId),

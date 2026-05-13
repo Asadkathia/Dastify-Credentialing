@@ -31,7 +31,7 @@ function getKey(): string {
 
 /**
  * Returns a SQL fragment that encrypts the given plaintext value at insert/update time.
- * Use as: `db.update(providers).set({ deaNumberEncrypted: encryptColumn(value) })`
+ * Use as: `db.update(clients).set({ deaNumberEncrypted: encryptColumn(value) })`
  */
 export function encryptColumn(plaintext: string | null | undefined) {
   if (plaintext == null || plaintext === "") {
@@ -43,7 +43,7 @@ export function encryptColumn(plaintext: string | null | undefined) {
 
 /**
  * Returns a SQL fragment that decrypts a bytea column. Used in SELECT.
- * Use as: `db.select({ dea: decryptColumn(providers.deaNumberEncrypted) })`
+ * Use as: `db.select({ dea: decryptColumn(clients.deaNumberEncrypted) })`
  */
 export function decryptColumn(column: unknown) {
   const key = getKey();

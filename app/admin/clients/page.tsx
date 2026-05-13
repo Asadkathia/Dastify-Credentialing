@@ -1,200 +1,83 @@
 import Link from "next/link";
-import {
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  CircleCheck,
-  Download,
-  FileText,
-  Plus,
-  Search,
-  Stethoscope,
-} from "lucide-react";
+import { UserCircle2 } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatTile } from "@/components/ui/stat-tile";
 import { RowOpenLink } from "@/components/ui/row-open-link";
-import { ClientsFilterDrawer } from "./_components/clients-filter-drawer";
 
 type SearchParams = Promise<{
-  status?: string;
   q?: string;
-  has_enrollments?: string;
-  state?: string;
+  organization?: string;
+  specialty?: string;
+  page?: string;
 }>;
 
-type StatusFilter = "all" | "active" | "inactive";
+const PAGE_SIZE = 50;
 
-function parseStatus(raw: string | undefined): StatusFilter {
-  if (raw === "active" || raw === "inactive") return raw;
-  return "all";
-}
-
-function buildHref(params: {
-  status?: StatusFilter;
-  q?: string;
-  hasEnrollments?: boolean;
-  state?: string;
-}): string {
-  const sp = new URLSearchParams();
-  if (params.status && params.status !== "all") sp.set("status", params.status);
-  if (params.q) sp.set("q", params.q);
-  if (params.hasEnrollments) sp.set("has_enrollments", "1");
-  if (params.state) sp.set("state", params.state.toUpperCase());
-  const qs = sp.toString();
-  return qs ? `/admin/clients?${qs}` : "/admin/clients";
-}
-
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0];
-  if (!first) return "—";
-  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
-  const last = parts[parts.length - 1] ?? first;
-  return ((first[0] ?? "") + (last[0] ?? "")).toUpperCase();
-}
-
-function shortId(id: string): string {
-  return id.replace(/-/g, "").slice(0, 8).toUpperCase();
-}
-
-export default async function AdminClientsListPage({
+export default async function AdminClientsPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
   const params = await searchParams;
-  const statusFilter = parseStatus(params.status);
-  const qRaw = params.q?.trim() ?? "";
-  const q = qRaw.length > 0 ? qRaw : "";
-  const hasEnrollments = params.has_enrollments === "1";
-  const stateFilter = (params.state ?? "").trim().toUpperCase();
+  const q = (params.q ?? "").trim();
+  const orgFilter = (params.organization ?? "").trim();
+  const specialtyFilter = (params.specialty ?? "").trim();
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
 
   const supabase = await createSupabaseServerClient();
 
-  // --- Stat strip queries (parallel, head-only counts) ---
-  // For "Total Enrollments" and "Providers Linked" we count globally (admin sees
-  // everything; RLS handles non-admin elsewhere).
-  const [
-    totalClientsRes,
-    activeRes,
-    inactiveRes,
-    totalEnrollmentsRes,
-    providersLinkedRes,
-  ] = await Promise.all([
-    supabase
-      .from("clients")
-      .select("id", { count: "exact", head: true })
-      .is("deleted_at", null),
-    supabase
-      .from("clients")
-      .select("id", { count: "exact", head: true })
-      .is("deleted_at", null)
-      .eq("is_active", true),
-    supabase
-      .from("clients")
-      .select("id", { count: "exact", head: true })
-      .is("deleted_at", null)
-      .eq("is_active", false),
-    supabase
-      .from("enrollments")
-      .select("id", { count: "exact", head: true })
-      .is("deleted_at", null),
-    supabase
-      .from("providers")
-      .select("id", { count: "exact", head: true })
-      .is("deleted_at", null),
-  ]);
-
-  const totalClients = totalClientsRes.count ?? 0;
-  const activeClients = activeRes.count ?? 0;
-  const inactiveClients = inactiveRes.count ?? 0;
-  const totalEnrollments = totalEnrollmentsRes.count ?? 0;
-  const providersLinked = providersLinkedRes.count ?? 0;
-
-  // --- Optional pre-filtering for the drawer's "Has enrollments" / "State" ---
-  // Both filter against the enrollments table. We pull a distinct list of
-  // client_ids matching the criteria, then constrain the clients query with
-  // `.in("id", ...)`. This is fine in v1 where the enrollment set is bounded.
-  let restrictToClientIds: string[] | null = null;
-  if (hasEnrollments || stateFilter) {
-    let eq = supabase
-      .from("enrollments")
-      .select("client_id")
-      .is("deleted_at", null);
-    if (stateFilter) eq = eq.eq("state", stateFilter);
-    const { data: enrolRows } = await eq;
-    const ids = new Set<string>();
-    for (const r of enrolRows ?? []) {
-      if (r.client_id) ids.add(r.client_id);
-    }
-    restrictToClientIds = Array.from(ids);
-    // If no enrollments matched, force empty result early to avoid building a
-    // contradictory query.
-    if (restrictToClientIds.length === 0) {
-      restrictToClientIds = ["00000000-0000-0000-0000-000000000000"];
-    }
-  }
-
-  // --- Main clients query ---
   let query = supabase
     .from("clients")
     .select(
-      "id, display_name, legal_name, primary_contact_name, primary_contact_email, primary_contact_phone, is_active, created_at",
+      `id, organization_id, first_name, middle_name, last_name, suffix, npi, primary_specialty,
+       secondary_specialty, caqh_id,
+       organization:organization_id (id, display_name)`,
+      { count: "exact" },
     )
     .is("deleted_at", null);
 
-  if (statusFilter === "active") query = query.eq("is_active", true);
-  if (statusFilter === "inactive") query = query.eq("is_active", false);
-
   if (q) {
-    // Escape % and , for PostgREST `or` clause syntax.
-    const safe = q.replace(/[%,()]/g, " ");
-    query = query.or(
-      `display_name.ilike.%${safe}%,legal_name.ilike.%${safe}%,primary_contact_email.ilike.%${safe}%`,
-    );
+    query = query.or(`last_name.ilike.%${q}%,first_name.ilike.%${q}%,npi.ilike.%${q}%`);
+  }
+  if (specialtyFilter) {
+    query = query.ilike("primary_specialty", `%${specialtyFilter}%`);
+  }
+  if (orgFilter) {
+    query = query.eq("organization_id", orgFilter);
   }
 
-  if (restrictToClientIds) {
-    query = query.in("id", restrictToClientIds);
-  }
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
 
-  const { data: clients, error } = await query.order("display_name", {
-    ascending: true,
-  });
+  const { data: clients, count, error } = await query.order("last_name").range(from, to);
 
-  // Per-client enrollment counts — single query, bucketed in JS to avoid N+1.
-  const enrollmentCountsByClient = new Map<string, number>();
-  if (clients && clients.length > 0) {
-    const { data: enrolRows } = await supabase
+  // Enrollment counts per client (clinician). Counts all non-soft-deleted rows;
+  // a row in any of the 5 enrollment statuses contributes.
+  const ids = (clients ?? []).map((c) => c.id);
+  let enrollmentCounts: Record<string, number> = {};
+  if (ids.length > 0) {
+    const { data: enrollments } = await supabase
       .from("enrollments")
       .select("client_id")
-      .is("deleted_at", null)
-      .in("client_id", clients.map((c) => c.id));
-    for (const r of enrolRows ?? []) {
-      if (!r.client_id) continue;
-      enrollmentCountsByClient.set(
-        r.client_id,
-        (enrollmentCountsByClient.get(r.client_id) ?? 0) + 1,
-      );
-    }
+      .in("client_id", ids)
+      .is("deleted_at", null);
+    enrollmentCounts = (enrollments ?? []).reduce<Record<string, number>>((acc, e) => {
+      if (e.client_id) acc[e.client_id] = (acc[e.client_id] ?? 0) + 1;
+      return acc;
+    }, {});
   }
 
-  const visibleCount = clients?.length ?? 0;
-  const filtersActive =
-    statusFilter !== "all" || q.length > 0 || hasEnrollments || stateFilter.length > 0;
+  // Organization filter dropdown options.
+  const { data: orgList } = await supabase
+    .from("organizations")
+    .select("id, display_name")
+    .is("deleted_at", null)
+    .order("display_name");
 
-  // Export URL preserves all current user-facing filters.
-  const exportSp = new URLSearchParams();
-  if (statusFilter !== "all") exportSp.set("status", statusFilter);
-  if (q) exportSp.set("q", q);
-  if (hasEnrollments) exportSp.set("has_enrollments", "1");
-  if (stateFilter) exportSp.set("state", stateFilter);
-  const exportHref = exportSp.toString()
-    ? `/api/export/clients.csv?${exportSp.toString()}`
-    : `/api/export/clients.csv`;
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasFilters = Boolean(q || orgFilter || specialtyFilter);
 
   return (
     <div>
@@ -202,234 +85,133 @@ export default async function AdminClientsListPage({
         title="Clients"
         subtitle={
           <>
-            <span className="tnum font-semibold text-charcoal">{totalClients}</span>{" "}
-            {totalClients === 1 ? "practice" : "practices"} Dastify provides
-            credentialing services to.
+            <span className="tnum font-semibold text-charcoal">{total}</span> total across all
+            organizations
+            {hasFilters ? " (filtered)" : ""}
           </>
-        }
-        actions={
-          <Button asChild className="uppercase tracking-[0.16em]">
-            <Link href="/admin/clients/new">
-              <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
-              New Client
-            </Link>
-          </Button>
         }
       />
 
-      {/* Stat strip */}
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatTile
-          label="TOTAL CLIENTS"
-          value={totalClients}
-          icon={Building2}
-          tone="teal"
+      <form
+        action="/admin/clients"
+        method="get"
+        className="surface mb-6 flex flex-wrap items-center gap-2 px-4 py-3"
+      >
+        <input
+          type="text"
+          name="q"
+          defaultValue={q}
+          placeholder="Search name or NPI…"
+          className="h-8 w-[240px] rounded-sm border border-border-subtle bg-white px-2.5 text-[12px] focus-visible:border-teal focus-visible:outline-none"
         />
-        <StatTile
-          label="ACTIVE"
-          value={activeClients}
-          icon={CircleCheck}
-          tone="green"
-        />
-        <StatTile
-          label="TOTAL ENROLLMENTS"
-          value={totalEnrollments}
-          icon={FileText}
-          tone="amber"
-        />
-        <StatTile
-          label="PROVIDERS LINKED"
-          value={providersLinked}
-          icon={Stethoscope}
-          tone="navy"
-        />
-      </div>
-
-      {/* Filter tabs — pill switcher (design treatment) */}
-      <div className="mb-4 inline-flex rounded-lg bg-lightgrey p-1">
-        <FilterTab
-          href={buildHref({
-            status: "all",
-            q,
-            hasEnrollments,
-            state: stateFilter,
-          })}
-          active={statusFilter === "all"}
-          label="All"
-          count={totalClients}
-        />
-        <FilterTab
-          href={buildHref({
-            status: "active",
-            q,
-            hasEnrollments,
-            state: stateFilter,
-          })}
-          active={statusFilter === "active"}
-          label="Active"
-          count={activeClients}
-        />
-        <FilterTab
-          href={buildHref({
-            status: "inactive",
-            q,
-            hasEnrollments,
-            state: stateFilter,
-          })}
-          active={statusFilter === "inactive"}
-          label="Inactive"
-          count={inactiveClients}
-        />
-      </div>
-
-      {/* Toolbar: search + filter drawer + export */}
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <form
-          action="/admin/clients"
-          method="get"
-          className="relative w-full sm:max-w-sm"
+        <select
+          name="organization"
+          defaultValue={orgFilter}
+          className="h-8 rounded-sm border border-border-subtle bg-white px-2.5 text-[12px] focus-visible:border-teal focus-visible:outline-none"
         >
-          {/* Persist current tab / drawer filters through the search submit. */}
-          {statusFilter !== "all" ? (
-            <input type="hidden" name="status" value={statusFilter} />
-          ) : null}
-          {hasEnrollments ? <input type="hidden" name="has_enrollments" value="1" /> : null}
-          {stateFilter ? <input type="hidden" name="state" value={stateFilter} /> : null}
-          <Search
-            size={14}
-            strokeWidth={1.6}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy/45"
-          />
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Search clients…"
-            className="h-9 w-full rounded-md border border-border-subtle bg-white pl-8 pr-3 text-[13px] placeholder:text-navy/40 focus-visible:border-teal focus-visible:outline-none"
-          />
-        </form>
-
-        <div className="flex items-center gap-2">
-          <ClientsFilterDrawer
-            status={statusFilter}
-            q={q}
-            hasEnrollments={hasEnrollments}
-            state={stateFilter}
-          />
-          <Button asChild variant="outline" size="sm" className="h-9 gap-1.5">
-            <a href={exportHref}>
-              <Download size={14} strokeWidth={1.6} />
-              Export CSV
-            </a>
-          </Button>
-        </div>
-      </div>
+          <option value="">All organizations</option>
+          {(orgList ?? []).map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.display_name}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          name="specialty"
+          defaultValue={specialtyFilter}
+          placeholder="Specialty…"
+          className="h-8 w-[160px] rounded-sm border border-border-subtle bg-white px-2.5 text-[12px] focus-visible:border-teal focus-visible:outline-none"
+        />
+        <button
+          type="submit"
+          className="h-8 rounded-sm bg-navy px-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-white transition-colors hover:bg-[#161D52]"
+        >
+          Apply
+        </button>
+        {hasFilters ? (
+          <Link
+            href="/admin/clients"
+            className="h-8 rounded-sm border border-border-subtle bg-white px-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/65 transition-colors hover:bg-lightgrey"
+          >
+            Clear
+          </Link>
+        ) : null}
+      </form>
 
       {error ? (
         <div className="rounded-md border border-danger/20 bg-danger-08 px-4 py-3 text-[13px] text-danger">
           Failed to load clients: {error.message}
         </div>
-      ) : null}
-
-      {!error && visibleCount === 0 ? (
+      ) : (clients ?? []).length === 0 ? (
         <EmptyState
-          icon={<Building2 size={32} strokeWidth={1.4} />}
-          title={filtersActive ? "No clients match these filters" : "No clients yet"}
+          icon={<UserCircle2 size={32} strokeWidth={1.4} />}
+          title={hasFilters ? "No clients match these filters" : "No clients yet"}
           description={
-            filtersActive
-              ? "Try widening the filters, clearing the search, or starting from All."
-              : "Add the first practice Dastify provides credentialing services to. You can manage their providers, enrollments, and documents once they're set up."
-          }
-          action={
-            filtersActive ? (
-              <Button asChild variant="outline">
-                <Link href="/admin/clients">Clear filters</Link>
-              </Button>
-            ) : (
-              <Button asChild>
-                <Link href="/admin/clients/new">
-                  <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
-                  New client
-                </Link>
-              </Button>
-            )
+            hasFilters
+              ? "Try widening the filters, or clear them to see everything."
+              : "Clients are added per-organization. Open an organization and add a client to see them here."
           }
         />
-      ) : null}
-
-      {!error && visibleCount > 0 ? (
-        <div className="surface">
-          <div className="overflow-x-auto">
+      ) : (
+        <>
+          <div className="surface overflow-x-auto">
             <table className="data-table">
-              <colgroup>
-                <col style={{ width: "28%" }} />
-                <col style={{ width: "18%" }} />
-                <col style={{ width: "26%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "8%" }} />
-              </colgroup>
               <thead>
                 <tr>
-                  <th>Display name</th>
-                  <th>Legal name</th>
-                  <th>Primary contact</th>
-                  <th>Enrollments</th>
-                  <th>Status</th>
-                  <th className="text-right" />
+                  <th>Name</th>
+                  <th>Organization</th>
+                  <th className="w-[140px]">NPI</th>
+                  <th>Specialty</th>
+                  <th className="w-[140px]">Enrollments</th>
+                  <th className="w-[60px] text-right" />
                 </tr>
               </thead>
               <tbody>
                 {clients!.map((c) => {
-                  const enrollCount = enrollmentCountsByClient.get(c.id) ?? 0;
+                  const org = Array.isArray(c.organization) ? c.organization[0] : c.organization;
+                  const display =
+                    `${c.last_name}, ${c.first_name}` +
+                    (c.middle_name ? ` ${c.middle_name[0]}.` : "") +
+                    (c.suffix ? `, ${c.suffix}` : "");
+                  const enrollN = enrollmentCounts[c.id] ?? 0;
                   return (
                     <tr key={c.id}>
-                      <td className="font-medium">
-                        <Link
-                          href={`/admin/clients/${c.id}`}
-                          className="flex items-center gap-3 text-navy hover:text-teal"
-                        >
-                          <span
-                            aria-hidden
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[9px] bg-teal-08 text-[13px] font-bold tracking-[0.02em] text-teal"
+                      <td className="font-medium text-navy">{display}</td>
+                      <td>
+                        {org ? (
+                          <Link
+                            href={`/admin/organizations/${org.id}`}
+                            className="text-navy/85 hover:text-teal"
                           >
-                            {initialsFromName(c.display_name)}
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate text-[13px] font-medium leading-tight">
-                              {c.display_name}
-                            </span>
-                            <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.08em] text-navy/45">
-                              # CLT-{shortId(c.id)}
-                            </span>
-                          </span>
-                        </Link>
+                            {org.display_name}
+                          </Link>
+                        ) : (
+                          <span className="text-navy/45">—</span>
+                        )}
                       </td>
-                      <td className="text-navy/60">{c.legal_name}</td>
+                      <td className="font-mono text-[12px] tnum text-navy/70">{c.npi ?? "—"}</td>
                       <td className="text-navy/70">
-                        {c.primary_contact_name || "—"}
-                        {c.primary_contact_email ? (
+                        {c.primary_specialty || <span className="text-navy/45">—</span>}
+                        {c.secondary_specialty ? (
                           <span className="block text-[11px] text-navy/45">
-                            {c.primary_contact_email}
+                            {c.secondary_specialty}
                           </span>
                         ) : null}
                       </td>
                       <td>
-                        <span className="block text-[20px] font-bold leading-none tnum text-navy">
-                          {enrollCount}
-                        </span>
-                        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/45">
-                          Active
-                        </span>
-                      </td>
-                      <td>
-                        <StatusDot active={c.is_active} />
+                        {enrollN > 0 ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-sm bg-teal-08 px-2 py-0.5 text-[11px] font-semibold tnum text-navy">
+                            {enrollN}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-navy/45">0</span>
+                        )}
                       </td>
                       <td className="text-right">
-                        <RowOpenLink
-                          href={`/admin/clients/${c.id}`}
-                          ariaLabel={`Open ${c.display_name}`}
-                        />
+                        {org ? (
+                          <RowOpenLink href={`/admin/organizations/${org.id}/clients/${c.id}`} />
+                        ) : null}
                       </td>
                     </tr>
                   );
@@ -438,107 +220,88 @@ export default async function AdminClientsListPage({
             </table>
           </div>
 
-          {/* Pagination footer — single-page in v1, but rendered to match design. */}
-          <div className="flex items-center justify-between border-t border-border-subtle px-5 py-3">
-            <p className="text-[12px] text-navy/55">
-              Showing <span className="font-semibold text-navy tnum">{visibleCount}</span> of{" "}
-              <span className="font-semibold text-navy tnum">
-                {statusFilter === "all"
-                  ? totalClients
-                  : statusFilter === "active"
-                    ? activeClients
-                    : inactiveClients}
-              </span>{" "}
-              {visibleCount === 1 ? "client" : "clients"}
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled
-                aria-label="Previous page"
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle text-navy/35 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={14} strokeWidth={1.7} />
-              </button>
-              <span
-                aria-current="page"
-                className="flex h-7 min-w-[28px] items-center justify-center rounded-md bg-navy px-2 text-[12px] font-semibold tnum text-white"
-              >
-                1
-              </span>
-              <button
-                type="button"
-                disabled
-                aria-label="Next page"
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle text-navy/35 disabled:cursor-not-allowed"
-              >
-                <ChevronRight size={14} strokeWidth={1.7} />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+          {totalPages > 1 ? (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              from={from + 1}
+              to={Math.min(to + 1, total)}
+              total={total}
+              hrefFor={(p) =>
+                `/admin/clients?${buildQs({
+                  q,
+                  organization: orgFilter,
+                  specialty: specialtyFilter,
+                  page: String(p),
+                })}`
+              }
+            />
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
 
-function FilterTab({
-  href,
-  active,
-  label,
-  count,
-}: {
-  href: string;
-  active: boolean;
-  label: string;
-  count: number;
-}) {
-  return (
-    <Link
-      href={href}
-      className={
-        "inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[12px] uppercase tracking-[0.12em] transition-colors " +
-        (active
-          ? "bg-navy font-semibold text-white shadow-[var(--shadow-xs)]"
-          : "font-semibold text-navy/55 hover:text-navy")
-      }
-    >
-      {label}
-      <span
-        className={
-          "tnum inline-flex h-[18px] min-w-[22px] items-center justify-center rounded-full px-1 text-[10px] font-semibold tracking-[0.04em] " +
-          (active ? "bg-teal text-navy" : "bg-white text-navy/55")
-        }
-      >
-        {count}
-      </span>
-    </Link>
-  );
+function buildQs(params: Record<string, string>): string {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v) sp.set(k, v);
+  });
+  return sp.toString();
 }
 
-function StatusDot({ active }: { active: boolean }) {
+function Pagination({
+  page,
+  totalPages,
+  from,
+  to,
+  total,
+  hrefFor,
+}: {
+  page: number;
+  totalPages: number;
+  from: number;
+  to: number;
+  total: number;
+  hrefFor: (page: number) => string;
+}) {
   return (
-    <span
-      className={
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] " +
-        (active ? "bg-success-08 text-[#1B5E20]" : "bg-navy-04 text-navy/55")
-      }
-    >
-      <span
-        aria-hidden
-        className={
-          "relative inline-flex h-1.5 w-1.5 rounded-full " +
-          (active ? "bg-success" : "bg-navy/40")
-        }
-      >
-        {active ? (
-          <span
-            aria-hidden
-            className="absolute inset-0 animate-ping rounded-full bg-success opacity-60"
-          />
-        ) : null}
-      </span>
-      {active ? "Active" : "Inactive"}
-    </span>
+    <div className="mt-4 flex items-center justify-between text-[12px] text-navy/65">
+      <p className="tnum">
+        Showing <span className="font-semibold text-charcoal">{from}</span>–
+        <span className="font-semibold text-charcoal">{to}</span> of{" "}
+        <span className="font-semibold text-charcoal">{total}</span>
+      </p>
+      <div className="flex items-center gap-2">
+        {page > 1 ? (
+          <Link
+            href={hrefFor(page - 1)}
+            className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/75 hover:bg-lightgrey"
+          >
+            ← Prev
+          </Link>
+        ) : (
+          <span className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/30">
+            ← Prev
+          </span>
+        )}
+        <span className="tnum px-1">
+          Page {page} / {totalPages}
+        </span>
+        {page < totalPages ? (
+          <Link
+            href={hrefFor(page + 1)}
+            className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/75 hover:bg-lightgrey"
+          >
+            Next →
+          </Link>
+        ) : (
+          <span className="rounded-sm border border-border-subtle bg-white px-3 py-1.5 font-semibold uppercase tracking-[0.06em] text-navy/30">
+            Next →
+          </span>
+        )}
+      </div>
+    </div>
   );
 }

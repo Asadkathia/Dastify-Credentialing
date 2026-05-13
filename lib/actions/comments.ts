@@ -23,7 +23,7 @@ export async function postCommentAction(
 
   const { data: enrollment } = await supabase
     .from("enrollments")
-    .select("id, client_id")
+    .select("id, organization_id")
     .eq("id", parsed.data.enrollmentId)
     .maybeSingle();
   if (!enrollment) return fail("Enrollment not found");
@@ -31,7 +31,7 @@ export async function postCommentAction(
   const { data: comment, error } = await supabase
     .from("comments")
     .insert({
-      client_id: enrollment.client_id,
+      organization_id: enrollment.organization_id,
       enrollment_id: parsed.data.enrollmentId,
       parent_comment_id: parsed.data.parentCommentId ?? null,
       author_user_id: session.userId,
@@ -45,7 +45,7 @@ export async function postCommentAction(
   }
 
   await supabase.from("activity_events").insert({
-    client_id: enrollment.client_id,
+    organization_id: enrollment.organization_id,
     actor_user_id: session.userId,
     action: "comment_post",
     target_table: "comments",
@@ -53,8 +53,7 @@ export async function postCommentAction(
     summary: `Comment posted on enrollment ${parsed.data.enrollmentId.slice(0, 8)}`,
   });
 
-  // Revalidate both admin and client portal views.
-  revalidatePath(`/admin/clients/${enrollment.client_id}/enrollments/${parsed.data.enrollmentId}`);
+  revalidatePath(`/admin/organizations/${enrollment.organization_id}/enrollments/${parsed.data.enrollmentId}`);
   revalidatePath(`/portal/enrollments/${parsed.data.enrollmentId}`);
 
   return ok({ id: comment.id });
@@ -78,7 +77,7 @@ export async function postInternalNoteAction(
 
   const { data: enrollment } = await supabase
     .from("enrollments")
-    .select("id, client_id")
+    .select("id, organization_id")
     .eq("id", parsed.data.enrollmentId)
     .maybeSingle();
   if (!enrollment) return fail("Enrollment not found");
@@ -86,7 +85,7 @@ export async function postInternalNoteAction(
   const { data: note, error } = await supabase
     .from("internal_notes")
     .insert({
-      client_id: enrollment.client_id,
+      organization_id: enrollment.organization_id,
       enrollment_id: parsed.data.enrollmentId,
       parent_note_id: parsed.data.parentNoteId ?? null,
       author_user_id: session.userId,
@@ -100,7 +99,7 @@ export async function postInternalNoteAction(
   }
 
   await supabase.from("activity_events").insert({
-    client_id: enrollment.client_id,
+    organization_id: enrollment.organization_id,
     actor_user_id: session.userId,
     action: "internal_note_post",
     target_table: "internal_notes",
@@ -108,6 +107,6 @@ export async function postInternalNoteAction(
     summary: `Internal note posted`,
   });
 
-  revalidatePath(`/admin/clients/${enrollment.client_id}/enrollments/${parsed.data.enrollmentId}`);
+  revalidatePath(`/admin/organizations/${enrollment.organization_id}/enrollments/${parsed.data.enrollmentId}`);
   return ok({ id: note.id });
 }

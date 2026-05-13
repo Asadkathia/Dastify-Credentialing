@@ -12,6 +12,7 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { NewEnrollmentLauncher } from "@/components/admin/new-enrollment-launcher";
 import { StatusChip } from "@/components/ui/status-chip";
 import { DesignKpi } from "@/components/ui/design-kpi";
 import {
@@ -88,9 +89,9 @@ export default async function AdminDashboardPage() {
     supabase
       .from("enrollments")
       .select(
-        `id, client_id, state, status, sub_status, updated_at,
-         client:client_id (id, display_name),
-         provider:provider_id (first_name, last_name),
+        `id, organization_id, state, status, sub_status, updated_at,
+         client:organization_id (id, display_name),
+         provider:client_id (first_name, last_name),
          group_entity:group_entity_id (legal_name),
          payer:payer_id (name)`,
       )
@@ -146,17 +147,20 @@ export default async function AdminDashboardPage() {
         title="Dashboard"
         subtitle={
           <>
-            At-a-glance enrollment counts by status across all clients. Updated{" "}
+            At-a-glance enrollment counts by status across all organizations. Updated{" "}
             <span className="font-semibold text-teal tnum">{format(today, "PP")}</span>.
           </>
         }
         actions={
-          <Button asChild variant="outline">
-            <a href="/api/export/monthly-enrollments.xlsx">
-              <Download size={14} strokeWidth={1.6} className="mr-1.5" />
-              Monthly report
-            </a>
-          </Button>
+          <div className="flex items-center gap-2">
+            <NewEnrollmentLauncher triggerLabel="New Enrollment" />
+            <Button asChild variant="outline">
+              <a href="/api/export/monthly-enrollments.xlsx">
+                <Download size={14} strokeWidth={1.6} className="mr-1.5" />
+                Monthly report
+              </a>
+            </Button>
+          </div>
         }
       />
 
@@ -270,7 +274,7 @@ export default async function AdminDashboardPage() {
             <thead>
               <tr>
                 <th>Subject</th>
-                <th>Client</th>
+                <th>Organization</th>
                 <th>Payer · State</th>
                 <th>Status</th>
                 <th>Updated</th>
@@ -288,7 +292,7 @@ export default async function AdminDashboardPage() {
                   ? `${provider.last_name}, ${provider.first_name}`
                   : (groupEntity?.legal_name ?? "—");
                 const detailHref = client
-                  ? `/admin/clients/${client.id}/enrollments/${r.id}`
+                  ? `/admin/organizations/${client.id}/enrollments/${r.id}`
                   : "#";
                 return (
                   <tr key={r.id}>
