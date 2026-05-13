@@ -13,25 +13,13 @@ import { ok, fail, type ActionResult } from "@/lib/actions/result";
 
 const BUCKET = "documents";
 
-/**
- * Admin-only: upload a file to Supabase Storage and create a documents row.
- *
- * The form sends multipart/form-data with the file as `file` plus metadata
- * fields. We validate metadata server-side, generate a path that encodes
- * client_id (so RLS can use it), upload via the user-scoped Supabase client
- * (which runs RLS — so a non-admin would be denied), then insert the row.
- *
- * Returns the new document id on success.
- */
 export async function uploadDocumentAction(
   formData: FormData,
 ): Promise<ActionResult<{ documentId: string }>> {
   const session = await requireAdmin();
 
   const file = formData.get("file");
-  if (!(file instanceof File)) {
-    return fail("No file provided");
-  }
+  if (!(file instanceof File)) return fail("No file provided");
   if (file.size === 0) return fail("File is empty");
   if (file.size > MAX_DOCUMENT_BYTES) {
     return fail(`File too large (max ${Math.floor(MAX_DOCUMENT_BYTES / 1024 / 1024)} MB)`);
@@ -41,7 +29,7 @@ export async function uploadDocumentAction(
   }
 
   const parsed = uploadDocumentMetaSchema.safeParse({
-    clientId: formData.get("clientId"),
+    organizationId: formData.get("organizationId"),
     ownerType: formData.get("ownerType"),
     ownerId: formData.get("ownerId"),
     categoryId: formData.get("categoryId"),
@@ -58,15 +46,13 @@ export async function uploadDocumentAction(
 
   const supabase = await createSupabaseServerClient();
 
-  // Sanity check: confirm the owner row exists and belongs to the right client
-  // (admins see everything via RLS, so this also guards against typos).
   const { data: ownerExists } = await ownerLookup(supabase, parsed.data);
-  if (!ownerExists) return fail("Owner record not found for this client");
+  if (!ownerExists) return fail("Owner record not found for this organization");
 
-  // Path: <clientId>/<ownerType>/<ownerId>/<random>-<safeName>
+  // Path: <organizationId>/<ownerType>/<ownerId>/<random>-<safeName>
   const safeName = sanitizeFileName(parsed.data.fileName);
   const random = crypto.randomUUID();
-  const storagePath = `${parsed.data.clientId}/${parsed.data.ownerType}/${parsed.data.ownerId}/${random}-${safeName}`;
+  const storagePath = `${parsed.data.organizationId}/${parsed.data.ownerType}/${parsed.data.ownerId}/${random}-${safeName}`;
 
   const { error: uploadErr } = await supabase.storage
     .from(BUCKET)
@@ -75,14 +61,12 @@ export async function uploadDocumentAction(
       cacheControl: "3600",
       upsert: false,
     });
-  if (uploadErr) {
-    return fail(`Storage upload failed: ${uploadErr.message}`);
-  }
+  if (uploadErr) return fail(`Storage upload failed: ${uploadErr.message}`);
 
   const { data: doc, error: insertErr } = await supabase
     .from("documents")
     .insert({
-      client_id: parsed.data.clientId,
+      organization_id: parsed.data.organizationId,
       owner_type: parsed.data.ownerType,
       owner_id: parsed.data.ownerId,
       category_id: parsed.data.categoryId,
@@ -99,13 +83,12 @@ export async function uploadDocumentAction(
     .select("id")
     .single();
   if (insertErr || !doc) {
-    // Roll back the upload so we don't leak orphan files in storage.
     await supabase.storage.from(BUCKET).remove([storagePath]);
     return fail(`Document insert failed: ${insertErr?.message ?? "unknown"}`);
   }
 
   await supabase.from("activity_events").insert({
-    client_id: parsed.data.clientId,
+    organization_id: parsed.data.organizationId,
     actor_user_id: session.userId,
     action: "document_upload",
     target_table: "documents",
@@ -113,15 +96,10 @@ export async function uploadDocumentAction(
     summary: `Uploaded ${parsed.data.fileName}${parsed.data.isInternal ? " (internal)" : ""}`,
   });
 
-  revalidatePathsForOwner(parsed.data.clientId, parsed.data.ownerType, parsed.data.ownerId);
+  revalidatePathsForOwner(parsed.data.organizationId, parsed.data.ownerType, parsed.data.ownerId);
   return ok({ documentId: doc.id });
 }
 
-/**
- * Returns a short-lived signed URL for downloading a document. Permission is
- * enforced by the storage RLS policy: clients can only get URLs for documents
- * that match their client_id and aren't internal.
- */
 export async function getDocumentDownloadUrlAction(
   documentId: string,
 ): Promise<ActionResult<{ url: string; fileName: string }>> {
@@ -141,16 +119,12 @@ export async function getDocumentDownloadUrlAction(
 
   const { data: signed, error: signErr } = await supabase.storage
     .from(BUCKET)
-    .createSignedUrl(doc.storage_path, 60); // 60-second TTL — user clicks immediately
+    .createSignedUrl(doc.storage_path, 60);
   if (signErr || !signed) return fail(`Could not sign URL: ${signErr?.message ?? "unknown"}`);
 
   return ok({ url: signed.signedUrl, fileName: doc.file_name });
 }
 
-/**
- * Admin-only soft delete: marks the documents row deleted_at and removes the
- * storage object. Audit row is the activity_events insert.
- */
 export async function deleteDocumentAction(
   documentId: string,
 ): Promise<ActionResult<{ documentId: string }>> {
@@ -162,13 +136,11 @@ export async function deleteDocumentAction(
 
   const { data: doc, error: docErr } = await supabase
     .from("documents")
-    .select("id, client_id, owner_type, owner_id, storage_path, file_name")
+    .select("id, organization_id, owner_type, owner_id, storage_path, file_name")
     .eq("id", parsed.data.documentId)
     .maybeSingle();
   if (docErr || !doc) return fail("Document not found");
 
-  // Remove the storage object first; if that fails, we don't soft-delete (so
-  // the user can retry). Admin RLS allows the storage delete.
   const { error: rmErr } = await supabase.storage.from(BUCKET).remove([doc.storage_path]);
   if (rmErr && !rmErr.message.toLowerCase().includes("not found")) {
     return fail(`Storage delete failed: ${rmErr.message}`);
@@ -181,7 +153,7 @@ export async function deleteDocumentAction(
   if (updErr) return fail(`Soft-delete failed: ${updErr.message}`);
 
   await supabase.from("activity_events").insert({
-    client_id: doc.client_id,
+    organization_id: doc.organization_id,
     actor_user_id: session.userId,
     action: "document_delete",
     target_table: "documents",
@@ -189,16 +161,10 @@ export async function deleteDocumentAction(
     summary: `Deleted ${doc.file_name}`,
   });
 
-  revalidatePathsForOwner(doc.client_id, doc.owner_type, doc.owner_id);
+  revalidatePathsForOwner(doc.organization_id, doc.owner_type, doc.owner_id);
   return ok({ documentId: doc.id });
 }
 
-/**
- * Admin-only: append a new category to the document_categories table.
- * The `name` (machine identifier) is derived from the label by lower-casing
- * and replacing whitespace/punctuation with `_`. If a category with the same
- * name already exists, return that one (idempotent).
- */
 export async function createDocumentCategoryAction(
   input: unknown,
 ): Promise<ActionResult<{ id: string; name: string; label: string; isExisting: boolean }>> {
@@ -229,7 +195,6 @@ export async function createDocumentCategoryAction(
     return ok({ id: existing.id, name: existing.name, label: existing.label, isExisting: true });
   }
 
-  // Place new categories above "Other" but below the last default.
   const { data: highestDefault } = await supabase
     .from("document_categories")
     .select("sort_order")
@@ -259,11 +224,7 @@ export async function createDocumentCategoryAction(
   return ok({ id: created.id, name: created.name, label: created.label, isExisting: false });
 }
 
-// ── helpers ─────────────────────────────────────────────────────────────────
-
 function sanitizeFileName(name: string): string {
-  // Replace anything outside [A-Za-z0-9._-] with `_`. Collapse runs.
-  // Storage keys allow more, but staying narrow avoids surprises.
   return (
     name
       .replace(/[^A-Za-z0-9._-]+/g, "_")
@@ -273,7 +234,7 @@ function sanitizeFileName(name: string): string {
 }
 
 type SupabaseFromArgs = {
-  clientId: string;
+  organizationId: string;
   ownerType: "provider" | "enrollment" | "group_entity" | "client";
   ownerId: string;
 };
@@ -282,35 +243,37 @@ async function ownerLookup(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   args: SupabaseFromArgs,
 ): Promise<{ data: boolean }> {
+  // Note: ownerType "provider" is legacy; new code uses "client" for clinicians.
+  // The clients table now holds clinicians (formerly providers).
   const tableByOwner: Record<SupabaseFromArgs["ownerType"], string> = {
-    provider: "providers",
+    provider: "clients",
     enrollment: "enrollments",
     group_entity: "group_entities",
-    client: "clients",
+    client: "organizations",
   };
   const table = tableByOwner[args.ownerType];
-  const idColumn = args.ownerType === "client" ? "id" : "id";
+  const orgColumn = args.ownerType === "client" ? "id" : "organization_id";
   const { count } = await supabase
     .from(table)
     .select("*", { count: "exact", head: true })
-    .eq(idColumn, args.ownerId)
-    .eq(args.ownerType === "client" ? "id" : "client_id", args.clientId);
+    .eq("id", args.ownerId)
+    .eq(orgColumn, args.organizationId);
   return { data: (count ?? 0) > 0 };
 }
 
-function revalidatePathsForOwner(clientId: string, ownerType: string, ownerId: string) {
+function revalidatePathsForOwner(organizationId: string, ownerType: string, ownerId: string) {
   switch (ownerType) {
     case "enrollment":
-      revalidatePath(`/admin/clients/${clientId}/enrollments/${ownerId}`);
+      revalidatePath(`/admin/organizations/${organizationId}/enrollments/${ownerId}`);
       revalidatePath(`/portal/enrollments/${ownerId}`);
       break;
     case "provider":
-      revalidatePath(`/admin/clients/${clientId}/providers/${ownerId}`);
-      revalidatePath(`/admin/clients/${clientId}`);
+      revalidatePath(`/admin/organizations/${organizationId}/clients/${ownerId}`);
+      revalidatePath(`/admin/organizations/${organizationId}`);
       break;
     case "group_entity":
     case "client":
-      revalidatePath(`/admin/clients/${clientId}`);
+      revalidatePath(`/admin/organizations/${organizationId}`);
       revalidatePath(`/portal`);
       break;
   }

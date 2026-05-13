@@ -9,23 +9,23 @@ export type AdminSession = {
   fullName: string;
 };
 
-export type ClientSession = {
-  role: "client_admin" | "client_viewer";
+export type OrganizationSession = {
+  role: "org_admin" | "org_viewer";
   userId: string;
   email: string;
   fullName: string;
-  clientId: string;
+  organizationId: string;
 };
 
-export type Session = AdminSession | ClientSession;
+export type Session = AdminSession | OrganizationSession;
 
 /**
  * Reads the current Supabase auth session and resolves it to either an
- * AdminSession (if the user is in admin_users) or a ClientSession (if in
- * client_users), or null. Cached per request via React's `cache()`.
+ * AdminSession (if the user is in admin_users) or an OrganizationSession
+ * (if in organization_users), or null. Cached per request via React's `cache()`.
  *
- * This is the single source of truth for "who is the current user" in any
- * server component or server action.
+ * Source of truth for "who is the current user" in any server component or
+ * server action.
  */
 export const getCurrentSession = cache(async (): Promise<Session | null> => {
   const supabase = await createSupabaseServerClient();
@@ -36,10 +36,9 @@ export const getCurrentSession = cache(async (): Promise<Session | null> => {
 
   if (error || !user) return null;
 
-  // The JWT custom access token hook (migration 0012) stamps `app_role` and
-  // `client_id` into app_metadata, so we know which side to query without a
-  // probe. If claims are missing (hook disabled / pre-hook session), fall back
-  // to looking in both tables in parallel.
+  // The JWT custom access token hook (migration 0013, replacing 0012) stamps
+  // `app_role` and `organization_id` into app_metadata. If claims are missing
+  // (hook disabled / pre-rename session), fall back to looking in both tables.
   const appRole = (user.app_metadata as { app_role?: string } | undefined)?.app_role;
 
   if (appRole === "admin") {
@@ -60,20 +59,20 @@ export const getCurrentSession = cache(async (): Promise<Session | null> => {
     return null;
   }
 
-  if (appRole === "client_admin" || appRole === "client_viewer") {
-    const { data: clientRow } = await supabase
-      .from("client_users")
-      .select("id, email, full_name, role, client_id, is_active")
+  if (appRole === "org_admin" || appRole === "org_viewer") {
+    const { data: orgRow } = await supabase
+      .from("organization_users")
+      .select("id, email, full_name, role, organization_id, is_active")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (clientRow && clientRow.is_active) {
+    if (orgRow && orgRow.is_active) {
       return {
-        role: clientRow.role as "client_admin" | "client_viewer",
-        userId: clientRow.id,
-        email: clientRow.email,
-        fullName: clientRow.full_name,
-        clientId: clientRow.client_id,
+        role: orgRow.role as "org_admin" | "org_viewer",
+        userId: orgRow.id,
+        email: orgRow.email,
+        fullName: orgRow.full_name,
+        organizationId: orgRow.organization_id,
       };
     }
     return null;
@@ -81,15 +80,15 @@ export const getCurrentSession = cache(async (): Promise<Session | null> => {
 
   // Fallback path — JWT claim absent. Probe both tables in parallel rather
   // than serially.
-  const [{ data: adminRow }, { data: clientRow }] = await Promise.all([
+  const [{ data: adminRow }, { data: orgRow }] = await Promise.all([
     supabase
       .from("admin_users")
       .select("id, email, full_name, is_active")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
-      .from("client_users")
-      .select("id, email, full_name, role, client_id, is_active")
+      .from("organization_users")
+      .select("id, email, full_name, role, organization_id, is_active")
       .eq("id", user.id)
       .maybeSingle(),
   ]);
@@ -103,13 +102,13 @@ export const getCurrentSession = cache(async (): Promise<Session | null> => {
     };
   }
 
-  if (clientRow && clientRow.is_active) {
+  if (orgRow && orgRow.is_active) {
     return {
-      role: clientRow.role as "client_admin" | "client_viewer",
-      userId: clientRow.id,
-      email: clientRow.email,
-      fullName: clientRow.full_name,
-      clientId: clientRow.client_id,
+      role: orgRow.role as "org_admin" | "org_viewer",
+      userId: orgRow.id,
+      email: orgRow.email,
+      fullName: orgRow.full_name,
+      organizationId: orgRow.organization_id,
     };
   }
 
@@ -124,10 +123,10 @@ export async function requireAdmin(): Promise<AdminSession> {
   return session;
 }
 
-export async function requireClient(): Promise<ClientSession> {
+export async function requireOrganization(): Promise<OrganizationSession> {
   const session = await getCurrentSession();
   if (!session || session.role === "admin") {
-    throw new Error("Unauthorized: client role required");
+    throw new Error("Unauthorized: organization role required");
   }
   return session;
 }

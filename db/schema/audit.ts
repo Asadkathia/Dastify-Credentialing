@@ -1,5 +1,5 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
-import { clients } from "./clients";
+import { organizations } from "./organizations";
 import { enrollments } from "./enrollments";
 import { enrollmentStatusEnum, activityActionEnum } from "./enums";
 
@@ -10,7 +10,9 @@ export const statusHistory = pgTable(
   "status_history",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "set null",
+    }),
     enrollmentId: uuid("enrollment_id").references(() => enrollments.id, {
       onDelete: "set null",
     }),
@@ -24,7 +26,7 @@ export const statusHistory = pgTable(
   },
   (t) => ({
     enrollmentIdx: index("status_history_enrollment_id_idx").on(t.enrollmentId, t.changedAt),
-    clientIdx: index("status_history_client_id_idx").on(t.clientId, t.changedAt),
+    organizationIdx: index("status_history_organization_id_idx").on(t.organizationId, t.changedAt),
   }),
 );
 
@@ -33,7 +35,9 @@ export const activityEvents = pgTable(
   "activity_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "set null",
+    }),
     actorUserId: uuid("actor_user_id"),
     action: activityActionEnum("action").notNull(),
     targetTable: text("target_table").notNull(),
@@ -44,7 +48,7 @@ export const activityEvents = pgTable(
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    clientIdx: index("activity_events_client_id_idx").on(t.clientId, t.occurredAt),
+    organizationIdx: index("activity_events_organization_id_idx").on(t.organizationId, t.occurredAt),
     targetIdx: index("activity_events_target_idx").on(t.targetTable, t.targetId),
     actorIdx: index("activity_events_actor_idx").on(t.actorUserId, t.occurredAt),
   }),

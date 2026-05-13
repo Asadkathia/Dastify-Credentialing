@@ -1,26 +1,27 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import {
-  createClientSchema,
-  inviteClientUserSchema,
-  updateClientSchema,
-} from "@/lib/validation/schemas";
+import { createClientSchema, updateClientSchema } from "@/lib/validation/schemas";
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
 
-export async function createClientAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
+export async function createClientAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
   const session = await requireAdmin();
 
   const parsed = createClientSchema.safeParse({
-    legalName: formData.get("legalName"),
-    displayName: formData.get("displayName"),
-    primaryContactName: formData.get("primaryContactName") || "",
-    primaryContactEmail: formData.get("primaryContactEmail") || "",
-    primaryContactPhone: formData.get("primaryContactPhone") || "",
-    notes: formData.get("notes") || "",
+    organizationId: formData.get("organizationId"),
+    firstName: formData.get("firstName"),
+    middleName: formData.get("middleName") || "",
+    lastName: formData.get("lastName"),
+    suffix: formData.get("suffix") || "",
+    npi: formData.get("npi") || "",
+    primarySpecialty: formData.get("primarySpecialty") || "",
+    secondarySpecialty: formData.get("secondarySpecialty") || "",
+    email: formData.get("email") || "",
+    phone: formData.get("phone") || "",
+    caqhId: formData.get("caqhId") || "",
   });
   if (!parsed.success) {
     return fail("Invalid input", parsed.error.flatten().fieldErrors);
@@ -31,12 +32,17 @@ export async function createClientAction(formData: FormData): Promise<ActionResu
   const { data: client, error } = await supabase
     .from("clients")
     .insert({
-      legal_name: parsed.data.legalName,
-      display_name: parsed.data.displayName,
-      primary_contact_name: parsed.data.primaryContactName || null,
-      primary_contact_email: parsed.data.primaryContactEmail || null,
-      primary_contact_phone: parsed.data.primaryContactPhone || null,
-      notes: parsed.data.notes || null,
+      organization_id: parsed.data.organizationId,
+      first_name: parsed.data.firstName,
+      middle_name: parsed.data.middleName || null,
+      last_name: parsed.data.lastName,
+      suffix: parsed.data.suffix || null,
+      npi: parsed.data.npi || null,
+      primary_specialty: parsed.data.primarySpecialty || null,
+      secondary_specialty: parsed.data.secondarySpecialty || null,
+      email: parsed.data.email || null,
+      phone: parsed.data.phone || null,
+      caqh_id: parsed.data.caqhId || null,
     })
     .select("id")
     .single();
@@ -45,19 +51,16 @@ export async function createClientAction(formData: FormData): Promise<ActionResu
     return fail(`Failed to create client: ${error?.message ?? "unknown"}`);
   }
 
-  // Auto-create default settings row.
-  await supabase.from("client_settings").insert({ client_id: client.id });
-
   await supabase.from("activity_events").insert({
-    client_id: client.id,
+    organization_id: parsed.data.organizationId,
     actor_user_id: session.userId,
     action: "create",
     target_table: "clients",
     target_id: client.id,
-    summary: `Created client ${parsed.data.displayName}`,
+    summary: `Created client ${parsed.data.firstName} ${parsed.data.lastName}`,
   });
 
-  revalidatePath("/admin");
+  revalidatePath(`/admin/organizations/${parsed.data.organizationId}`);
   return ok({ id: client.id });
 }
 
@@ -68,13 +71,16 @@ export async function updateClientAction(
 
   const parsed = updateClientSchema.safeParse({
     clientId: formData.get("clientId"),
-    legalName: formData.get("legalName"),
-    displayName: formData.get("displayName"),
-    primaryContactName: formData.get("primaryContactName") || "",
-    primaryContactEmail: formData.get("primaryContactEmail") || "",
-    primaryContactPhone: formData.get("primaryContactPhone") || "",
-    notes: formData.get("notes") || "",
-    isActive: formData.get("isActive") === "on" || formData.get("isActive") === "true",
+    firstName: formData.get("firstName"),
+    middleName: formData.get("middleName") || "",
+    lastName: formData.get("lastName"),
+    suffix: formData.get("suffix") || "",
+    npi: formData.get("npi") || "",
+    primarySpecialty: formData.get("primarySpecialty") || "",
+    secondarySpecialty: formData.get("secondarySpecialty") || "",
+    email: formData.get("email") || "",
+    phone: formData.get("phone") || "",
+    caqhId: formData.get("caqhId") || "",
   });
   if (!parsed.success) {
     return fail("Invalid input", parsed.error.flatten().fieldErrors);
@@ -84,23 +90,24 @@ export async function updateClientAction(
 
   const { data: existing, error: fetchErr } = await supabase
     .from("clients")
-    .select("id")
+    .select("id, organization_id")
     .eq("id", parsed.data.clientId)
-    .is("deleted_at", null)
     .maybeSingle();
   if (fetchErr || !existing) return fail("Client not found");
 
   const { error: updateErr } = await supabase
     .from("clients")
     .update({
-      legal_name: parsed.data.legalName,
-      display_name: parsed.data.displayName,
-      primary_contact_name: parsed.data.primaryContactName || null,
-      primary_contact_email: parsed.data.primaryContactEmail || null,
-      primary_contact_phone: parsed.data.primaryContactPhone || null,
-      notes: parsed.data.notes || null,
-      is_active: parsed.data.isActive,
-      updated_at: new Date().toISOString(),
+      first_name: parsed.data.firstName,
+      middle_name: parsed.data.middleName || null,
+      last_name: parsed.data.lastName,
+      suffix: parsed.data.suffix || null,
+      npi: parsed.data.npi || null,
+      primary_specialty: parsed.data.primarySpecialty || null,
+      secondary_specialty: parsed.data.secondarySpecialty || null,
+      email: parsed.data.email || null,
+      phone: parsed.data.phone || null,
+      caqh_id: parsed.data.caqhId || null,
     })
     .eq("id", parsed.data.clientId);
   if (updateErr) {
@@ -108,116 +115,15 @@ export async function updateClientAction(
   }
 
   await supabase.from("activity_events").insert({
-    client_id: parsed.data.clientId,
+    organization_id: existing.organization_id,
     actor_user_id: session.userId,
     action: "update",
     target_table: "clients",
     target_id: parsed.data.clientId,
-    summary: `Updated client ${parsed.data.displayName}`,
+    summary: `Updated client ${parsed.data.firstName} ${parsed.data.lastName}`,
   });
 
-  revalidatePath(`/admin/clients/${parsed.data.clientId}`);
-  revalidatePath("/admin/clients");
-  revalidatePath("/admin");
+  revalidatePath(`/admin/organizations/${existing.organization_id}/clients/${parsed.data.clientId}`);
+  revalidatePath(`/admin/organizations/${existing.organization_id}`);
   return ok({ id: parsed.data.clientId });
-}
-
-export async function createClientAndRedirect(formData: FormData): Promise<void> {
-  const result = await createClientAction(formData);
-  if (!result.ok) {
-    // Server actions can't return rich errors via redirect; encode minimally.
-    redirect(`/admin/clients/new?error=${encodeURIComponent(result.error)}`);
-  }
-  redirect(`/admin/clients/${result.data.id}`);
-}
-
-export async function inviteClientUserAction(
-  formData: FormData,
-): Promise<ActionResult<{ userId: string; authMethod: "magic_link" | "password" }>> {
-  const session = await requireAdmin();
-
-  const passwordRaw = formData.get("password");
-  const parsed = inviteClientUserSchema.safeParse({
-    clientId: formData.get("clientId"),
-    email: formData.get("email"),
-    fullName: formData.get("fullName"),
-    role: formData.get("role") || "client_viewer",
-    authMethod: formData.get("authMethod") || "magic_link",
-    password: passwordRaw ? String(passwordRaw) : undefined,
-  });
-  if (!parsed.success) {
-    return fail("Invalid input", parsed.error.flatten().fieldErrors);
-  }
-
-  const supabase = await createSupabaseServerClient();
-
-  const { data: client } = await supabase
-    .from("clients")
-    .select("id, display_name")
-    .eq("id", parsed.data.clientId)
-    .maybeSingle();
-  if (!client) return fail("Client not found");
-
-  const adminSupabase = createSupabaseAdminClient();
-  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`;
-
-  let userId: string;
-
-  if (parsed.data.authMethod === "password") {
-    // Admin-set password flow: create the user immediately with the chosen
-    // password and email pre-confirmed. Admin shares the password with the
-    // user out-of-band. No email is sent by Supabase.
-    const { data: created, error: createErr } = await adminSupabase.auth.admin.createUser({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      email_confirm: true,
-      user_metadata: { full_name: parsed.data.fullName, client_id: parsed.data.clientId },
-    });
-    if (createErr || !created.user) {
-      return fail(`Account creation failed: ${createErr?.message ?? "unknown"}`);
-    }
-    userId = created.user.id;
-  } else {
-    // Magic-link invite: Supabase sends the user a one-time sign-in link.
-    const { data: invited, error: inviteErr } = await adminSupabase.auth.admin.inviteUserByEmail(
-      parsed.data.email,
-      {
-        redirectTo,
-        data: { full_name: parsed.data.fullName, client_id: parsed.data.clientId },
-      },
-    );
-    if (inviteErr || !invited.user) {
-      return fail(`Invite failed: ${inviteErr?.message ?? "unknown"}`);
-    }
-    userId = invited.user.id;
-  }
-
-  // Insert the client_users profile row (admin client bypasses RLS — fine since
-  // we already verified admin status above).
-  const { error: insertErr } = await adminSupabase.from("client_users").insert({
-    id: userId,
-    client_id: parsed.data.clientId,
-    email: parsed.data.email,
-    full_name: parsed.data.fullName,
-    role: parsed.data.role,
-    invited_by_user_id: session.userId,
-    accepted_at: parsed.data.authMethod === "password" ? new Date().toISOString() : null,
-  });
-  if (insertErr) {
-    return fail(`Account created but profile insert failed: ${insertErr.message}`);
-  }
-
-  await supabase.from("activity_events").insert({
-    client_id: parsed.data.clientId,
-    actor_user_id: session.userId,
-    action: "user_invite",
-    target_table: "client_users",
-    target_id: userId,
-    summary: `${
-      parsed.data.authMethod === "password" ? "Created account for" : "Invited"
-    } ${parsed.data.email} (${parsed.data.role}) to ${client.display_name}`,
-  });
-
-  revalidatePath(`/admin/clients/${parsed.data.clientId}`);
-  return ok({ userId, authMethod: parsed.data.authMethod });
 }

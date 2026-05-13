@@ -1,6 +1,6 @@
 import { pgTable, uuid, timestamp, text, boolean, pgSchema } from "drizzle-orm/pg-core";
-import { adminRoleEnum, clientUserRoleEnum } from "./enums";
-import { clients } from "./clients";
+import { adminRoleEnum, organizationUserRoleEnum } from "./enums";
+import { organizations } from "./organizations";
 
 // Reference to Supabase's built-in auth.users table.
 // We don't manage this; it's owned by Supabase Auth.
@@ -24,18 +24,18 @@ export const adminUsers = pgTable("admin_users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Client-side users (practice staff).
-// Provisioned via admin invite; scoped to one client_id.
-export const clientUsers = pgTable("client_users", {
+// Organization-side users (practice staff).
+// Provisioned via admin invite; scoped to one organization_id.
+export const organizationUsers = pgTable("organization_users", {
   id: uuid("id")
     .primaryKey()
     .references(() => authUsers.id, { onDelete: "cascade" }),
-  clientId: uuid("client_id")
+  organizationId: uuid("organization_id")
     .notNull()
-    .references(() => clients.id, { onDelete: "cascade" }),
+    .references(() => organizations.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   fullName: text("full_name").notNull(),
-  role: clientUserRoleEnum("role").notNull().default("client_viewer"),
+  role: organizationUserRoleEnum("role").notNull().default("org_viewer"),
   isActive: boolean("is_active").notNull().default(true),
   invitedByUserId: uuid("invited_by_user_id"),
   invitedAt: timestamp("invited_at", { withTimezone: true }).notNull().defaultNow(),
@@ -45,4 +45,4 @@ export const clientUsers = pgTable("client_users", {
 });
 
 export type AdminUser = typeof adminUsers.$inferSelect;
-export type ClientUser = typeof clientUsers.$inferSelect;
+export type OrganizationUser = typeof organizationUsers.$inferSelect;

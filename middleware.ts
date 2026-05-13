@@ -7,21 +7,21 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
  * Middleware refreshes the Supabase auth session cookie on each request and
  * gates route groups:
  *   /admin/*  → admin only
- *   /portal/* → client_admin / client_viewer only
+ *   /portal/* → org_admin / org_viewer only
  *   /login    → public
  *
  * Role is read from the JWT's `app_metadata.app_role` claim, populated by the
- * `public.custom_access_token_hook` Postgres function (migration 0012). If the
+ * `public.custom_access_token_hook` Postgres function (migration 0013). If the
  * claim is absent (hook not enabled yet, or a session predating the hook), we
  * fall back to two parallel Supabase lookups so the gate still works.
  *
  * This is a coarse first gate; finer authorization happens in server components
- * via `requireAdmin()` / `requireClient()` and at the DB layer via RLS.
+ * via `requireAdmin()` / `requireOrganization()` and at the DB layer via RLS.
  */
 
 const PUBLIC_PATHS = new Set(["/login", "/auth/callback", "/auth/error"]);
 
-type AppRole = "admin" | "client_admin" | "client_viewer";
+type AppRole = "admin" | "org_admin" | "org_viewer";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -74,22 +74,22 @@ export async function middleware(request: NextRequest) {
   // Fallback path: claim missing (hook not enabled / stale session). Probe
   // both tables in parallel and infer the role.
   if (!role) {
-    const [{ data: adminRow }, { data: clientRow }] = await Promise.all([
+    const [{ data: adminRow }, { data: orgRow }] = await Promise.all([
       supabase.from("admin_users").select("is_active").eq("id", user.id).maybeSingle(),
-      supabase.from("client_users").select("is_active, role").eq("id", user.id).maybeSingle(),
+      supabase.from("organization_users").select("is_active, role").eq("id", user.id).maybeSingle(),
     ]);
     if (adminRow?.is_active === true) {
       role = "admin";
-    } else if (clientRow?.is_active === true) {
-      role = clientRow.role as AppRole;
+    } else if (orgRow?.is_active === true) {
+      role = orgRow.role as AppRole;
     }
   }
 
   const isAdmin = role === "admin";
-  const isClient = role === "client_admin" || role === "client_viewer";
+  const isOrgUser = role === "org_admin" || role === "org_viewer";
 
   // Orphaned auth session (user exists in auth.users but no app row) → log out.
-  if (!isAdmin && !isClient) {
+  if (!isAdmin && !isOrgUser) {
     await supabase.auth.signOut();
     return NextResponse.redirect(new URL("/login?error=no_profile", request.url));
   }
@@ -100,9 +100,9 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Client can only enter /portal/*
+  // Org users can only enter /portal/*
   if (pathname.startsWith("/portal")) {
-    if (!isClient) return NextResponse.redirect(new URL("/admin", request.url));
+    if (!isOrgUser) return NextResponse.redirect(new URL("/admin", request.url));
     return response;
   }
 

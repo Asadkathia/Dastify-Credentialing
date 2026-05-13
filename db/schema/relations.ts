@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
-import { adminUsers, clientUsers } from "./auth";
-import { clients, clientSettings } from "./clients";
-import { providers, groupEntities } from "./providers";
+import { adminUsers, organizationUsers } from "./auth";
+import { organizations, organizationSettings } from "./organizations";
+import { clients, groupEntities } from "./clients";
 import { payers } from "./payers";
 import { enrollments } from "./enrollments";
 import { comments, internalNotes } from "./comments";
@@ -9,28 +9,37 @@ import { documents } from "./documents";
 import { documentCategories } from "./document_categories";
 import { statusHistory, activityEvents } from "./audit";
 
-export const clientsRelations = relations(clients, ({ many, one }) => ({
-  users: many(clientUsers),
-  providers: many(providers),
+export const organizationsRelations = relations(organizations, ({ many, one }) => ({
+  users: many(organizationUsers),
+  clients: many(clients),
   groupEntities: many(groupEntities),
   enrollments: many(enrollments),
-  settings: one(clientSettings, {
-    fields: [clients.id],
-    references: [clientSettings.clientId],
+  settings: one(organizationSettings, {
+    fields: [organizations.id],
+    references: [organizationSettings.organizationId],
   }),
 }));
 
-export const clientUsersRelations = relations(clientUsers, ({ one }) => ({
-  client: one(clients, { fields: [clientUsers.clientId], references: [clients.id] }),
+export const organizationUsersRelations = relations(organizationUsers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationUsers.organizationId],
+    references: [organizations.id],
+  }),
 }));
 
-export const providersRelations = relations(providers, ({ one, many }) => ({
-  client: one(clients, { fields: [providers.clientId], references: [clients.id] }),
+export const clientsRelations = relations(clients, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [clients.organizationId],
+    references: [organizations.id],
+  }),
   enrollments: many(enrollments),
 }));
 
 export const groupEntitiesRelations = relations(groupEntities, ({ one, many }) => ({
-  client: one(clients, { fields: [groupEntities.clientId], references: [clients.id] }),
+  organization: one(organizations, {
+    fields: [groupEntities.organizationId],
+    references: [organizations.id],
+  }),
   enrollments: many(enrollments),
 }));
 
@@ -39,8 +48,11 @@ export const payersRelations = relations(payers, ({ many }) => ({
 }));
 
 export const enrollmentsRelations = relations(enrollments, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [enrollments.organizationId],
+    references: [organizations.id],
+  }),
   client: one(clients, { fields: [enrollments.clientId], references: [clients.id] }),
-  provider: one(providers, { fields: [enrollments.providerId], references: [providers.id] }),
   groupEntity: one(groupEntities, {
     fields: [enrollments.groupEntityId],
     references: [groupEntities.id],
@@ -52,7 +64,10 @@ export const enrollmentsRelations = relations(enrollments, ({ one, many }) => ({
 }));
 
 export const commentsRelations = relations(comments, ({ one }) => ({
-  client: one(clients, { fields: [comments.clientId], references: [clients.id] }),
+  organization: one(organizations, {
+    fields: [comments.organizationId],
+    references: [organizations.id],
+  }),
   enrollment: one(enrollments, {
     fields: [comments.enrollmentId],
     references: [enrollments.id],
@@ -60,7 +75,10 @@ export const commentsRelations = relations(comments, ({ one }) => ({
 }));
 
 export const internalNotesRelations = relations(internalNotes, ({ one }) => ({
-  client: one(clients, { fields: [internalNotes.clientId], references: [clients.id] }),
+  organization: one(organizations, {
+    fields: [internalNotes.organizationId],
+    references: [organizations.id],
+  }),
   enrollment: one(enrollments, {
     fields: [internalNotes.enrollmentId],
     references: [enrollments.id],
@@ -68,7 +86,10 @@ export const internalNotesRelations = relations(internalNotes, ({ one }) => ({
 }));
 
 export const documentsRelations = relations(documents, ({ one }) => ({
-  client: one(clients, { fields: [documents.clientId], references: [clients.id] }),
+  organization: one(organizations, {
+    fields: [documents.organizationId],
+    references: [organizations.id],
+  }),
   category: one(documentCategories, {
     fields: [documents.categoryId],
     references: [documentCategories.id],
@@ -87,7 +108,10 @@ export const statusHistoryRelations = relations(statusHistory, ({ one }) => ({
 }));
 
 export const activityEventsRelations = relations(activityEvents, ({ one }) => ({
-  client: one(clients, { fields: [activityEvents.clientId], references: [clients.id] }),
+  organization: one(organizations, {
+    fields: [activityEvents.organizationId],
+    references: [organizations.id],
+  }),
 }));
 
 export const adminUsersRelations = relations(adminUsers, () => ({}));
