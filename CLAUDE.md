@@ -6,13 +6,13 @@
 
 ## 1. What this project is
 
-Dastify is a healthcare payer-enrollment-as-a-service business. This portal is the operational core: Dastify staff use it to manage every provider's enrollment status with every payer, in every US state, across every recredentialing cycle. Client practices log in to see their own data and comment on it.
+Dastify is a healthcare payer-enrollment-as-a-service business. This portal is the operational core: Dastify staff use it to manage every client's (clinician's) enrollment status with every payer, in every US state. Organization users (practice staff) log in to see their own data and comment on it.
 
 It replaces a per-client Excel spreadsheet (`States | Payers | Participation Request Status | Comments`) with a multi-tenant web app.
 
 **Two user types**:
 - **Admins** (Dastify staff) — full access, single role in v1.
-- **Client users** (practice staff) — provisioned by admin invite. Two sub-roles: `client_admin` (manages their org's users) and `client_viewer` (read + comment).
+- **Client users** (practice staff) — provisioned by admin invite. Two sub-roles: `org_admin` (manages their org's users) and `org_viewer` (read + comment).
 
 **Core domain unit**: `Enrollment = (Provider OR GroupEntity) × Payer × State × CycleNumber`.
 
@@ -51,7 +51,7 @@ These are the rules you must never break. If a request requires breaking one, st
 ### Security & multi-tenancy
 
 1. **Every tenant-scoped table has Row-Level Security enabled, with default-deny policies.** No exceptions. Migrations that create a tenant table without enabling RLS are rejected.
-2. **`auth.uid()` is the source of truth for the actor.** Never trust a `client_id` or `user_id` value passed from the client. Derive it from the session.
+2. **`auth.uid()` is the source of truth for the actor.** Never trust a `organization_id` or `user_id` value passed from the client. Derive it from the session.
 3. **`internal_notes` and `documents WHERE is_internal = true` are never returned to a client session, ever.** RLS hides them; UI also hides them; double-defense.
 4. **Sensitive columns are encrypted at rest with `pgcrypto`**: DEA number, SSN-last-4 (full SSN forbidden), DOB, Tax ID. Never log, return, or export these in plaintext outside the protected detail screens.
 5. **No self-signup.** All client users are admin-provisioned via invite. The signup route does not exist.
@@ -60,19 +60,19 @@ These are the rules you must never break. If a request requires breaking one, st
 
 ### Data model integrity
 
-8. **An enrollment is keyed by `(client_id, [provider_id|group_entity_id], payer_id, state)`.** Don't deduplicate by `(provider, payer)` alone — state is first-class. The unique index is partial — one for individual enrollments, one for group enrollments. **No `cycle_number`** (removed in migration 0009 along with the recredentialing module).
-9. **An enrollment has exactly one of `provider_id` or `group_entity_id`** — enforced by a CHECK constraint (`enrollments_subject_xor`).
-10. **States are 2-letter US codes everywhere they appear** — `enrollments.state`, `providers.license_states[].state`, `payers.states_active[]`, `group_entities.addresses[].state`. Validated by a DB CHECK (`^[A-Z]{2}$`) on `enrollments.state` and by `US_STATE_REGEX` in Zod for everything else. Never accept lowercase, full state names, or non-US codes.
+8. **An enrollment is keyed by `(organization_id, [client_id|group_entity_id], payer_id, state)`.** Don't deduplicate by `(client, payer)` alone — state is first-class. The unique index is partial — one for individual enrollments, one for group enrollments. **No `cycle_number`** (removed in migration 0009 along with the recredentialing module).
+9. **An enrollment has exactly one of `client_id` or `group_entity_id`** — enforced by a CHECK constraint (`enrollments_subject_xor`).
+10. **States are 2-letter US codes everywhere they appear** — `enrollments.state`, `clients.license_states[].state`, `payers.states_active[]`, `group_entities.addresses[].state`. Validated by a DB CHECK (`^[A-Z]{2}$`) on `enrollments.state` and by `US_STATE_REGEX` in Zod for everything else. Never accept lowercase, full state names, or non-US codes.
 11. **Provider names are stored split**: `first_name`, `middle_name?`, `last_name`, `suffix?`. Never add a single `name` or `full_name` column. UI display names are computed (`${last}, ${first}${middle ? " " + middle[0] + "." : ""}${suffix ? ", " + suffix : ""}` or similar) — design mockups that show "Dr. Imran Khan" are rendering, not storing.
-12. **Provider license states are a jsonb array** of `{ state, licenseNumber, expiration }` on `providers.license_states`. Don't model licenses as a separate table in v1 — the array is intentional and the UI treats it as a sub-grid on the provider detail screen.
-13. **Tax ID lives on `group_entities` only** (`tax_id_encrypted`). Providers do **not** have a tax ID column. Designs that show a Tax ID field on a provider are wrong — that field belongs on the group.
-14. **Sensitive provider columns are stored encrypted** as bytea via pgcrypto: `dea_number_encrypted`, `ssn_last4_encrypted`, `dob_encrypted`. Read paths must go through the documented decrypt SQL helpers, never `SELECT *`. The plain values never enter logs, exports, or non-detail screens.
+12. **Client license states are a jsonb array** of `{ state, licenseNumber, expiration }` on `clients.license_states`. Don't model licenses as a separate table in v1 — the array is intentional and the UI treats it as a sub-grid on the client detail screen.
+13. **Tax ID lives on `group_entities` only** (`tax_id_encrypted`). Clients (clinicians) do **not** have a tax ID column. Designs that show a Tax ID field on a client (clinician) are wrong — that field belongs on the group.
+14. **Sensitive client columns (clinicians) are stored encrypted** as bytea via pgcrypto: `dea_number_encrypted`, `ssn_last4_encrypted`, `dob_encrypted`. Read paths must go through the documented decrypt SQL helpers, never `SELECT *`. The plain values never enter logs, exports, or non-detail screens.
 15. **Document categories are a runtime-extensible table** (`document_categories`), not an enum. Migration 0008 seeds 11 defaults; admins can add more. Reference categories by `category_id` (FK), never by string name. The legacy `documentCategoryEnum` exists only for the deprecated `legacy_category` column and must not be used in new code.
-16. **`payers` is a global, non-tenant-scoped master table.** No `client_id`. Statewise availability is `payers.states_active` (jsonb string[]). The old `recred_cycle_months` column was removed in migration 0010.
+16. **`payers` is a global, non-tenant-scoped master table.** No `organization_id`. Statewise availability is `payers.states_active` (jsonb string[]). The old `recred_cycle_months` column was removed in migration 0010.
 
 ### Status lifecycle
 
-17. **Status is a closed enum**: `prep`, `submitted`, `in_review`, `approved`, `non_par_credentialed`. Linear happy path: `prep → submitted → in_review → approved` (4 stages). `non_par_credentialed` is the off-rail terminal (provider credentialed but not in-network). The schema defines `TERMINAL_STATUSES = {approved, non_par_credentialed}` for guard logic.
+17. **Status is a closed enum**: `prep`, `submitted`, `in_review`, `approved`, `non_par_credentialed`. Linear happy path: `prep → submitted → in_review → approved` (4 stages). `non_par_credentialed` is the off-rail terminal (client (clinician) credentialed but not in-network). The schema defines `TERMINAL_STATUSES = {approved, non_par_credentialed}` for guard logic.
 18. **`sub_status` is free-form `text`, not an enum.** UI may surface a curated list of common phrases as suggestions, but the column accepts any string and `status_history` records both `from_sub_status` and `to_sub_status` as text.
 19. **State transitions are validated server-side.** A transition that violates the documented machine returns `{ ok: false, error }`; it does not silently succeed. Each transition writes one row to `status_history` (append-only, enforced by `trg_status_history_no_update`).
 20. **Setting status to `submitted` for the first time sets `submitted_at`** automatically. `effective_date` is no longer auto-computed — the column remains for manual override only (set when a payer assigns a network-effective date).
@@ -82,9 +82,9 @@ These are the rules you must never break. If a request requires breaking one, st
 
 22. **Every list view is paginated.** Never render an unbounded query result.
 23. **Every destructive action requires confirmation** — soft delete by default (`deleted_at`); hard delete is admin-only and audit-logged via `activity_events` with `action = "delete"`.
-24. **The .xlsx export must reproduce the existing template format exactly**: banner row (configurable from `client_settings.disclaimer_banner_text`), `States | Payers | Participation Request Status | Comments` header, one row per enrollment. The user has clients trained on this layout — do not "improve" it without permission.
-25. **The disclaimer banner text is per-client and stored** at `client_settings.disclaimer_banner_text` (default: `"All Insurances take up to 90-120 business days for processing."`). Render it on every client-portal screen and at the top of the .xlsx export.
-26. **UI must replicate the design files in `/Dastify-Crendentialing/`** while honoring the data model above. Where a mockup field disagrees with the schema (provider Tax ID, single `name` field, `sub_status` as enum, recredentialing surfaces), the schema wins — adjust the rendering, not the column.
+24. **The .xlsx export must reproduce the existing template format exactly**: banner row (configurable from `organization_settings.disclaimer_banner_text`), `States | Payers | Participation Request Status | Comments` header, one row per enrollment. The user has clients trained on this layout — do not "improve" it without permission.
+25. **The disclaimer banner text is per-client and stored** at `organization_settings.disclaimer_banner_text` (default: `"All Insurances take up to 90-120 business days for processing."`). Render it on every client-portal screen and at the top of the .xlsx export.
+26. **UI must replicate the design files in `/Dastify-Crendentialing/`** while honoring the data model above. Where a mockup field disagrees with the schema (Tax ID on a client, single `name` field, `sub_status` as enum, recredentialing surfaces), the schema wins — adjust the rendering, not the column.
 27. **Admin dashboards are per-status KPI bands.** Each of the 5 statuses gets its own card with the live count and a click-through to `/admin/enrollments?status=X` (or `/portal/enrollments?status=X`). No recreds-due KPI, no time-to-effective KPI — those concepts no longer exist.
 
 ---
@@ -145,19 +145,19 @@ Locked v1 scope. The screens in `/Dastify-Crendentialing/` are the visual target
 - Multi-tenant data model per `docs/DESIGN.md` §3 and `db/schema/*`.
 - **Admin portal**:
   - Dashboard — 5 status KPI cards (one per enum value), each clickable to `/admin/enrollments?status=X`. Status distribution donut, non-par-credentialed rate by payer, 12-month enrollment-creations bar, recently-updated table, "Monthly report" Excel download.
-  - Clients / Providers / Payers — separate list pages with detail panes.
+  - Organizations / Clients / Payers — separate list pages with detail panes.
   - Enrollments list — cross-client, with status filter chips (5 chips), payer + state filters, pagination.
   - Enrollment detail — status pipeline visualization, Overview / Status History / Documents / Comments / Internal Notes / Activity tabs.
   - Status Transition modal — valid-transition gating per the new state machine, free-form reason capture.
-  - New Enrollment — one (provider × payer × state) per row (no cycle concept).
+  - New Enrollment — one (client × payer × state) per row (no cycle concept).
   - Documents (cross-client) + Audit Log (cross-client).
 - **Client portal** — read access scoped via RLS to their own client's data; comment posting; .xlsx export. Mirrors admin Dashboard (5 status KPI cards, status donut, 12-month creations bar, recently-updated, recent comments). Internal notes and internal documents never appear; non-par rate is admin-only.
 - Status pipeline (5 statuses, 4 linear stages) with server-side transition validation.
 - Documents with admin-extensible runtime categories (`document_categories` table), expiration tracking, internal/public flag, virus scanning hook.
 - Audit log: `status_history` + `activity_events`, append-only, visible per-enrollment and globally on `/admin/audit`.
 - .xlsx export matching the existing Excel template — plus a monthly cross-client report at `/api/export/monthly-enrollments.xlsx`.
-- Email notifications (Resend): status change, client-comment-to-admin, daily/weekly digest (`client_settings.digest_email_frequency`), expiration alerts (`client_settings.expiration_alert_days_before`).
-- Configurable per-client disclaimer banner from `client_settings`.
+- Email notifications (Resend): status change, client-comment-to-admin, daily/weekly digest (`organization_settings.digest_email_frequency`), expiration alerts (`organization_settings.expiration_alert_days_before`).
+- Configurable per-client disclaimer banner from `organization_settings`.
 - Login + audit-logged sessions.
 
 ### Out of scope for v1 — push back if asked
@@ -203,7 +203,7 @@ Ask the user. Do not invent a product decision (status names, role permissions, 
 
 ## 7. Anti-patterns — do not do these
 
-- ❌ Adding a `client_id` filter only in the WHERE clause and skipping RLS "because we already filter."
+- ❌ Adding a `organization_id` filter only in the WHERE clause and skipping RLS "because we already filter."
 - ❌ Storing full SSN, full driver-license numbers, or any patient data.
 - ❌ Hand-writing types that duplicate Drizzle's inferred types.
 - ❌ Catching an error and returning a generic 500 — wrap with context.
@@ -215,7 +215,7 @@ Ask the user. Do not invent a product decision (status names, role permissions, 
 - ❌ Sending an email from anywhere other than the Resend wrapper in `/lib/email`.
 - ❌ Querying Postgres outside Drizzle (no raw `pg` clients in route handlers).
 - ❌ Adding a single `name` / `full_name` column on `providers` — names are split (rule 11).
-- ❌ Adding a Tax ID field, column, or form input on a provider — Tax ID lives on `group_entities` only (rule 13).
+- ❌ Adding a Tax ID field, column, or form input on a client (clinician) — Tax ID lives on `group_entities` only (rule 13).
 - ❌ Modeling `sub_status` as an enum, check constraint, or FK to a lookup table — it stays free-form `text` (rule 18).
 - ❌ Modeling document categories as an enum extension — extend the `document_categories` table instead (rule 15).
 - ❌ Importing `documentCategoryEnum` in new code — it exists only for the deprecated `legacy_category` column.
@@ -254,7 +254,8 @@ Ask the user. Do not invent a product decision (status names, role permissions, 
 These are operational settings that can't be applied via SQL/MCP and must be flipped manually in the Supabase dashboard. Track them here so they don't get lost.
 
 - [ ] **Enable HaveIBeenPwned password check** — Auth → Providers → Email → "Check passwords against HaveIBeenPwned". Surfaced by the security advisor (`auth_leaked_password_protection`). Blocks compromised passwords during sign-up / change. Do this before onboarding any real client.
-- [ ] **Enable Custom Access Token hook** — Auth → Hooks → Custom Access Token → select `public.custom_access_token_hook` (defined in migration 0012). This stamps `app_role` (and `client_id` for client users) into the JWT so the middleware can gate routes without a DB query per request. Until this is enabled the middleware falls back to two parallel table lookups — same behavior as before the hook existed, just slower. After enabling, every existing session needs to refresh (≤1 hour by default) or re-log-in for the claims to appear.
+- [ ] **Re-confirm Custom Access Token hook after migration 0013** — Auth → Hooks → Custom Access Token → ensure `public.custom_access_token_hook` is still selected. Migration 0013 replaced the function body in-place to stamp `organization_id` (not the old `client_id`) into the JWT, but the dashboard pointer must be verified post-deploy. This stamps `app_role` (`admin | org_admin | org_viewer`) and `organization_id` (for org users) so the middleware can gate routes without a DB query per request.
+- [ ] **Force-sign-out all users post-rename** — Auth → Users → "Sign out all users" once migration 0013 is applied and the new code is deployed. JWTs issued before the rename still carry the old `client_id` claim and the middleware's claim-reader fallback will probe `organization_users` per request until each user re-logs-in. Required: do this **before** announcing the deploy is complete.
 - [ ] **Auth → URL Configuration** — once we have a production URL (Vercel), add `https://<prod-host>/auth/callback` to the Redirect URLs allow-list.
 - [ ] **Storage bucket retention policy** — once `documents` bucket is in use, decide retention (soft-delete via `deleted_at` vs hard-delete from Storage) and configure in Supabase.
 - [ ] **Email sender** — Supabase's default sender is rate-limited (~3/hr) and brands as "supabase.io". Before client-facing emails, configure custom SMTP (Resend) under Auth → SMTP Settings.
@@ -262,4 +263,4 @@ These are operational settings that can't be applied via SQL/MCP and must be fli
 
 ---
 
-**Last updated**: 2026-05-12 (status pipeline shrunk to 5 values / 4 linear stages — `completed` dropped, `approved` is now the terminal happy-path)
+**Last updated**: 2026-05-14 (rename: `clients` table → `organizations` for tenant; `providers` → `clients` for individual clinicians; `client_users` → `organization_users`; role values `client_admin`/`client_viewer` → `org_admin`/`org_viewer`; JWT claim `client_id` → `organization_id`). Migration 0013 applied.
