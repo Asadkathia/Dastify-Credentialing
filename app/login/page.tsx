@@ -78,26 +78,15 @@ export default async function LoginPage({
           </svg>
         </span>
 
-        {/* Brand mark — hero logo */}
-        <div className="relative z-10 flex flex-col items-start gap-4">
+        <div className="relative z-10 mt-auto w-full text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/dastify-logo.svg"
-            alt="Dastify"
-            className="h-[112px] w-auto select-none drop-shadow-[0_8px_28px_rgba(22,193,194,0.18)]"
+            src="/login-hero.svg"
+            alt=""
+            aria-hidden
+            className="mx-auto mb-10 block h-auto w-full max-w-[912px] select-none"
             draggable={false}
           />
-          <span className="flex flex-col leading-tight">
-            <span className="text-[16px] font-bold uppercase tracking-[0.08em] text-white">
-              Dastify
-            </span>
-            <span className="text-[10px] font-normal uppercase tracking-[0.36em] text-white/40">
-              Solutions
-            </span>
-          </span>
-        </div>
-
-        <div className="relative z-10 mt-auto w-full text-center">
           <div className="mx-auto text-center">
             <h1
               className="whitespace-nowrap font-semibold leading-[1.1] tracking-[-0.018em] text-teal"
