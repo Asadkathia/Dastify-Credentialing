@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   createOrganizationSchema,
   inviteOrganizationUserSchema,
+  revokeOrganizationUserSchema,
   updateOrganizationSchema,
 } from "@/lib/validation/schemas";
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
@@ -214,4 +215,78 @@ export async function inviteOrganizationUserAction(
 
   revalidatePath(`/admin/organizations/${parsed.data.organizationId}`);
   return ok({ userId, authMethod: parsed.data.authMethod });
+}
+
+// Revokes a portal user's access to an organization. Handles both pending
+// invites (accepted_at is null) and accepted members in one path:
+//   1. Soft-revoke: organization_users.is_active = false (preserves audit
+//      history; the session helper denies access when is_active is false).
+//   2. Auth ban: supabase.auth.admin.updateUserById with ban_duration so the
+//      auth provider rejects future logins and outstanding magic links.
+//   3. Activity event with action='user_revoke' for the audit trail.
+export async function revokeOrganizationUserAction(
+  formData: FormData,
+): Promise<ActionResult<{ userId: string; wasPending: boolean }>> {
+  const session = await requireAdmin();
+
+  const parsed = revokeOrganizationUserSchema.safeParse({
+    organizationId: formData.get("organizationId"),
+    userId: formData.get("userId"),
+  });
+  if (!parsed.success) {
+    return fail("Invalid input", parsed.error.flatten().fieldErrors);
+  }
+
+  if (parsed.data.userId === session.userId) {
+    return fail("You cannot revoke your own access");
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: target, error: fetchErr } = await supabase
+    .from("organization_users")
+    .select("id, email, organization_id, accepted_at, is_active")
+    .eq("id", parsed.data.userId)
+    .eq("organization_id", parsed.data.organizationId)
+    .maybeSingle();
+  if (fetchErr || !target) {
+    return fail("User not found in this organization");
+  }
+  if (!target.is_active) {
+    return fail("User is already revoked");
+  }
+
+  const wasPending = target.accepted_at === null;
+
+  const { error: updateErr } = await supabase
+    .from("organization_users")
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq("id", parsed.data.userId);
+  if (updateErr) {
+    return fail(`Failed to revoke access: ${updateErr.message}`);
+  }
+
+  // 876000h ≈ 100 years — Supabase's documented forever-ban idiom.
+  const adminSupabase = createSupabaseAdminClient();
+  const { error: banErr } = await adminSupabase.auth.admin.updateUserById(
+    parsed.data.userId,
+    { ban_duration: "876000h" },
+  );
+  if (banErr) {
+    return fail(
+      `Access revoked in app, but auth ban failed: ${banErr.message}. Please retry or contact support.`,
+    );
+  }
+
+  await supabase.from("activity_events").insert({
+    organization_id: parsed.data.organizationId,
+    actor_user_id: session.userId,
+    action: "user_revoke",
+    target_table: "organization_users",
+    target_id: parsed.data.userId,
+    summary: `Revoked access for ${target.email} (${wasPending ? "pending invite" : "active user"})`,
+  });
+
+  revalidatePath(`/admin/organizations/${parsed.data.organizationId}`);
+  return ok({ userId: parsed.data.userId, wasPending });
 }

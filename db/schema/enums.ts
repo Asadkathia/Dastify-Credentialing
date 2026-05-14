@@ -74,7 +74,10 @@ export const activityActionEnum = pgEnum("activity_action", [
   "document_upload",
   "document_delete",
   "user_invite",
+  "user_revoke",
   "user_login",
   "export",
   "import",
+  "password_reset_requested",
+  "password_reset_completed",
 ]);

@@ -36,8 +36,8 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-[560px] translate-x-[-50%] translate-y-[-50%]",
-        "rounded-lg border border-border-subtle bg-white p-6 shadow-[var(--shadow-lg)]",
+        "fixed left-[50%] top-[50%] z-50 grid w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] sm:w-full sm:max-w-[560px]",
+        "rounded-lg border border-border-subtle bg-white p-5 shadow-[var(--shadow-lg)] sm:p-6",
         "duration-200",
         "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
         "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
@@ -48,7 +48,7 @@ const DialogContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close
         aria-label="Close"
-        className="absolute right-4 top-4 rounded-sm p-1.5 text-navy/45 transition-colors hover:bg-navy-04 hover:text-navy focus-visible:outline-none"
+        className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-sm text-navy/45 transition-colors hover:bg-navy-04 hover:text-navy focus-visible:outline-none sm:right-4 sm:top-4 sm:h-8 sm:w-8"
       >
         <X size={16} strokeWidth={1.6} />
       </DialogPrimitive.Close>

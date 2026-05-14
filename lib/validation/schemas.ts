@@ -57,6 +57,27 @@ export const inviteOrganizationUserSchema = z
   });
 export type InviteOrganizationUserInput = z.infer<typeof inviteOrganizationUserSchema>;
 
+export const revokeOrganizationUserSchema = z.object({
+  organizationId: z.string().uuid(),
+  userId: z.string().uuid(),
+});
+export type RevokeOrganizationUserInput = z.infer<typeof revokeOrganizationUserSchema>;
+
+// ── Password reset (forgot-password / reset-password flow) ────────────────────
+
+export const requestPasswordResetSchema = z.object({
+  email: emailSchema,
+});
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
+
+export const completePasswordResetSchema = z.object({
+  password: z
+    .string()
+    .min(8, "At least 8 characters")
+    .max(72, "Max 72 characters (Supabase limit)"),
+});
+export type CompletePasswordResetInput = z.infer<typeof completePasswordResetSchema>;
+
 // ── Client (individual clinician) ─────────────────────────────────────────────
 
 export const createClientSchema = z.object({

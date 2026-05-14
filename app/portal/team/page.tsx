@@ -15,6 +15,7 @@ export default async function TeamPage() {
     .from("organization_users")
     .select("id, email, full_name, role, is_active, invited_at, accepted_at")
     .eq("organization_id", session.organizationId)
+    .eq("is_active", true)
     .order("invited_at", { ascending: false });
 
   const count = users?.length ?? 0;

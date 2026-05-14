@@ -141,7 +141,7 @@ These are the rules you must never break. If a request requires breaking one, st
 
 Locked v1 scope. The screens in `/Dastify-Crendentialing/` are the visual target; this list is what they must wire up to.
 
-- Auth + admin-provisioned client invites (Supabase Auth, magic-link). No password, no SSO, no 2FA in v1 (the design's password/SSO/2FA chrome is illustrative; ship magic-link only).
+- Auth + admin-provisioned client invites (Supabase Auth). Two methods, both shipped: magic-link (Supabase emails) and password (admin sets initial password via `supabase.auth.admin.createUser`, shown once for out-of-band delivery). No SSO, no 2FA in v1.
 - Multi-tenant data model per `docs/DESIGN.md` §3 and `db/schema/*`.
 - **Admin portal**:
   - Dashboard — 5 status KPI cards (one per enum value), each clickable to `/admin/enrollments?status=X`. Status distribution donut, non-par-credentialed rate by payer, 12-month enrollment-creations bar, recently-updated table, "Monthly report" Excel download.
@@ -224,7 +224,7 @@ Ask the user. Do not invent a product decision (status names, role permissions, 
 - ❌ Referencing the old status enum values in new code (`intake`, `info_requested`, `denied`, `effective`, `closed`, `withdrawn`, `completed`) — they no longer exist. Use the 5 current values (`prep`, `submitted`, `in_review`, `approved`, `non_par_credentialed`).
 - ❌ Implementing live tickers, presence indicators, or WebSocket subscriptions — v1 is request/response only (out of scope).
 - ❌ Implementing the Inbox screen or Recreds Pipeline for v1 — both deferred / removed.
-- ❌ Wiring Google / Microsoft / SSO buttons on the login screen — magic-link only in v1.
+- ❌ Wiring Google / Microsoft / SSO buttons on the login screen — v1 is email-only (password or magic-link), no federated identity.
 - ❌ Designing per-biller / staff productivity reports — out of scope.
 - ❌ Accepting US state codes that aren't 2-letter uppercase ISO — validate everywhere with `US_STATE_REGEX` (`^[A-Z]{2}$`).
 
