@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { ChevronDown, HelpCircle, Search } from "lucide-react";
 import { AppSidebarNav, type NavItem } from "@/components/app-sidebar-nav";
+import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export type { NavItem } from "@/components/app-sidebar-nav";
+
+type Variant = "admin" | "organization";
 
 export function AppShell({
   variant,
@@ -14,7 +17,7 @@ export function AppShell({
   topbarSlot,
   children,
 }: {
-  variant: "admin" | "organization";
+  variant: Variant;
   user: { fullName: string; email: string; organizationName?: string };
   nav: NavItem[];
   workspaceLabel?: string;
@@ -28,60 +31,28 @@ export function AppShell({
   const initials = getInitials(user.fullName);
   const roleLabel = variant === "admin" ? "Dastify · Admin" : "Organization · Viewer";
 
+  const sidebarBody = (
+    <SidebarBody
+      variant={variant}
+      homeHref={homeHref}
+      workspaceLabel={workspaceLabel}
+      organizationName={user.organizationName}
+      nav={nav}
+    />
+  );
+
   return (
     <div className="min-h-screen lg:flex">
       {/* ── Sidebar (navy, fixed full-height on lg+) ───────────────────── */}
       <aside className="hidden w-[220px] shrink-0 flex-col self-stretch bg-navy text-white lg:flex">
-        {/* Brand block */}
-        <Link
-          href={homeHref}
-          className="flex items-center gap-3 px-5 pt-[18px] pb-4"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/dastify-logo.svg"
-            alt="Dastify"
-            className="h-[36px] w-auto select-none"
-            draggable={false}
-          />
-          <span className="flex flex-col leading-tight">
-            <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-white">
-              Dastify
-            </span>
-            <span className="text-[8px] font-normal uppercase tracking-[0.25em] text-white/35">
-              {variant === "admin" ? "Credentialing" : "Portal"}
-            </span>
-          </span>
-        </Link>
-
-        <p className="px-5 pt-4 pb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/20">
-          {workspaceLabel ?? (variant === "organization" ? "Logged in as" : "Workspace")}
-        </p>
-        {variant === "organization" && user.organizationName ? (
-          <p className="px-5 pb-3 text-[13px] font-bold text-white">
-            {user.organizationName}
-          </p>
-        ) : null}
-
-        <AppSidebarNav items={nav} />
-
-        <div className="mt-auto px-3 pb-4">
-          <div className="mx-2 mb-3 h-px bg-white/8" />
-          <Link
-            href="#"
-            aria-disabled
-            className="flex items-center gap-3 rounded-md px-3 py-[9px] text-[13px] font-medium text-white/35"
-          >
-            <SettingsLockIcon />
-            <span className="flex-1">Settings</span>
-          </Link>
-        </div>
+        {sidebarBody}
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-50 flex h-[60px] items-center justify-between border-b border-border-subtle bg-white px-6">
-          <div className="flex items-center gap-5">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-navy/55">
+        <header className="sticky top-0 z-40 flex h-[60px] items-center justify-between gap-2 border-b border-border-subtle bg-white px-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-5">
+            <MobileNavDrawer>{sidebarBody}</MobileNavDrawer>
+            <span className="truncate text-[11px] font-semibold uppercase tracking-[0.3em] text-navy/55">
               {variant === "admin" ? "Credentialing" : "Portal"}
             </span>
             {breadcrumb ? (
@@ -94,7 +65,7 @@ export function AppShell({
             ) : null}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {variant === "admin" ? (
               <button
                 type="button"
@@ -113,12 +84,12 @@ export function AppShell({
             <button
               type="button"
               aria-label="Help"
-              className="flex h-9 w-9 items-center justify-center rounded-md text-navy/55 transition-colors hover:bg-lightgrey hover:text-navy"
+              className="hidden h-9 w-9 items-center justify-center rounded-md text-navy/55 transition-colors hover:bg-lightgrey hover:text-navy sm:flex"
             >
               <HelpCircle size={16} strokeWidth={1.6} />
             </button>
 
-            <div className="flex items-center gap-2.5 rounded-md px-2 py-1 transition-colors hover:bg-lightgrey">
+            <div className="flex items-center gap-2.5 rounded-md px-1.5 py-1 transition-colors hover:bg-lightgrey sm:px-2">
               <span
                 aria-hidden
                 className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-teal text-[11px] font-semibold text-navy"
@@ -131,16 +102,78 @@ export function AppShell({
                   {variant === "admin" ? roleLabel : (user.organizationName ?? "Organization")}
                 </div>
               </div>
-              <ChevronDown size={12} className="text-navy/40" />
+              <ChevronDown size={12} className="hidden text-navy/40 sm:block" />
             </div>
 
             <SignOutButton />
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-8 pt-8 pb-16">{children}</main>
+        <main className="min-w-0 flex-1 px-4 pt-5 pb-12 sm:px-6 sm:pt-8 sm:pb-16 lg:px-8">
+          {children}
+        </main>
       </div>
     </div>
+  );
+}
+
+function SidebarBody({
+  variant,
+  homeHref,
+  workspaceLabel,
+  organizationName,
+  nav,
+}: {
+  variant: Variant;
+  homeHref: string;
+  workspaceLabel?: string;
+  organizationName?: string;
+  nav: NavItem[];
+}) {
+  return (
+    <>
+      <Link
+        href={homeHref}
+        className="flex items-center gap-3 px-5 pt-[18px] pb-4"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/dastify-logo.svg"
+          alt="Dastify"
+          className="h-[36px] w-auto select-none"
+          draggable={false}
+        />
+        <span className="flex flex-col leading-tight">
+          <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-white">
+            Dastify
+          </span>
+          <span className="text-[8px] font-normal uppercase tracking-[0.25em] text-white/35">
+            {variant === "admin" ? "Credentialing" : "Portal"}
+          </span>
+        </span>
+      </Link>
+
+      <p className="px-5 pt-4 pb-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/20">
+        {workspaceLabel ?? (variant === "organization" ? "Logged in as" : "Workspace")}
+      </p>
+      {variant === "organization" && organizationName ? (
+        <p className="px-5 pb-3 text-[13px] font-bold text-white">{organizationName}</p>
+      ) : null}
+
+      <AppSidebarNav items={nav} />
+
+      <div className="mt-auto px-3 pb-4">
+        <div className="mx-2 mb-3 h-px bg-white/8" />
+        <Link
+          href="#"
+          aria-disabled
+          className="flex items-center gap-3 rounded-md px-3 py-[9px] text-[13px] font-medium text-white/35"
+        >
+          <SettingsLockIcon />
+          <span className="flex-1">Settings</span>
+        </Link>
+      </div>
+    </>
   );
 }
 
