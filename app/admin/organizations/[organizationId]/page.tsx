@@ -20,6 +20,7 @@ import { PayerMark } from "@/components/ui/payer-mark";
 import { StatusChip } from "@/components/ui/status-chip";
 import { OrganizationEditForm } from "./_components/organization-edit-form";
 import { InviteOrganizationUserForm } from "./_components/invite-user-form";
+import { RevokeUserButton } from "./_components/revoke-user-button";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 
 function initials(name: string | null | undefined): string {
@@ -329,29 +330,56 @@ export default async function ClientOverviewPage({
             <div className="px-5 py-4">
               {users && users.length > 0 ? (
                 <ul className="space-y-3 pb-4">
-                  {users.map((u) => (
-                    <li key={u.id} className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-medium text-navy">
-                          {u.full_name}
-                        </p>
-                        <p className="truncate text-[11px] text-navy/55">{u.email}</p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70">
-                          {u.role === "org_admin" ? (
-                            <Shield size={11} strokeWidth={1.8} />
-                          ) : (
-                            <Eye size={11} strokeWidth={1.8} />
-                          )}
-                          {u.role === "org_admin" ? "Admin" : "Viewer"}
-                        </p>
-                        <p className="text-[10px] uppercase tracking-[0.06em] text-navy/45">
-                          {u.accepted_at ? "Accepted" : "Invited"}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
+                  {users.map((u) => {
+                    const wasPending = !u.accepted_at;
+                    const stateLabel = !u.is_active
+                      ? "Revoked"
+                      : wasPending
+                        ? "Invited"
+                        : "Accepted";
+                    return (
+                      <li
+                        key={u.id}
+                        className={
+                          "flex items-start justify-between gap-3 " +
+                          (!u.is_active ? "opacity-60" : "")
+                        }
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-medium text-navy">
+                            {u.full_name}
+                          </p>
+                          <p className="truncate text-[11px] text-navy/55">{u.email}</p>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70">
+                            {u.role === "org_admin" ? (
+                              <Shield size={11} strokeWidth={1.8} />
+                            ) : (
+                              <Eye size={11} strokeWidth={1.8} />
+                            )}
+                            {u.role === "org_admin" ? "Admin" : "Viewer"}
+                          </p>
+                          <p
+                            className={
+                              "text-[10px] uppercase tracking-[0.06em] " +
+                              (!u.is_active ? "text-danger" : "text-navy/45")
+                            }
+                          >
+                            {stateLabel}
+                          </p>
+                          {u.is_active ? (
+                            <RevokeUserButton
+                              organizationId={organizationId}
+                              userId={u.id}
+                              email={u.email}
+                              wasPending={wasPending}
+                            />
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="pb-4 text-center text-[13px] text-navy/55">

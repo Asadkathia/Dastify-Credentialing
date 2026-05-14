@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { CheckCircle2, Eye, EyeOff, KeyRound, Lock, Mail, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -134,9 +135,17 @@ export function LoginForm({ next, initialError }: { next?: string; initialError?
 
       {mode === "password" ? (
         <div>
-          <label htmlFor="password" className={labelClasses}>
-            Password
-          </label>
+          <div className="flex items-baseline justify-between">
+            <label htmlFor="password" className={labelClasses}>
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-[11px] font-semibold uppercase tracking-[0.06em] text-teal hover:text-[#0E7475]"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative mt-2">
             <Lock
               aria-hidden

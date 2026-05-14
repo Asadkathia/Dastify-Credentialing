@@ -19,7 +19,12 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
  * via `requireAdmin()` / `requireOrganization()` and at the DB layer via RLS.
  */
 
-const PUBLIC_PATHS = new Set(["/login", "/auth/callback", "/auth/error"]);
+const PUBLIC_PATHS = new Set([
+  "/login",
+  "/auth/callback",
+  "/auth/error",
+  "/forgot-password",
+]);
 
 type AppRole = "admin" | "org_admin" | "org_viewer";
 
