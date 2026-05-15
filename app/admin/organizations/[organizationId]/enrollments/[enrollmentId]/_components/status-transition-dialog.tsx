@@ -50,9 +50,6 @@ export function StatusTransitionDialog({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  // Non-par is a terminal off-rail outcome — surface a "why" prompt so the
-  // admin has to make the decision explicit, but the reason is optional (no
-  // dedicated column to capture it; lives in status_history.reason if filled).
   const isOffRail = toStatus === "non_par_credentialed";
 
   const isQuickAction = triggerVariant === "quick-action";
@@ -149,12 +146,13 @@ export function StatusTransitionDialog({
 
           <div>
             <Label htmlFor="td-reason" className={labelClasses}>
-              {isOffRail ? "Reason (recommended)" : "Reason (optional)"}
+              Reason (required)
             </Label>
             <Textarea
               id="td-reason"
               name="reason"
               rows={3}
+              required
               placeholder={
                 isOffRail
                   ? "Why this is non-par credentialed — recorded in status history."

@@ -169,10 +169,11 @@ describe("validation schemas", () => {
   });
 
   describe("transitionStatusSchema", () => {
-    it("accepts a valid enum value", () => {
+    it("accepts a valid enum value with a reason", () => {
       const r = transitionStatusSchema.safeParse({
         enrollmentId: "00000000-0000-0000-0000-000000000001",
         toStatus: "submitted",
+        reason: "Submitted via payer portal",
       });
       expect(r.success).toBe(true);
     });
@@ -181,6 +182,24 @@ describe("validation schemas", () => {
       const r = transitionStatusSchema.safeParse({
         enrollmentId: "00000000-0000-0000-0000-000000000001",
         toStatus: "wibble",
+        reason: "Submitted via payer portal",
+      });
+      expect(r.success).toBe(false);
+    });
+
+    it("rejects a missing reason", () => {
+      const r = transitionStatusSchema.safeParse({
+        enrollmentId: "00000000-0000-0000-0000-000000000001",
+        toStatus: "submitted",
+      });
+      expect(r.success).toBe(false);
+    });
+
+    it("rejects a whitespace-only reason", () => {
+      const r = transitionStatusSchema.safeParse({
+        enrollmentId: "00000000-0000-0000-0000-000000000001",
+        toStatus: "submitted",
+        reason: "   ",
       });
       expect(r.success).toBe(false);
     });

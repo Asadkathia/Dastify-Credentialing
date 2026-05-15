@@ -154,7 +154,11 @@ export const transitionStatusSchema = z.object({
   enrollmentId: z.string().uuid(),
   toStatus: z.enum(ENROLLMENT_STATUSES),
   subStatus: z.string().max(200).optional().or(z.literal("")),
-  reason: z.string().max(500).optional().or(z.literal("")),
+  reason: z
+    .string()
+    .trim()
+    .min(1, "Reason is required")
+    .max(500),
 });
 export type TransitionStatusInput = z.infer<typeof transitionStatusSchema>;
 
