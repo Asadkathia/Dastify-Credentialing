@@ -179,15 +179,16 @@ export function NewEnrollmentDialog({
         setError(result.error);
         return;
       }
-      // Close + refresh listings.
+      const submittedOrgId = String(formData.get("organizationId") ?? "");
       setOpen(false);
-      // Reset (preserving locked presets).
       if (!orgLocked) setOrganizationId("");
       if (!clientLocked) setClientId("");
       setPayerId("");
       setState("");
       setSubStatus("");
-      router.refresh();
+      router.push(
+        `/admin/organizations/${submittedOrgId}/enrollments/${result.data.id}`,
+      );
     });
   }
 
