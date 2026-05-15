@@ -15,7 +15,44 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createEnrollmentAction } from "@/lib/actions/enrollments";
+import { createPayerAction } from "@/lib/actions/payers";
 import type { OrganizationKind } from "@/db/schema/organizations";
+
+const PAYER_TYPES = [
+  { value: "commercial", label: "Commercial" },
+  { value: "medicare", label: "Medicare" },
+  { value: "medicaid", label: "Medicaid" },
+  { value: "tricare", label: "TRICARE" },
+  { value: "other", label: "Other" },
+] as const;
+type PayerType = (typeof PAYER_TYPES)[number]["value"];
+
+const ALL_US_STATES = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL",
+  "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME",
+  "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH",
+  "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI",
+  "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+];
+
+function parseStateList(raw: string): { states: string[]; invalid: string[] } {
+  const tokens = raw
+    .split(/[,\s]+/)
+    .map((t) => t.trim().toUpperCase())
+    .filter(Boolean);
+  const seen = new Set<string>();
+  const states: string[] = [];
+  const invalid: string[] = [];
+  for (const tok of tokens) {
+    if (seen.has(tok)) continue;
+    seen.add(tok);
+    if (/^[A-Z]{2}$/.test(tok)) states.push(tok);
+    else invalid.push(tok);
+  }
+  return { states, invalid };
+}
+
+const ADD_NEW_PAYER_SENTINEL = "__add_new_payer__";
 
 export type OrgOption = { id: string; displayName: string; kind: OrganizationKind };
 export type ClientOption = {
@@ -55,7 +92,7 @@ function clientDisplayName(c: ClientOption): string {
 export function NewEnrollmentDialog({
   organizations,
   clients,
-  payers,
+  payers: initialPayers,
   presetOrganizationId,
   presetClientId,
   triggerLabel = "New Enrollment",
@@ -71,9 +108,25 @@ export function NewEnrollmentDialog({
   // Form state
   const [organizationId, setOrganizationId] = useState<string>(presetOrganizationId ?? "");
   const [clientId, setClientId] = useState<string>(presetClientId ?? "");
+  const [payers, setPayers] = useState<PayerOption[]>(initialPayers);
   const [payerId, setPayerId] = useState<string>("");
   const [state, setState] = useState<string>("");
   const [subStatus, setSubStatus] = useState<string>("");
+
+  // Inline "add new payer" panel state.
+  const [showAddPayer, setShowAddPayer] = useState(false);
+  const [newPayerName, setNewPayerName] = useState("");
+  const [newPayerType, setNewPayerType] = useState<PayerType>("commercial");
+  const [newPayerAllStates, setNewPayerAllStates] = useState(true);
+  const [newPayerStatesRaw, setNewPayerStatesRaw] = useState("");
+  const [newPayerError, setNewPayerError] = useState<string | null>(null);
+  const [addingPayer, startAddingPayer] = useTransition();
+
+  // Keep local payer list in sync if the prop changes (e.g. after router.refresh
+  // re-renders the server wrapper with newly-seeded payers).
+  useEffect(() => {
+    setPayers(initialPayers);
+  }, [initialPayers]);
 
   const orgLocked = Boolean(presetOrganizationId);
   const clientLocked = Boolean(presetClientId);
@@ -135,6 +188,72 @@ export function NewEnrollmentDialog({
       setState("");
       setSubStatus("");
       router.refresh();
+    });
+  }
+
+  function resetAddPayerPanel() {
+    setShowAddPayer(false);
+    setNewPayerName("");
+    setNewPayerType("commercial");
+    setNewPayerAllStates(true);
+    setNewPayerStatesRaw("");
+    setNewPayerError(null);
+  }
+
+  function handleAddPayer() {
+    setNewPayerError(null);
+
+    const trimmed = newPayerName.trim();
+    if (trimmed.length < 2) {
+      setNewPayerError("Name must be at least 2 characters.");
+      return;
+    }
+
+    let statesActive: string[];
+    if (newPayerAllStates) {
+      statesActive = ALL_US_STATES;
+    } else {
+      const parsed = parseStateList(newPayerStatesRaw);
+      if (parsed.invalid.length > 0) {
+        setNewPayerError(
+          `Invalid state code${parsed.invalid.length > 1 ? "s" : ""}: ${parsed.invalid.join(", ")}. Use 2-letter US codes.`,
+        );
+        return;
+      }
+      if (parsed.states.length === 0) {
+        setNewPayerError("Enter at least one 2-letter US state code, or check 'all US states'.");
+        return;
+      }
+      statesActive = parsed.states;
+    }
+
+    startAddingPayer(async () => {
+      const result = await createPayerAction({
+        name: trimmed,
+        payerType: newPayerType,
+        statesActive,
+      });
+      if (!result.ok) {
+        setNewPayerError(result.error);
+        return;
+      }
+      // Merge into local list (case-insensitive dedupe is handled server-side —
+      // result.data.isExisting tells us it was already there).
+      const merged: PayerOption = {
+        id: result.data.id,
+        name: result.data.name,
+        statesActive,
+      };
+      setPayers((prev) => {
+        const without = prev.filter((p) => p.id !== merged.id);
+        const next = [...without, merged];
+        next.sort((a, b) => a.name.localeCompare(b.name));
+        return next;
+      });
+      setPayerId(merged.id);
+      // Reset state if the previously-picked state isn't covered by the new payer.
+      if (state && !statesActive.includes(state)) setState("");
+      resetAddPayerPanel();
     });
   }
 
@@ -241,9 +360,16 @@ export function NewEnrollmentDialog({
                 name="payerId"
                 value={payerId}
                 onChange={(e) => {
-                  setPayerId(e.target.value);
+                  const v = e.target.value;
+                  if (v === ADD_NEW_PAYER_SENTINEL) {
+                    setShowAddPayer(true);
+                    setNewPayerError(null);
+                    return;
+                  }
+                  setPayerId(v);
+                  setShowAddPayer(false);
                   // Clear state if it's no longer in the payer's active list
-                  const p = payers.find((p) => p.id === e.target.value);
+                  const p = payers.find((p) => p.id === v);
                   if (p && state && !p.statesActive.includes(state)) setState("");
                 }}
                 disabled={pending}
@@ -256,6 +382,7 @@ export function NewEnrollmentDialog({
                     {p.name}
                   </option>
                 ))}
+                <option value={ADD_NEW_PAYER_SENTINEL}>+ Other (add new payer)…</option>
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -283,6 +410,100 @@ export function NewEnrollmentDialog({
               </select>
             </div>
           </div>
+
+          {showAddPayer ? (
+            <div className="rounded-md border border-teal/30 bg-teal-08 p-3">
+              <p className="pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-navy/70">
+                Add a new payer to the master list
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="ne-newPayerName"
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy/65"
+                  >
+                    Name
+                  </label>
+                  <input
+                    id="ne-newPayerName"
+                    value={newPayerName}
+                    onChange={(e) => setNewPayerName(e.target.value)}
+                    placeholder="e.g. Aetna"
+                    minLength={2}
+                    maxLength={120}
+                    disabled={addingPayer}
+                    className="h-9 rounded-md border border-border-subtle bg-white px-2.5 text-[13px] focus-visible:border-teal focus-visible:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="ne-newPayerType"
+                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy/65"
+                  >
+                    Type
+                  </label>
+                  <select
+                    id="ne-newPayerType"
+                    value={newPayerType}
+                    onChange={(e) => setNewPayerType(e.target.value as PayerType)}
+                    disabled={addingPayer}
+                    className="h-9 rounded-md border border-border-subtle bg-white px-2.5 text-[13px] focus-visible:border-teal focus-visible:outline-none"
+                  >
+                    {PAYER_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="mt-3">
+                <label className="flex items-center gap-2 text-[12px] text-navy/80">
+                  <input
+                    type="checkbox"
+                    checked={newPayerAllStates}
+                    onChange={(e) => setNewPayerAllStates(e.target.checked)}
+                    disabled={addingPayer}
+                    className="h-4 w-4 rounded border-border-subtle text-teal focus:ring-teal"
+                  />
+                  Available in all US states (51 incl. DC)
+                </label>
+                {!newPayerAllStates ? (
+                  <input
+                    value={newPayerStatesRaw}
+                    onChange={(e) => setNewPayerStatesRaw(e.target.value)}
+                    placeholder="TX, CA, NY"
+                    disabled={addingPayer}
+                    className="mt-2 h-9 w-full rounded-md border border-border-subtle bg-white px-2.5 text-[13px] focus-visible:border-teal focus-visible:outline-none"
+                  />
+                ) : null}
+              </div>
+              {newPayerError ? (
+                <p className="mt-2 rounded-md border border-danger/20 bg-danger-08 px-3 py-2 text-[12px] text-danger">
+                  {newPayerError}
+                </p>
+              ) : null}
+              <div className="mt-3 flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleAddPayer}
+                  disabled={addingPayer || newPayerName.trim().length < 2}
+                >
+                  {addingPayer ? "Adding…" : "Add payer"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={resetAddPayerPanel}
+                  disabled={addingPayer}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
           {/* Optional sub-status */}
           <div className="flex flex-col gap-1.5">
