@@ -1,5 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import {
+  ACTIVITY_COOKIE_NAME,
+  SESSION_IDLE_TIMEOUT_MS,
+  checkSessionExpiry,
+  parseActivityCookie,
+  parseLastSignInAt,
+  type SessionExpiryReason,
+} from "@/lib/auth/session-policy";
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
@@ -72,6 +80,38 @@ export async function middleware(request: NextRequest) {
     }
     return NextResponse.redirect(loginUrl);
   }
+
+  // Session-expiry enforcement: idle (30 min, cookie-tracked) and absolute
+  // (12 h since last_sign_in_at). See lib/auth/session-policy.ts for rationale.
+  const now = Date.now();
+  const lastActivityAt = parseActivityCookie(
+    request.cookies.get(ACTIVITY_COOKIE_NAME)?.value,
+  );
+  const lastSignInAt = parseLastSignInAt(user.last_sign_in_at);
+  const expiryReason: SessionExpiryReason | null = checkSessionExpiry({
+    now,
+    lastActivityAt,
+    lastSignInAt,
+  });
+  if (expiryReason) {
+    await supabase.auth.signOut();
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("error", expiryReason);
+    if (pathname !== "/") {
+      loginUrl.searchParams.set("next", pathname);
+    }
+    const out = NextResponse.redirect(loginUrl);
+    out.cookies.delete(ACTIVITY_COOKIE_NAME);
+    return out;
+  }
+
+  response.cookies.set(ACTIVITY_COOKIE_NAME, String(now), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: Math.ceil(SESSION_IDLE_TIMEOUT_MS / 1000),
+  });
 
   // Fast path: role is stamped into the JWT by the access-token hook.
   let role: AppRole | null =

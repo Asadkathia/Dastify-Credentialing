@@ -220,6 +220,10 @@ function mapError(code: string): string {
       return "Your account is not linked to a portal profile. Please contact your administrator.";
     case "expired":
       return "Your sign-in link expired. Request a new one below.";
+    case "idle":
+      return "You were signed out after a period of inactivity. Please sign in again.";
+    case "absolute":
+      return "Your session reached its maximum length. Please sign in again.";
     default:
       return "Sign-in failed. Try again or contact your administrator.";
   }

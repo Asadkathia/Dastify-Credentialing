@@ -1,6 +1,7 @@
 import { requireOrganization } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppShell, type NavItem } from "@/components/app-shell";
+import { IdleSessionGuard } from "@/components/idle-session-guard";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await requireOrganization();
@@ -32,6 +33,7 @@ export default async function PortalLayout({ children }: { children: React.React
       }}
       nav={navItems}
     >
+      <IdleSessionGuard />
       {children}
     </AppShell>
   );

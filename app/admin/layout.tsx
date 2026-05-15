@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth/session";
 import { AppShell, type NavItem } from "@/components/app-shell";
 import { NewEnrollmentLauncher } from "@/components/admin/new-enrollment-launcher";
+import { IdleSessionGuard } from "@/components/idle-session-guard";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAdmin();
@@ -29,6 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         />
       }
     >
+      <IdleSessionGuard />
       {children}
     </AppShell>
   );
