@@ -637,16 +637,21 @@ BEGIN
     RAISE EXCEPTION 'Rename verification: RLS disabled on % renamed table(s)', rls_off_count;
   END IF;
 
-  -- Row counts must match pre-flight snapshot.
-  IF (SELECT COUNT(*) FROM public.organizations)         <> 2  THEN RAISE EXCEPTION 'organizations rowcount drift';         END IF;
-  IF (SELECT COUNT(*) FROM public.clients)               <> 1  THEN RAISE EXCEPTION 'clients rowcount drift';               END IF;
-  IF (SELECT COUNT(*) FROM public.organization_users)    <> 3  THEN RAISE EXCEPTION 'organization_users rowcount drift';    END IF;
-  IF (SELECT COUNT(*) FROM public.organization_settings) <> 2  THEN RAISE EXCEPTION 'organization_settings rowcount drift'; END IF;
-  IF (SELECT COUNT(*) FROM public.enrollments)           <> 6  THEN RAISE EXCEPTION 'enrollments rowcount drift';           END IF;
-  IF (SELECT COUNT(*) FROM public.status_history)        <> 12 THEN RAISE EXCEPTION 'status_history rowcount drift';        END IF;
-  IF (SELECT COUNT(*) FROM public.activity_events)       <> 18 THEN RAISE EXCEPTION 'activity_events rowcount drift';       END IF;
-  IF (SELECT COUNT(*) FROM public.payers)                <> 23 THEN RAISE EXCEPTION 'payers rowcount drift';                END IF;
-  IF (SELECT COUNT(*) FROM public.admin_users)           <> 1  THEN RAISE EXCEPTION 'admin_users rowcount drift';           END IF;
+  -- Row counts must match pre-flight snapshot. Skip on a fresh DB (e.g. the
+  -- local Supabase stack used by integration tests) where these counts are
+  -- meaningless — the drift check is a one-shot safety net for the live
+  -- production rename, not a permanent invariant.
+  IF (SELECT COUNT(*) FROM public.organizations) > 0 THEN
+    IF (SELECT COUNT(*) FROM public.organizations)         <> 2  THEN RAISE EXCEPTION 'organizations rowcount drift';         END IF;
+    IF (SELECT COUNT(*) FROM public.clients)               <> 1  THEN RAISE EXCEPTION 'clients rowcount drift';               END IF;
+    IF (SELECT COUNT(*) FROM public.organization_users)    <> 3  THEN RAISE EXCEPTION 'organization_users rowcount drift';    END IF;
+    IF (SELECT COUNT(*) FROM public.organization_settings) <> 2  THEN RAISE EXCEPTION 'organization_settings rowcount drift'; END IF;
+    IF (SELECT COUNT(*) FROM public.enrollments)           <> 6  THEN RAISE EXCEPTION 'enrollments rowcount drift';           END IF;
+    IF (SELECT COUNT(*) FROM public.status_history)        <> 12 THEN RAISE EXCEPTION 'status_history rowcount drift';        END IF;
+    IF (SELECT COUNT(*) FROM public.activity_events)       <> 18 THEN RAISE EXCEPTION 'activity_events rowcount drift';       END IF;
+    IF (SELECT COUNT(*) FROM public.payers)                <> 23 THEN RAISE EXCEPTION 'payers rowcount drift';                END IF;
+    IF (SELECT COUNT(*) FROM public.admin_users)           <> 1  THEN RAISE EXCEPTION 'admin_users rowcount drift';           END IF;
+  END IF;
 
   -- The subject_xor check must reference the renamed column.
   IF NOT EXISTS (

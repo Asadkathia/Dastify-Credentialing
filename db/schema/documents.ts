@@ -4,8 +4,8 @@ import { documentOwnerTypeEnum } from "./enums";
 import { documentCategories } from "./document_categories";
 
 // Polymorphic document table — owned by client (formerly provider), enrollment,
-// group_entity, or organization. File contents live in Supabase Storage; this
-// row is the metadata.
+// or organization (owner_type='client'). File contents live in Supabase Storage;
+// this row is the metadata.
 //
 // `categoryId` references document_categories (admin-extensible at runtime).
 // `legacyCategory` is the old enum value, retained for one release for recovery

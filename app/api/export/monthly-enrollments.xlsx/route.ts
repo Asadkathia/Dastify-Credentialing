@@ -35,7 +35,6 @@ export async function GET(request: Request) {
       `id, state, status, sub_status, created_at, organization_id,
        client:organization_id (id, display_name),
        provider:client_id (id, first_name, last_name, npi),
-       group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name)`,
     )
     .gte("created_at", start.toISOString())
@@ -64,12 +63,12 @@ export async function GET(request: Request) {
     }
   }
 
-  // One sheet per client. Empty result → single placeholder sheet.
+  // One sheet per organization. Empty result → single placeholder sheet.
+  // `client_id` is NOT NULL on enrollments, so the provider join is always present.
   const sheetMap = new Map<string, ExportSheet>();
   for (const e of enrollments ?? []) {
     const client = Array.isArray(e.client) ? e.client[0] : e.client;
     const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
-    const groupEntity = Array.isArray(e.group_entity) ? e.group_entity[0] : e.group_entity;
     const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
     if (!client) continue;
 
@@ -87,7 +86,7 @@ export async function GET(request: Request) {
 
     const subjectLabel = provider
       ? `${provider.first_name} ${provider.last_name}${provider.npi ? ` (NPI ${provider.npi})` : ""}`
-      : (groupEntity?.legal_name ?? "Unknown");
+      : "Unknown";
 
     const row: ExportRow = {
       state: e.state,

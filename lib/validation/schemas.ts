@@ -7,16 +7,42 @@ export const emailSchema = z.string().email().toLowerCase().trim();
 
 // ── Organization (tenant practice) ────────────────────────────────────────────
 
-export const createOrganizationSchema = z.object({
+// Shared "org-only" fields, used by both kinds.
+const organizationCoreFields = {
   legalName: z.string().min(2).max(200).trim(),
   displayName: z.string().min(2).max(120).trim(),
   primaryContactName: z.string().max(120).trim().optional().or(z.literal("")),
   primaryContactEmail: emailSchema.optional().or(z.literal("")),
   primaryContactPhone: z.string().max(40).trim().optional().or(z.literal("")),
   notes: z.string().max(2000).optional().or(z.literal("")),
-});
+} as const;
+
+// Clinician fields embedded into the individual-org branch — same constraints
+// as createClientSchema below.
+const individualClinicianFields = {
+  firstName: z.string().min(1).max(80).trim(),
+  middleName: z.string().max(80).trim().optional().or(z.literal("")),
+  lastName: z.string().min(1).max(80).trim(),
+  suffix: z.string().max(20).trim().optional().or(z.literal("")),
+  npi: z.string().regex(/^\d{10}$/).optional().or(z.literal("")),
+  primarySpecialty: z.string().max(120).trim().optional().or(z.literal("")),
+  secondarySpecialty: z.string().max(120).trim().optional().or(z.literal("")),
+  email: emailSchema.optional().or(z.literal("")),
+  phone: z.string().max(40).trim().optional().or(z.literal("")),
+  caqhId: z.string().max(40).trim().optional().or(z.literal("")),
+} as const;
+
+export const createOrganizationSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("group"), ...organizationCoreFields }),
+  z.object({
+    kind: z.literal("individual"),
+    ...organizationCoreFields,
+    ...individualClinicianFields,
+  }),
+]);
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
 
+// Kind is immutable in v1 — `updateOrganizationSchema` intentionally omits it.
 export const updateOrganizationSchema = z.object({
   organizationId: z.string().uuid(),
   legalName: z.string().min(2).max(200).trim(),
@@ -112,22 +138,16 @@ export type UpdateClientInput = z.infer<typeof updateClientSchema>;
 
 // ── Enrollment ────────────────────────────────────────────────────────────────
 
-export const createEnrollmentSchema = z
-  .object({
-    organizationId: z.string().uuid(),
-    clientId: z.string().uuid().optional(),
-    groupEntityId: z.string().uuid().optional(),
-    payerId: z.string().uuid(),
-    state: z.string().regex(US_STATE_REGEX, "State must be a 2-letter US state code (e.g. TX)"),
-    subStatus: z.string().max(200).optional().or(z.literal("")),
-  })
-  .refine(
-    (val) => Boolean(val.clientId) !== Boolean(val.groupEntityId),
-    {
-      message: "Exactly one of clientId or groupEntityId must be set",
-      path: ["clientId"],
-    },
-  );
+// clientId is optional here because the server action resolves it from the
+// organization's singleton when kind='individual'. For group orgs the server
+// action requires it explicitly and errors otherwise.
+export const createEnrollmentSchema = z.object({
+  organizationId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  payerId: z.string().uuid(),
+  state: z.string().regex(US_STATE_REGEX, "State must be a 2-letter US state code (e.g. TX)"),
+  subStatus: z.string().max(200).optional().or(z.literal("")),
+});
 export type CreateEnrollmentInput = z.infer<typeof createEnrollmentSchema>;
 
 export const transitionStatusSchema = z.object({
@@ -156,7 +176,7 @@ export type PostInternalNoteInput = z.infer<typeof postInternalNoteSchema>;
 
 // ── Documents ─────────────────────────────────────────────────────────────────
 
-const DOCUMENT_OWNER_TYPES = ["provider", "enrollment", "group_entity", "client"] as const;
+const DOCUMENT_OWNER_TYPES = ["provider", "enrollment", "client"] as const;
 
 const ALLOWED_MIME_TYPES = [
   "application/pdf",

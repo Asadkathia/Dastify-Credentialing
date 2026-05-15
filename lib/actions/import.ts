@@ -54,7 +54,7 @@ export async function previewImportAction(
 
   const parsedHeader = parseFormHeader(formData);
   if (!parsedHeader.ok) return fail(parsedHeader.error);
-  const { entity, organizationId, clientId, groupEntityId, file } = parsedHeader.data;
+  const { entity, organizationId, clientId: rawClientId, file } = parsedHeader.data;
 
   let rawRows: RawRow[];
   try {
@@ -68,14 +68,10 @@ export async function previewImportAction(
 
   if (entity === "enrollments") {
     if (!organizationId) return fail("Pick an organization before uploading.");
-    if (!clientId && !groupEntityId) {
-      return fail("Pick a client (clinician) or group entity before uploading.");
-    }
-    if (clientId && groupEntityId) {
-      return fail("Pick exactly one subject — a client OR a group entity, not both.");
-    }
+    const subject = await resolveEnrollmentSubject(supabase, organizationId, rawClientId);
+    if (!subject.ok) return fail(subject.error);
 
-    const ctx = await loadEnrollmentContext(supabase, organizationId, clientId, groupEntityId);
+    const ctx = await loadEnrollmentContext(supabase, organizationId, subject.clientId);
     const previewRows: Array<ImportPreviewRow<ParsedEnrollmentRow>> = [];
     for (const raw of rawRows) {
       previewRows.push(...validateEnrollmentRow(raw, ctx));
@@ -109,7 +105,7 @@ export async function commitImportAction(
 
   const parsedHeader = parseFormHeader(formData);
   if (!parsedHeader.ok) return fail(parsedHeader.error);
-  const { entity, organizationId, clientId, groupEntityId, file } = parsedHeader.data;
+  const { entity, organizationId, clientId: rawClientId, file } = parsedHeader.data;
 
   let rawRows: RawRow[];
   try {
@@ -123,19 +119,16 @@ export async function commitImportAction(
 
   if (entity === "enrollments") {
     if (!organizationId) return fail("Pick an organization before uploading.");
-    if (!clientId && !groupEntityId) {
-      return fail("Pick a client or group entity before uploading.");
-    }
-    if (clientId && groupEntityId) {
-      return fail("Pick exactly one subject.");
-    }
-    const ctx = await loadEnrollmentContext(supabase, organizationId, clientId, groupEntityId);
+    const subject = await resolveEnrollmentSubject(supabase, organizationId, rawClientId);
+    if (!subject.ok) return fail(subject.error);
+    const clientId = subject.clientId;
+
+    const ctx = await loadEnrollmentContext(supabase, organizationId, clientId);
     const previewRows = rawRows.flatMap((r) => validateEnrollmentRow(r, ctx));
     const valid = previewRows.filter((r) => r.status === "valid" && r.parsed);
     const insertRows = valid.map((r) => ({
       organization_id: organizationId,
-      client_id: clientId ?? null,
-      group_entity_id: groupEntityId ?? null,
+      client_id: clientId,
       payer_id: r.parsed!.payerId,
       state: r.parsed!.state,
       status: r.parsed!.status,
@@ -260,7 +253,6 @@ function parseFormHeader(formData: FormData):
         entity: ImportEntityType;
         organizationId: string | null;
         clientId: string | null;
-        groupEntityId: string | null;
         file: File;
       };
     } {
@@ -273,7 +265,6 @@ function parseFormHeader(formData: FormData):
 
   const organizationId = optionalUuid(formData.get("organizationId"));
   const clientId = optionalUuid(formData.get("clientId"));
-  const groupEntityId = optionalUuid(formData.get("groupEntityId"));
 
   return {
     ok: true,
@@ -281,10 +272,45 @@ function parseFormHeader(formData: FormData):
       entity: entityResult.data,
       organizationId,
       clientId,
-      groupEntityId,
       file,
     },
   };
+}
+
+// Resolves the clinician subject for an enrollment import. Group orgs must pass
+// `clientId`; individual orgs auto-resolve to their singleton clinician.
+async function resolveEnrollmentSubject(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  rawClientId: string | null,
+): Promise<{ ok: true; clientId: string } | { ok: false; error: string }> {
+  if (rawClientId) return { ok: true, clientId: rawClientId };
+
+  const { data: org, error: orgErr } = await supabase
+    .from("organizations")
+    .select("id, kind")
+    .eq("id", organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (orgErr || !org) return { ok: false, error: "Organization not found." };
+  if (org.kind !== "individual") {
+    return { ok: false, error: "Pick a clinician before uploading." };
+  }
+
+  const { data: rows, error: clientErr } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .is("deleted_at", null)
+    .limit(2);
+  if (clientErr) return { ok: false, error: `Could not resolve clinician: ${clientErr.message}` };
+  if (!rows || rows.length === 0) {
+    return { ok: false, error: "Individual organization has no clinician row." };
+  }
+  if (rows.length > 1) {
+    return { ok: false, error: "Individual organization has more than one clinician (data error)." };
+  }
+  return { ok: true, clientId: rows[0]!.id };
 }
 
 function optionalUuid(v: FormDataEntryValue | null): string | null {
@@ -297,8 +323,7 @@ function optionalUuid(v: FormDataEntryValue | null): string | null {
 async function loadEnrollmentContext(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   organizationId: string,
-  clientId: string | null,
-  groupEntityId: string | null,
+  clientId: string,
 ): Promise<ValidateEnrollmentsContext> {
   const [payersRes, existingRes] = await Promise.all([
     supabase.from("payers").select("id, name"),
@@ -307,7 +332,7 @@ async function loadEnrollmentContext(
       .select("payer_id, state")
       .eq("organization_id", organizationId)
       .is("deleted_at", null)
-      .eq(clientId ? "client_id" : "group_entity_id", clientId ?? groupEntityId!),
+      .eq("client_id", clientId),
   ]);
 
   const payersByName = new Map<string, { id: string; displayName: string }>();

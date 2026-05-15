@@ -49,7 +49,6 @@ export const documentCategoryEnum = pgEnum("document_category", [
 export const documentOwnerTypeEnum = pgEnum("document_owner_type", [
   "provider",
   "enrollment",
-  "group_entity",
   "client",
 ]);
 

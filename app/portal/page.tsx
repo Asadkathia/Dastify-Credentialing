@@ -46,7 +46,6 @@ export default async function ClientPortalDashboardPage() {
       .select(
         `id, state, status,
          provider:client_id (first_name, last_name),
-         group_entity:group_entity_id (legal_name),
          payer:payer_id (name)`,
       )
       .is("deleted_at", null)
@@ -58,7 +57,6 @@ export default async function ClientPortalDashboardPage() {
       .select(
         `id, state, status, sub_status, updated_at,
          provider:client_id (first_name, last_name),
-         group_entity:group_entity_id (legal_name),
          payer:payer_id (name)`,
       )
       .is("deleted_at", null)
@@ -154,13 +152,10 @@ export default async function ClientPortalDashboardPage() {
               <tbody>
                 {recentlyUpdated.map((r) => {
                   const provider = Array.isArray(r.provider) ? r.provider[0] : r.provider;
-                  const groupEntity = Array.isArray(r.group_entity)
-                    ? r.group_entity[0]
-                    : r.group_entity;
                   const payer = Array.isArray(r.payer) ? r.payer[0] : r.payer;
                   const subject = provider
                     ? `${provider.last_name}, ${provider.first_name}`
-                    : (groupEntity?.legal_name ?? "—");
+                    : "—";
                   return (
                     <tr key={r.id}>
                       <td>
@@ -295,7 +290,6 @@ type MasterEnrollmentRow = {
   state: string;
   status: string;
   provider: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null;
-  group_entity: { legal_name: string } | { legal_name: string }[] | null;
   payer: { name: string } | { name: string }[] | null;
 };
 
@@ -483,13 +477,10 @@ function AllEnrollmentsListing({ enrollments }: { enrollments: MasterEnrollmentR
             <tbody>
               {enrollments.map((e) => {
                 const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
-                const groupEntity = Array.isArray(e.group_entity)
-                  ? e.group_entity[0]
-                  : e.group_entity;
                 const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
                 const subject = provider
                   ? `${provider.last_name}, ${provider.first_name}`
-                  : (groupEntity?.legal_name ?? "—");
+                  : "—";
                 const status = e.status as EnrollmentStatus;
                 return (
                   <tr key={e.id}>

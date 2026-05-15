@@ -15,8 +15,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createEnrollmentAction } from "@/lib/actions/enrollments";
+import type { OrganizationKind } from "@/db/schema/organizations";
 
-export type OrgOption = { id: string; displayName: string };
+export type OrgOption = { id: string; displayName: string; kind: OrganizationKind };
 export type ClientOption = {
   id: string;
   organizationId: string;
@@ -24,11 +25,6 @@ export type ClientOption = {
   lastName: string;
   middleName: string | null;
   suffix: string | null;
-};
-export type GroupEntityOption = {
-  id: string;
-  organizationId: string;
-  legalName: string;
 };
 export type PayerOption = {
   id: string;
@@ -39,7 +35,6 @@ export type PayerOption = {
 export type NewEnrollmentDialogProps = {
   organizations: OrgOption[];
   clients: ClientOption[];
-  groupEntities: GroupEntityOption[];
   payers: PayerOption[];
   /** When provided, organization is pre-selected and locked. */
   presetOrganizationId?: string;
@@ -51,13 +46,6 @@ export type NewEnrollmentDialogProps = {
   triggerClassName?: string;
 };
 
-type SubjectKind = "client" | "group";
-
-const SUBJECT_KIND_TABS: ReadonlyArray<{ id: SubjectKind; label: string }> = [
-  { id: "client", label: "Individual client" },
-  { id: "group", label: "Group entity" },
-];
-
 function clientDisplayName(c: ClientOption): string {
   const middle = c.middleName ? ` ${c.middleName[0]}.` : "";
   const suffix = c.suffix ? `, ${c.suffix}` : "";
@@ -67,7 +55,6 @@ function clientDisplayName(c: ClientOption): string {
 export function NewEnrollmentDialog({
   organizations,
   clients,
-  groupEntities,
   payers,
   presetOrganizationId,
   presetClientId,
@@ -83,11 +70,7 @@ export function NewEnrollmentDialog({
 
   // Form state
   const [organizationId, setOrganizationId] = useState<string>(presetOrganizationId ?? "");
-  const [subjectKind, setSubjectKind] = useState<SubjectKind>(
-    presetClientId ? "client" : "client",
-  );
   const [clientId, setClientId] = useState<string>(presetClientId ?? "");
-  const [groupEntityId, setGroupEntityId] = useState<string>("");
   const [payerId, setPayerId] = useState<string>("");
   const [state, setState] = useState<string>("");
   const [subStatus, setSubStatus] = useState<string>("");
@@ -99,17 +82,19 @@ export function NewEnrollmentDialog({
   useEffect(() => {
     if (clientLocked) return;
     setClientId("");
-    setGroupEntityId("");
   }, [organizationId, clientLocked]);
 
-  // Filter clients + groups to the chosen org.
+  // Selected org drives whether we show the clinician picker.
+  const selectedOrg = useMemo(
+    () => organizations.find((o) => o.id === organizationId),
+    [organizations, organizationId],
+  );
+  const orgKind: OrganizationKind | undefined = selectedOrg?.kind;
+
+  // Filter clients to the chosen org.
   const orgClients = useMemo(
     () => clients.filter((c) => c.organizationId === organizationId),
     [clients, organizationId],
-  );
-  const orgGroups = useMemo(
-    () => groupEntities.filter((g) => g.organizationId === organizationId),
-    [groupEntities, organizationId],
   );
 
   // Filter payers/states cascade: state options are constrained to what the
@@ -131,8 +116,7 @@ export function NewEnrollmentDialog({
     Boolean(organizationId) &&
     Boolean(payerId) &&
     Boolean(state) &&
-    ((subjectKind === "client" && Boolean(clientId)) ||
-      (subjectKind === "group" && Boolean(groupEntityId)));
+    (orgKind === "individual" || Boolean(clientId));
 
   function onSubmit(formData: FormData) {
     setError(null);
@@ -147,7 +131,6 @@ export function NewEnrollmentDialog({
       // Reset (preserving locked presets).
       if (!orgLocked) setOrganizationId("");
       if (!clientLocked) setClientId("");
-      setGroupEntityId("");
       setPayerId("");
       setState("");
       setSubStatus("");
@@ -172,8 +155,8 @@ export function NewEnrollmentDialog({
         <DialogHeader>
           <DialogTitle>New enrollment</DialogTitle>
           <DialogDescription>
-            One (subject × payer × state). Subject is a client (individual clinician) OR a group
-            entity.
+            One (clinician × payer × state). For individual-practice organizations the singleton
+            clinician is selected automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -205,34 +188,12 @@ export function NewEnrollmentDialog({
             </select>
           </div>
 
-          {/* Subject kind tabs (hide when a client is locked in) */}
-          {!clientLocked ? (
-            <div className="flex gap-1 rounded-md bg-lightgrey p-1">
-              {SUBJECT_KIND_TABS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    setSubjectKind(t.id);
-                    if (t.id === "client") setGroupEntityId("");
-                    else setClientId("");
-                  }}
-                  className={
-                    "flex-1 rounded-sm px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] transition-colors " +
-                    (subjectKind === t.id
-                      ? "bg-white text-navy shadow-[var(--shadow-xs)]"
-                      : "text-navy/55 hover:text-navy")
-                  }
-                  disabled={pending}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          {/* Client OR Group selector */}
-          {subjectKind === "client" ? (
+          {/* Clinician picker — hidden for Individual orgs (server resolves singleton). */}
+          {orgKind === "individual" ? (
+            <p className="rounded-md bg-lightgrey px-3 py-2 text-[12px] text-navy/65">
+              This will be enrolled for the practice&apos;s clinician.
+            </p>
+          ) : (
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="ne-clientId"
@@ -261,39 +222,6 @@ export function NewEnrollmentDialog({
               {organizationId && orgClients.length === 0 ? (
                 <p className="text-[11px] text-navy/55">
                   This organization has no clients yet. Add one before creating an enrollment.
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="ne-groupEntityId"
-                className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy/65"
-              >
-                Group entity
-              </label>
-              <select
-                id="ne-groupEntityId"
-                name="groupEntityId"
-                value={groupEntityId}
-                onChange={(e) => setGroupEntityId(e.target.value)}
-                disabled={pending || !organizationId}
-                required
-                className="h-9 rounded-md border border-border-subtle bg-white px-2.5 text-[13px] focus-visible:border-teal focus-visible:outline-none disabled:bg-lightgrey disabled:text-navy/55"
-              >
-                <option value="">
-                  {organizationId ? "Select group entity…" : "Pick an organization first"}
-                </option>
-                {orgGroups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.legalName}
-                  </option>
-                ))}
-              </select>
-              {organizationId && orgGroups.length === 0 ? (
-                <p className="text-[11px] text-navy/55">
-                  This organization has no group entities. Add one before creating a group
-                  enrollment.
                 </p>
               ) : null}
             </div>

@@ -41,7 +41,6 @@ export default async function PortalEnrollmentsPage({
     .select(
       `id, state, status, sub_status, effective_date, updated_at,
        provider:client_id (id, first_name, last_name),
-       group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name)`,
       { count: "exact" },
     )
@@ -196,13 +195,10 @@ export default async function PortalEnrollmentsPage({
               <tbody>
                 {rows.map((e) => {
                   const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
-                  const groupEntity = Array.isArray(e.group_entity)
-                    ? e.group_entity[0]
-                    : e.group_entity;
                   const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
                   const subject = provider
                     ? `${provider.last_name}, ${provider.first_name}`
-                    : (groupEntity?.legal_name ?? "—");
+                    : "—";
                   const status = e.status as EnrollmentStatus;
                   return (
                     <tr key={e.id}>

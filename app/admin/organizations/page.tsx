@@ -23,12 +23,19 @@ type SearchParams = Promise<{
   q?: string;
   has_enrollments?: string;
   state?: string;
+  kind?: string;
 }>;
 
 type StatusFilter = "all" | "active" | "inactive";
+type KindFilter = "all" | "group" | "individual";
 
 function parseStatus(raw: string | undefined): StatusFilter {
   if (raw === "active" || raw === "inactive") return raw;
+  return "all";
+}
+
+function parseKind(raw: string | undefined): KindFilter {
+  if (raw === "group" || raw === "individual") return raw;
   return "all";
 }
 
@@ -37,12 +44,14 @@ function buildHref(params: {
   q?: string;
   hasEnrollments?: boolean;
   state?: string;
+  kind?: KindFilter;
 }): string {
   const sp = new URLSearchParams();
   if (params.status && params.status !== "all") sp.set("status", params.status);
   if (params.q) sp.set("q", params.q);
   if (params.hasEnrollments) sp.set("has_enrollments", "1");
   if (params.state) sp.set("state", params.state.toUpperCase());
+  if (params.kind && params.kind !== "all") sp.set("kind", params.kind);
   const qs = sp.toString();
   return qs ? `/admin/organizations?${qs}` : "/admin/organizations";
 }
@@ -67,6 +76,7 @@ export default async function AdminOrganizationsListPage({
 }) {
   const params = await searchParams;
   const statusFilter = parseStatus(params.status);
+  const kindFilter = parseKind(params.kind);
   const qRaw = params.q?.trim() ?? "";
   const q = qRaw.length > 0 ? qRaw : "";
   const hasEnrollments = params.has_enrollments === "1";
@@ -81,6 +91,8 @@ export default async function AdminOrganizationsListPage({
     inactiveRes,
     totalEnrollmentsRes,
     totalClientsRes,
+    groupCountRes,
+    individualCountRes,
   ] = await Promise.all([
     supabase
       .from("organizations")
@@ -104,6 +116,16 @@ export default async function AdminOrganizationsListPage({
       .from("clients")
       .select("id", { count: "exact", head: true })
       .is("deleted_at", null),
+    supabase
+      .from("organizations")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .eq("kind", "group"),
+    supabase
+      .from("organizations")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .eq("kind", "individual"),
   ]);
 
   const totalOrgs = totalOrgsRes.count ?? 0;
@@ -111,6 +133,8 @@ export default async function AdminOrganizationsListPage({
   const inactiveOrgs = inactiveRes.count ?? 0;
   const totalEnrollments = totalEnrollmentsRes.count ?? 0;
   const totalClients = totalClientsRes.count ?? 0;
+  const groupOrgs = groupCountRes.count ?? 0;
+  const individualOrgs = individualCountRes.count ?? 0;
 
   // Optional pre-filtering for the drawer's "Has enrollments" / "State" filter.
   let restrictToOrgIds: string[] | null = null;
@@ -135,12 +159,13 @@ export default async function AdminOrganizationsListPage({
   let query = supabase
     .from("organizations")
     .select(
-      "id, display_name, legal_name, primary_contact_name, primary_contact_email, primary_contact_phone, is_active, created_at",
+      "id, display_name, legal_name, primary_contact_name, primary_contact_email, primary_contact_phone, is_active, kind, created_at",
     )
     .is("deleted_at", null);
 
   if (statusFilter === "active") query = query.eq("is_active", true);
   if (statusFilter === "inactive") query = query.eq("is_active", false);
+  if (kindFilter !== "all") query = query.eq("kind", kindFilter);
 
   if (q) {
     const safe = q.replace(/[%,()]/g, " ");
@@ -192,13 +217,18 @@ export default async function AdminOrganizationsListPage({
 
   const visibleCount = organizations?.length ?? 0;
   const filtersActive =
-    statusFilter !== "all" || q.length > 0 || hasEnrollments || stateFilter.length > 0;
+    statusFilter !== "all" ||
+    kindFilter !== "all" ||
+    q.length > 0 ||
+    hasEnrollments ||
+    stateFilter.length > 0;
 
   const exportSp = new URLSearchParams();
   if (statusFilter !== "all") exportSp.set("status", statusFilter);
   if (q) exportSp.set("q", q);
   if (hasEnrollments) exportSp.set("has_enrollments", "1");
   if (stateFilter) exportSp.set("state", stateFilter);
+  if (kindFilter !== "all") exportSp.set("kind", kindFilter);
   const exportHref = exportSp.toString()
     ? `/api/export/clients.csv?${exportSp.toString()}`
     : `/api/export/clients.csv`;
@@ -252,22 +282,80 @@ export default async function AdminOrganizationsListPage({
         />
       </div>
 
+      {/* Kind tabs */}
+      <div className="mb-3 inline-flex rounded-lg bg-lightgrey p-1">
+        <FilterTab
+          href={buildHref({
+            kind: "all",
+            status: statusFilter,
+            q,
+            hasEnrollments,
+            state: stateFilter,
+          })}
+          active={kindFilter === "all"}
+          label="All"
+          count={totalOrgs}
+        />
+        <FilterTab
+          href={buildHref({
+            kind: "group",
+            status: statusFilter,
+            q,
+            hasEnrollments,
+            state: stateFilter,
+          })}
+          active={kindFilter === "group"}
+          label="Group"
+          count={groupOrgs}
+        />
+        <FilterTab
+          href={buildHref({
+            kind: "individual",
+            status: statusFilter,
+            q,
+            hasEnrollments,
+            state: stateFilter,
+          })}
+          active={kindFilter === "individual"}
+          label="Individual"
+          count={individualOrgs}
+        />
+      </div>
+
       {/* Filter tabs */}
       <div className="mb-4 inline-flex rounded-lg bg-lightgrey p-1">
         <FilterTab
-          href={buildHref({ status: "all", q, hasEnrollments, state: stateFilter })}
+          href={buildHref({
+            status: "all",
+            q,
+            hasEnrollments,
+            state: stateFilter,
+            kind: kindFilter,
+          })}
           active={statusFilter === "all"}
           label="All"
           count={totalOrgs}
         />
         <FilterTab
-          href={buildHref({ status: "active", q, hasEnrollments, state: stateFilter })}
+          href={buildHref({
+            status: "active",
+            q,
+            hasEnrollments,
+            state: stateFilter,
+            kind: kindFilter,
+          })}
           active={statusFilter === "active"}
           label="Active"
           count={activeOrgs}
         />
         <FilterTab
-          href={buildHref({ status: "inactive", q, hasEnrollments, state: stateFilter })}
+          href={buildHref({
+            status: "inactive",
+            q,
+            hasEnrollments,
+            state: stateFilter,
+            kind: kindFilter,
+          })}
           active={statusFilter === "inactive"}
           label="Inactive"
           count={inactiveOrgs}
@@ -283,6 +371,9 @@ export default async function AdminOrganizationsListPage({
         >
           {statusFilter !== "all" ? (
             <input type="hidden" name="status" value={statusFilter} />
+          ) : null}
+          {kindFilter !== "all" ? (
+            <input type="hidden" name="kind" value={kindFilter} />
           ) : null}
           {hasEnrollments ? <input type="hidden" name="has_enrollments" value="1" /> : null}
           {stateFilter ? <input type="hidden" name="state" value={stateFilter} /> : null}
@@ -376,6 +467,7 @@ export default async function AdminOrganizationsListPage({
                 {organizations!.map((o) => {
                   const enrollCount = enrollmentCountsByOrg.get(o.id) ?? 0;
                   const clientCount = clientCountsByOrg.get(o.id) ?? 0;
+                  const isIndividual = o.kind === "individual";
                   return (
                     <tr key={o.id}>
                       <td className="font-medium">
@@ -390,8 +482,11 @@ export default async function AdminOrganizationsListPage({
                             {initialsFromName(o.display_name)}
                           </span>
                           <span className="min-w-0">
-                            <span className="block truncate text-[13px] font-medium leading-tight">
-                              {o.display_name}
+                            <span className="flex items-center gap-1.5">
+                              <span className="block truncate text-[13px] font-medium leading-tight">
+                                {o.display_name}
+                              </span>
+                              <KindChip kind={isIndividual ? "individual" : "group"} />
                             </span>
                             <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.08em] text-navy/45">
                               # ORG-{shortId(o.id)}
@@ -409,12 +504,25 @@ export default async function AdminOrganizationsListPage({
                         ) : null}
                       </td>
                       <td>
-                        <span className="block text-[20px] font-bold leading-none tnum text-navy">
-                          {clientCount}
-                        </span>
-                        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/45">
-                          Clinicians
-                        </span>
+                        {isIndividual ? (
+                          <>
+                            <span className="block text-[13px] font-semibold leading-none text-navy/70">
+                              Solo
+                            </span>
+                            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/45">
+                              Clinician
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="block text-[20px] font-bold leading-none tnum text-navy">
+                              {clientCount}
+                            </span>
+                            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-navy/45">
+                              Clinicians
+                            </span>
+                          </>
+                        )}
                       </td>
                       <td>
                         <span className="block text-[20px] font-bold leading-none tnum text-navy">
@@ -514,6 +622,22 @@ function FilterTab({
         {count}
       </span>
     </Link>
+  );
+}
+
+function KindChip({ kind }: { kind: "group" | "individual" }) {
+  const individual = kind === "individual";
+  return (
+    <span
+      className={
+        "inline-flex shrink-0 items-center rounded-full px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-[0.1em] " +
+        (individual
+          ? "bg-warning-08 text-[#8a5a00]"
+          : "bg-navy-04 text-navy/60")
+      }
+    >
+      {individual ? "Individual" : "Group"}
+    </span>
   );
 }
 

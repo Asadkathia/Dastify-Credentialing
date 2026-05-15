@@ -10,31 +10,35 @@ export default async function NewEnrollmentPage({
   const { organizationId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: client }, { data: providers }, { data: groupEntities }, { data: payers }] =
-    await Promise.all([
-      supabase.from("organizations").select("display_name").eq("id", organizationId).maybeSingle(),
-      supabase
-        .from("clients")
-        .select("id, first_name, last_name")
-        .eq("organization_id", organizationId)
-        .is("deleted_at", null)
-        .order("last_name"),
-      supabase
-        .from("group_entities")
-        .select("id, legal_name")
-        .eq("organization_id", organizationId)
-        .is("deleted_at", null),
-      supabase.from("payers").select("id, name").order("name"),
-    ]);
+  const [{ data: client }, { data: providers }, { data: payers }] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select("display_name, kind")
+      .eq("id", organizationId)
+      .maybeSingle(),
+    supabase
+      .from("clients")
+      .select("id, first_name, last_name")
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null)
+      .order("last_name"),
+    supabase.from("payers").select("id, name").order("name"),
+  ]);
+
+  const organizationKind = client?.kind ?? "group";
 
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader
         title="New enrollment"
-        subtitle="Pick a provider or group, then a payer + the states this enrollment covers. One row per state."
+        subtitle={
+          organizationKind === "individual"
+            ? "Pick a payer + the states this enrollment covers. One row per state."
+            : "Pick a clinician, then a payer + the states this enrollment covers. One row per state."
+        }
         crumbs={[
-          { label: "Clients", href: "/admin" },
-          { label: client?.display_name ?? "Client", href: `/admin/organizations/${organizationId}` },
+          { label: "Organizations", href: "/admin/organizations" },
+          { label: client?.display_name ?? "Organization", href: `/admin/organizations/${organizationId}` },
           { label: "New enrollment" },
         ]}
       />
@@ -42,8 +46,8 @@ export default async function NewEnrollmentPage({
       <div className="rounded-md border border-border-subtle bg-white p-6 shadow-[var(--shadow-xs)]">
         <NewEnrollmentForm
           organizationId={organizationId}
+          organizationKind={organizationKind}
           providers={providers ?? []}
-          groupEntities={groupEntities ?? []}
           initialPayers={payers ?? []}
         />
       </div>

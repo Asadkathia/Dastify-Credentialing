@@ -49,7 +49,6 @@ export async function GET(request: Request) {
       .select(
         `id, state, status, sub_status,
          provider:client_id (id, first_name, last_name, npi),
-         group_entity:group_entity_id (id, legal_name),
          payer:payer_id (id, name)`,
       )
       .eq("organization_id", organizationId)
@@ -79,26 +78,19 @@ export async function GET(request: Request) {
     }
   }
 
-  // Group rows by subject (provider or group entity); one sheet per subject.
+  // Group rows by clinician; one sheet per clinician. `client_id` is NOT NULL
+  // on enrollments, so the provider join is always present.
   const sheetMap = new Map<string, ExportSheet>();
   for (const e of enrollments) {
     const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
-    const groupEntity = Array.isArray(e.group_entity) ? e.group_entity[0] : e.group_entity;
     const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
 
-    const subjectKey = provider
-      ? `provider:${provider.id}`
-      : groupEntity
-        ? `group:${groupEntity.id}`
-        : "unknown";
+    const subjectKey = provider ? `provider:${provider.id}` : "unknown";
     const subjectLabel = provider
       ? `Provider: ${provider.first_name} ${provider.last_name}${provider.npi ? ` (NPI ${provider.npi})` : ""}`
-      : groupEntity
-        ? `Group: ${groupEntity.legal_name}`
-        : "Unknown subject";
-    const sheetName = (provider
-      ? `${provider.last_name}, ${provider.first_name}`
-      : (groupEntity?.legal_name ?? "Unknown")
+      : "Unknown subject";
+    const sheetName = (
+      provider ? `${provider.last_name}, ${provider.first_name}` : "Unknown"
     ).slice(0, 31);
 
     if (!sheetMap.has(subjectKey)) {

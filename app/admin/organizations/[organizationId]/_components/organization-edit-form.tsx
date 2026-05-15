@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateOrganizationAction } from "@/lib/actions/organizations";
+import type { OrganizationKind } from "@/db/schema/organizations";
 
 type Client = {
   id: string;
   legal_name: string;
   display_name: string;
+  kind: OrganizationKind;
   primary_contact_name: string | null;
   primary_contact_email: string | null;
   primary_contact_phone: string | null;
@@ -23,9 +25,17 @@ export function OrganizationEditForm({ client }: { client: Client }) {
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const kindLabel = client.kind === "individual" ? "Individual" : "Group";
+
   if (!editing) {
     return (
       <div>
+        <div className="mb-4 inline-flex items-center gap-2 rounded-sm border border-border-subtle bg-lightgrey/40 px-2.5 py-1 text-[11px]">
+          <span className="label-sm">Kind</span>
+          <span className="font-semibold uppercase tracking-[0.06em] text-navy/85">
+            {kindLabel}
+          </span>
+        </div>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
           <Field label="Legal name" value={client.legal_name} />
           <Field label="Display name" value={client.display_name} />
@@ -65,6 +75,13 @@ export function OrganizationEditForm({ client }: { client: Client }) {
         });
       }}
     >
+      <div className="inline-flex items-center gap-2 rounded-sm border border-border-subtle bg-lightgrey/40 px-2.5 py-1 text-[11px]">
+        <span className="label-sm">Kind</span>
+        <span className="font-semibold uppercase tracking-[0.06em] text-navy/85">
+          {kindLabel}
+        </span>
+      </div>
+
       <FieldGroup label="Identity">
         <div className="grid grid-cols-2 gap-4">
           <FormInput

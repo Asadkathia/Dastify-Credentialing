@@ -16,6 +16,8 @@
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rls": "vitest run --config vitest.integration.config.ts",
+    "test:rls:watch": "vitest --config vitest.integration.config.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

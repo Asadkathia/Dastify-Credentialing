@@ -235,7 +235,7 @@ function sanitizeFileName(name: string): string {
 
 type SupabaseFromArgs = {
   organizationId: string;
-  ownerType: "provider" | "enrollment" | "group_entity" | "client";
+  ownerType: "provider" | "enrollment" | "client";
   ownerId: string;
 };
 
@@ -244,11 +244,12 @@ async function ownerLookup(
   args: SupabaseFromArgs,
 ): Promise<{ data: boolean }> {
   // Note: ownerType "provider" is legacy; new code uses "client" for clinicians.
-  // The clients table now holds clinicians (formerly providers).
+  // owner_type='client' here means the document is owned by the organization
+  // itself (org-level document); the table mapped to is `organizations`. The
+  // clinician-row owner uses owner_type='provider' against the `clients` table.
   const tableByOwner: Record<SupabaseFromArgs["ownerType"], string> = {
     provider: "clients",
     enrollment: "enrollments",
-    group_entity: "group_entities",
     client: "organizations",
   };
   const table = tableByOwner[args.ownerType];
@@ -271,7 +272,6 @@ function revalidatePathsForOwner(organizationId: string, ownerType: string, owne
       revalidatePath(`/admin/organizations/${organizationId}/clients/${ownerId}`);
       revalidatePath(`/admin/organizations/${organizationId}`);
       break;
-    case "group_entity":
     case "client":
       revalidatePath(`/admin/organizations/${organizationId}`);
       revalidatePath(`/portal`);

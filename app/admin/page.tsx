@@ -92,7 +92,6 @@ export default async function AdminDashboardPage() {
         `id, organization_id, state, status, sub_status, updated_at,
          client:organization_id (id, display_name),
          provider:client_id (first_name, last_name),
-         group_entity:group_entity_id (legal_name),
          payer:payer_id (name)`,
       )
       .is("deleted_at", null)
@@ -284,13 +283,10 @@ export default async function AdminDashboardPage() {
               {recentlyUpdated.map((r) => {
                 const client = Array.isArray(r.client) ? r.client[0] : r.client;
                 const provider = Array.isArray(r.provider) ? r.provider[0] : r.provider;
-                const groupEntity = Array.isArray(r.group_entity)
-                  ? r.group_entity[0]
-                  : r.group_entity;
                 const payer = Array.isArray(r.payer) ? r.payer[0] : r.payer;
                 const subject = provider
                   ? `${provider.last_name}, ${provider.first_name}`
-                  : (groupEntity?.legal_name ?? "—");
+                  : "—";
                 const detailHref = client
                   ? `/admin/organizations/${client.id}/enrollments/${r.id}`
                   : "#";

@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
 import { adminUsers, organizationUsers } from "./auth";
 import { organizations, organizationSettings } from "./organizations";
-import { clients, groupEntities } from "./clients";
+import { clients } from "./clients";
 import { payers } from "./payers";
 import { enrollments } from "./enrollments";
 import { comments, internalNotes } from "./comments";
@@ -12,7 +12,6 @@ import { statusHistory, activityEvents } from "./audit";
 export const organizationsRelations = relations(organizations, ({ many, one }) => ({
   users: many(organizationUsers),
   clients: many(clients),
-  groupEntities: many(groupEntities),
   enrollments: many(enrollments),
   settings: one(organizationSettings, {
     fields: [organizations.id],
@@ -35,14 +34,6 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   enrollments: many(enrollments),
 }));
 
-export const groupEntitiesRelations = relations(groupEntities, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [groupEntities.organizationId],
-    references: [organizations.id],
-  }),
-  enrollments: many(enrollments),
-}));
-
 export const payersRelations = relations(payers, ({ many }) => ({
   enrollments: many(enrollments),
 }));
@@ -53,10 +44,6 @@ export const enrollmentsRelations = relations(enrollments, ({ one, many }) => ({
     references: [organizations.id],
   }),
   client: one(clients, { fields: [enrollments.clientId], references: [clients.id] }),
-  groupEntity: one(groupEntities, {
-    fields: [enrollments.groupEntityId],
-    references: [groupEntities.id],
-  }),
   payer: one(payers, { fields: [enrollments.payerId], references: [payers.id] }),
   comments: many(comments),
   internalNotes: many(internalNotes),

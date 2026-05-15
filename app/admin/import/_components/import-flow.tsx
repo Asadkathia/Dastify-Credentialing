@@ -25,8 +25,9 @@ import type {
   ParsedEnrollmentRow,
   ParsedOrganizationRow,
 } from "@/lib/import/types";
+import type { OrganizationKind } from "@/db/schema/organizations";
 
-export type OrgOption = { id: string; displayName: string };
+export type OrgOption = { id: string; displayName: string; kind: OrganizationKind };
 export type ClientOption = {
   id: string;
   organizationId: string;
@@ -35,17 +36,11 @@ export type ClientOption = {
   middleName: string | null;
   suffix: string | null;
 };
-export type GroupEntityOption = {
-  id: string;
-  organizationId: string;
-  legalName: string;
-};
 
 export type ImportFlowProps = {
   entity: ImportEntityType;
   organizations: OrgOption[];
   clients: ClientOption[];
-  groupEntities: GroupEntityOption[];
 };
 
 type Stage = "form" | "previewing" | "preview" | "committing" | "result" | "error";
@@ -56,41 +51,39 @@ export function ImportFlow({
   entity,
   organizations,
   clients,
-  groupEntities,
 }: ImportFlowProps) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("form");
   const [, startTransition] = useTransition();
   const [file, setFile] = useState<File | null>(null);
   const [organizationId, setOrganizationId] = useState<string>("");
-  const [subjectKind, setSubjectKind] = useState<"client" | "group">("client");
   const [clientId, setClientId] = useState<string>("");
-  const [groupEntityId, setGroupEntityId] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [preview, setPreview] = useState<ImportPreviewResult<AnyParsedRow> | null>(null);
   const [result, setResult] = useState<ImportCommitResult | null>(null);
+
+  const selectedOrg = useMemo(
+    () => organizations.find((o) => o.id === organizationId),
+    [organizations, organizationId],
+  );
+  const orgKind: OrganizationKind | undefined = selectedOrg?.kind;
 
   const orgClients = useMemo(
     () => clients.filter((c) => c.organizationId === organizationId),
     [clients, organizationId],
   );
-  const orgGroups = useMemo(
-    () => groupEntities.filter((g) => g.organizationId === organizationId),
-    [groupEntities, organizationId],
-  );
 
   const needsOrg = entity === "enrollments" || entity === "clients";
   const needsSubject = entity === "enrollments";
+  // For Individual orgs the server resolves the singleton clinician — no UI picker.
+  const needsClientPicker = needsSubject && orgKind === "group";
 
   function buildFormData(f: File): FormData {
     const fd = new FormData();
     fd.set("entity", entity);
     fd.set("file", f);
     if (needsOrg) fd.set("organizationId", organizationId);
-    if (needsSubject) {
-      if (subjectKind === "client") fd.set("clientId", clientId);
-      else fd.set("groupEntityId", groupEntityId);
-    }
+    if (needsClientPicker) fd.set("clientId", clientId);
     return fd;
   }
 
@@ -105,15 +98,9 @@ export function ImportFlow({
       setErrorMessage("Select an organization.");
       return;
     }
-    if (needsSubject) {
-      if (subjectKind === "client" && !clientId) {
-        setErrorMessage("Select a client (clinician).");
-        return;
-      }
-      if (subjectKind === "group" && !groupEntityId) {
-        setErrorMessage("Select a group entity.");
-        return;
-      }
+    if (needsClientPicker && !clientId) {
+      setErrorMessage("Select a client (clinician).");
+      return;
     }
 
     setStage("previewing");
@@ -186,7 +173,6 @@ export function ImportFlow({
                 onChange={(e) => {
                   setOrganizationId(e.target.value);
                   setClientId("");
-                  setGroupEntityId("");
                 }}
                 disabled={stage === "previewing"}
                 required
@@ -202,87 +188,40 @@ export function ImportFlow({
             </div>
           ) : null}
 
-          {needsSubject ? (
-            <>
-              <div className="flex gap-1 rounded-md bg-lightgrey p-1">
-                {(["client", "group"] as const).map((kind) => (
-                  <button
-                    key={kind}
-                    type="button"
-                    onClick={() => {
-                      setSubjectKind(kind);
-                      if (kind === "client") setGroupEntityId("");
-                      else setClientId("");
-                    }}
-                    className={
-                      "flex-1 rounded-sm px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] transition-colors " +
-                      (subjectKind === kind
-                        ? "bg-white text-navy shadow-[var(--shadow-xs)]"
-                        : "text-navy/55 hover:text-navy")
-                    }
-                    disabled={stage === "previewing"}
-                  >
-                    {kind === "client" ? "Individual client" : "Group entity"}
-                  </button>
-                ))}
-              </div>
+          {needsSubject && orgKind === "individual" ? (
+            <p className="rounded-md bg-lightgrey px-3 py-2 text-[12px] text-navy/65">
+              This will be enrolled for the practice&apos;s clinician.
+            </p>
+          ) : null}
 
-              {subjectKind === "client" ? (
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="imp-clientId"
-                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy/65"
-                  >
-                    Client (clinician)
-                  </label>
-                  <select
-                    id="imp-clientId"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    disabled={stage === "previewing" || !organizationId}
-                    required
-                    className="h-9 rounded-md border border-border-subtle bg-white px-2.5 text-[13px] focus-visible:border-teal focus-visible:outline-none disabled:bg-lightgrey"
-                  >
-                    <option value="">
-                      {organizationId ? "Select client…" : "Pick an organization first"}
-                    </option>
-                    {orgClients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.lastName}, {c.firstName}
-                        {c.middleName ? ` ${c.middleName[0]}.` : ""}
-                        {c.suffix ? `, ${c.suffix}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="imp-groupId"
-                    className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy/65"
-                  >
-                    Group entity
-                  </label>
-                  <select
-                    id="imp-groupId"
-                    value={groupEntityId}
-                    onChange={(e) => setGroupEntityId(e.target.value)}
-                    disabled={stage === "previewing" || !organizationId}
-                    required
-                    className="h-9 rounded-md border border-border-subtle bg-white px-2.5 text-[13px] focus-visible:border-teal focus-visible:outline-none disabled:bg-lightgrey"
-                  >
-                    <option value="">
-                      {organizationId ? "Select group entity…" : "Pick an organization first"}
-                    </option>
-                    {orgGroups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.legalName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </>
+          {needsClientPicker ? (
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="imp-clientId"
+                className="text-[11px] font-semibold uppercase tracking-[0.08em] text-navy/65"
+              >
+                Client (clinician)
+              </label>
+              <select
+                id="imp-clientId"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                disabled={stage === "previewing" || !organizationId}
+                required
+                className="h-9 rounded-md border border-border-subtle bg-white px-2.5 text-[13px] focus-visible:border-teal focus-visible:outline-none disabled:bg-lightgrey"
+              >
+                <option value="">
+                  {organizationId ? "Select client…" : "Pick an organization first"}
+                </option>
+                {orgClients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.lastName}, {c.firstName}
+                    {c.middleName ? ` ${c.middleName[0]}.` : ""}
+                    {c.suffix ? `, ${c.suffix}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
           ) : null}
 
           <div className="flex flex-col gap-1.5">

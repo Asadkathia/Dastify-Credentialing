@@ -54,7 +54,6 @@ export default async function EnrollmentDetailPage({
       `*,
        client:organization_id (id, display_name),
        provider:client_id (id, first_name, last_name, npi),
-       group_entity:group_entity_id (id, legal_name),
        payer:payer_id (id, name, payer_type)`,
     )
     .eq("id", enrollmentId)
@@ -67,14 +66,11 @@ export default async function EnrollmentDetailPage({
   const provider = Array.isArray(enrollment.provider)
     ? enrollment.provider[0]
     : enrollment.provider;
-  const groupEntity = Array.isArray(enrollment.group_entity)
-    ? enrollment.group_entity[0]
-    : enrollment.group_entity;
   const payer = Array.isArray(enrollment.payer) ? enrollment.payer[0] : enrollment.payer;
 
   const subjectLabel = provider
     ? `${provider.last_name}, ${provider.first_name}`
-    : (groupEntity?.legal_name ?? "—");
+    : "—";
 
   const status = enrollment.status as EnrollmentStatus;
 

@@ -8,8 +8,8 @@ const encryptedText = customType<{ data: Uint8Array; driverData: Buffer }>({
 });
 
 // A client is the individual clinician (a person) belonging to an organization.
-// One organization owns many clients. Enrollments hang off either a client or a
-// group_entity, not both — see enrollments_subject_xor.
+// Every enrollment hangs off a client_id; there is no separate group subject
+// (migration 0018 removed the group_entities table).
 export const clients = pgTable(
   "clients",
   {
@@ -45,43 +45,5 @@ export const clients = pgTable(
   }),
 );
 
-// Group enrollments (the practice itself enrolls under a group NPI/Tax ID).
-export const groupEntities = pgTable(
-  "group_entities",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    organizationId: uuid("organization_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    legalName: text("legal_name").notNull(),
-    dbaName: text("dba_name"),
-    groupNpi: text("group_npi"),
-    taxonomyCode: text("taxonomy_code"),
-    taxIdEncrypted: encryptedText("tax_id_encrypted"),
-    addresses: jsonb("addresses")
-      .$type<
-        Array<{
-          type: "service" | "billing" | "mailing";
-          line1: string;
-          line2?: string;
-          city: string;
-          state: string;
-          zip: string;
-        }>
-      >()
-      .notNull()
-      .default([]),
-    notes: text("notes"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-    deletedAt: timestamp("deleted_at", { withTimezone: true }),
-  },
-  (t) => ({
-    organizationIdx: index("group_entities_organization_id_idx").on(t.organizationId),
-  }),
-);
-
 export type Client = typeof clients.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
-export type GroupEntity = typeof groupEntities.$inferSelect;
-export type NewGroupEntity = typeof groupEntities.$inferInsert;

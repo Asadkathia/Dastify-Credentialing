@@ -8,7 +8,6 @@ import { createEnrollmentAction } from "@/lib/actions/enrollments";
 import { createPayerAction } from "@/lib/actions/payers";
 
 type Provider = { id: string; first_name: string; last_name: string };
-type GroupEntity = { id: string; legal_name: string };
 type Payer = { id: string; name: string };
 
 const PAYER_TYPES = [
@@ -28,13 +27,13 @@ const labelClasses = "text-[11px] font-semibold uppercase tracking-[0.06em] text
 
 export function NewEnrollmentForm({
   organizationId,
+  organizationKind,
   providers,
-  groupEntities,
   initialPayers,
 }: {
   organizationId: string;
+  organizationKind: "group" | "individual";
   providers: Provider[];
-  groupEntities: GroupEntity[];
   initialPayers: Payer[];
 }) {
   const router = useRouter();
@@ -100,41 +99,34 @@ export function NewEnrollmentForm({
         });
       }}
     >
-      <FieldGroup label="Subject" hint="Pick a provider OR a group entity — never both (rule 10).">
-        <div>
-          <Label htmlFor="clientId" className={labelClasses}>
-            Provider
-          </Label>
-          <select id="clientId" name="clientId" className={`mt-2 ${selectClasses}`} defaultValue="">
-            <option value="">— Select a provider —</option>
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.last_name}, {p.first_name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {groupEntities.length > 0 ? (
-          <div className="mt-4">
-            <Label htmlFor="groupEntityId" className={labelClasses}>
-              Or group entity
+      <FieldGroup label="Clinician">
+        {organizationKind === "individual" ? (
+          <p className="text-[13px] text-navy/65">
+            This will be enrolled for the practice&apos;s clinician.
+          </p>
+        ) : (
+          <div>
+            <Label htmlFor="clientId" className={labelClasses}>
+              Clinician <span className="text-danger">*</span>
             </Label>
             <select
-              id="groupEntityId"
-              name="groupEntityId"
+              id="clientId"
+              name="clientId"
+              required
               className={`mt-2 ${selectClasses}`}
               defaultValue=""
             >
-              <option value="">— No group enrollment —</option>
-              {groupEntities.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.legal_name}
+              <option value="" disabled>
+                — Select a clinician —
+              </option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.last_name}, {p.first_name}
                 </option>
               ))}
             </select>
           </div>
-        ) : null}
+        )}
       </FieldGroup>
 
       <FieldGroup label="Payer & state">

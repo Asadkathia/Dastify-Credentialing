@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { OrganizationKind } from "@/db/schema/organizations";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   ImportFlow,
   type ClientOption,
-  type GroupEntityOption,
   type OrgOption,
 } from "./_components/import-flow";
 import { TemplatePreview } from "./_components/template-preview";
@@ -24,7 +24,7 @@ const TABS: Array<{ id: ImportEntityType; label: string; description: string }> 
     id: "enrollments",
     label: "Enrollments",
     description:
-      "Bulk-add enrollments under one client (clinician) or group entity. Legacy 4-column template (States · Payers · Status · Comments).",
+      "Bulk-add enrollments under one client (clinician). Legacy 4-column template (States · Payers · Status · Comments). For Individual organizations the singleton clinician is selected automatically.",
   },
   {
     id: "clients",
@@ -52,10 +52,10 @@ export default async function AdminImportPage({
     : "enrollments";
 
   const supabase = await createSupabaseServerClient();
-  const [orgsRes, clientsRes, groupsRes] = await Promise.all([
+  const [orgsRes, clientsRes] = await Promise.all([
     supabase
       .from("organizations")
-      .select("id, display_name")
+      .select("id, display_name, kind")
       .is("deleted_at", null)
       .order("display_name"),
     supabase
@@ -63,16 +63,12 @@ export default async function AdminImportPage({
       .select("id, organization_id, first_name, middle_name, last_name, suffix")
       .is("deleted_at", null)
       .order("last_name"),
-    supabase
-      .from("group_entities")
-      .select("id, organization_id, legal_name")
-      .is("deleted_at", null)
-      .order("legal_name"),
   ]);
 
   const organizations: OrgOption[] = (orgsRes.data ?? []).map((o) => ({
     id: o.id,
     displayName: o.display_name,
+    kind: o.kind as OrganizationKind,
   }));
   const clients: ClientOption[] = (clientsRes.data ?? []).map((c) => ({
     id: c.id,
@@ -81,11 +77,6 @@ export default async function AdminImportPage({
     lastName: c.last_name,
     middleName: c.middle_name,
     suffix: c.suffix,
-  }));
-  const groupEntities: GroupEntityOption[] = (groupsRes.data ?? []).map((g) => ({
-    id: g.id,
-    organizationId: g.organization_id,
-    legalName: g.legal_name,
   }));
 
   const activeTab = TABS.find((t) => t.id === entity)!;
@@ -128,7 +119,6 @@ export default async function AdminImportPage({
         entity={entity}
         organizations={organizations}
         clients={clients}
-        groupEntities={groupEntities}
       />
     </div>
   );

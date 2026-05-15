@@ -12,13 +12,11 @@ export async function createEnrollmentAction(
 ): Promise<ActionResult<{ id: string }>> {
   const session = await requireAdmin();
 
-  const clientId = formData.get("clientId");
-  const groupEntityId = formData.get("groupEntityId");
+  const clientIdRaw = formData.get("clientId");
 
   const parsed = createEnrollmentSchema.safeParse({
     organizationId: formData.get("organizationId"),
-    clientId: clientId ? String(clientId) : undefined,
-    groupEntityId: groupEntityId ? String(groupEntityId) : undefined,
+    clientId: clientIdRaw ? String(clientIdRaw) : undefined,
     payerId: formData.get("payerId"),
     state: String(formData.get("state") ?? "").toUpperCase(),
     subStatus: formData.get("subStatus") || "",
@@ -29,12 +27,41 @@ export async function createEnrollmentAction(
 
   const supabase = await createSupabaseServerClient();
 
+  // Resolve client_id. For group orgs the form must supply it. For individual
+  // orgs we look up the singleton clinician row.
+  let clientId = parsed.data.clientId;
+  if (!clientId) {
+    const { data: org, error: orgErr } = await supabase
+      .from("organizations")
+      .select("id, kind")
+      .eq("id", parsed.data.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (orgErr || !org) return fail("Organization not found");
+    if (org.kind !== "individual") {
+      return fail("Pick a clinician.");
+    }
+    const { data: singleton, error: clientErr } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("organization_id", parsed.data.organizationId)
+      .is("deleted_at", null)
+      .limit(2);
+    if (clientErr) return fail(`Could not resolve clinician: ${clientErr.message}`);
+    if (!singleton || singleton.length === 0) {
+      return fail("Individual organization has no clinician row");
+    }
+    if (singleton.length > 1) {
+      return fail("Individual organization has more than one clinician (data error)");
+    }
+    clientId = singleton[0]!.id;
+  }
+
   const { data: enrollment, error } = await supabase
     .from("enrollments")
     .insert({
       organization_id: parsed.data.organizationId,
-      client_id: parsed.data.clientId ?? null,
-      group_entity_id: parsed.data.groupEntityId ?? null,
+      client_id: clientId,
       payer_id: parsed.data.payerId,
       state: parsed.data.state,
       status: "prep",

@@ -22,6 +22,7 @@ import { OrganizationEditForm } from "./_components/organization-edit-form";
 import { InviteOrganizationUserForm } from "./_components/invite-user-form";
 import { RevokeUserButton } from "./_components/revoke-user-button";
 import type { EnrollmentStatus } from "@/db/schema/enums";
+import type { OrganizationKind } from "@/db/schema/organizations";
 
 function initials(name: string | null | undefined): string {
   if (!name) return "—";
@@ -34,6 +35,34 @@ function initials(name: string | null | undefined): string {
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   const last = parts[parts.length - 1] ?? first;
   return ((first[0] ?? "") + (last[0] ?? "")).toUpperCase();
+}
+
+function KindChip({ kind }: { kind: OrganizationKind }) {
+  const label = kind === "individual" ? "Individual" : "Group";
+  return (
+    <span className="inline-flex items-center rounded-full bg-navy/06 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-navy/70">
+      {label}
+    </span>
+  );
+}
+
+function ClinicianField({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}) {
+  return (
+    <div>
+      <dt className="label-sm">{label}</dt>
+      <dd className={"mt-1 text-[13px] text-charcoal " + (mono ? "font-mono tnum" : "")}>
+        {value || <span className="font-sans text-navy/35">—</span>}
+      </dd>
+    </div>
+  );
 }
 
 function ActivePill({ active }: { active: boolean }) {
@@ -77,7 +106,6 @@ export default async function ClientOverviewPage({
       .select(
         `id, state, status, sub_status,
          provider:client_id (id, first_name, last_name),
-         group_entity:group_entity_id (id, legal_name),
          payer:payer_id (id, name)`,
       )
       .eq("organization_id", organizationId)
@@ -99,13 +127,34 @@ export default async function ClientOverviewPage({
 
   if (!client) notFound();
 
+  const isIndividual = client.kind === "individual";
+
+  // For individual orgs the practice owns exactly one auto-managed clinician.
+  // We need it for the NPI tile + the read-only Clinician profile sub-section.
+  const { data: singletonClinician } = isIndividual
+    ? await supabase
+        .from("clients")
+        .select(
+          "id, first_name, middle_name, last_name, suffix, npi, primary_specialty, secondary_specialty, email, phone, caqh_id",
+        )
+        .eq("organization_id", organizationId)
+        .is("deleted_at", null)
+        .maybeSingle()
+    : { data: null };
+
+  const clinicianFullName = singletonClinician
+    ? `${singletonClinician.last_name}, ${singletonClinician.first_name}${
+        singletonClinician.middle_name ? " " + singletonClinician.middle_name[0] + "." : ""
+      }${singletonClinician.suffix ? ", " + singletonClinician.suffix : ""}`
+    : null;
+
   const idShort = organizationId.slice(0, 8).toUpperCase();
 
   return (
     <div>
       <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-[12px]">
         <Link href="/admin/organizations" className="text-navy/55 hover:text-navy">
-          Clients
+          Organizations
         </Link>
         <span className="text-navy/30">/</span>
         <span className="text-navy/85">{client.display_name}</span>
@@ -123,21 +172,33 @@ export default async function ClientOverviewPage({
             <span className="font-mono tnum">#CLT-{idShort}</span>
             <span className="text-navy/30">·</span>
             <ActivePill active={Boolean(client.is_active)} />
+            <span className="text-navy/30">·</span>
+            <KindChip kind={client.kind} />
           </>
         }
-        stats={[
-          { label: "ENROLLMENTS", value: enrollments?.length ?? 0 },
-          { label: "PROVIDERS", value: providers?.length ?? 0 },
-          { label: "PORTAL USERS", value: users?.length ?? 0 },
-        ]}
+        stats={
+          isIndividual
+            ? [
+                { label: "ENROLLMENTS", value: enrollments?.length ?? 0 },
+                { label: "NPI", value: singletonClinician?.npi ?? "—" },
+                { label: "PORTAL USERS", value: users?.length ?? 0 },
+              ]
+            : [
+                { label: "ENROLLMENTS", value: enrollments?.length ?? 0 },
+                { label: "CLIENTS", value: providers?.length ?? 0 },
+                { label: "PORTAL USERS", value: users?.length ?? 0 },
+              ]
+        }
         actions={
           <>
-            <Button asChild variant="outline">
-              <Link href={`/admin/organizations/${organizationId}/providers/new`}>
-                <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
-                Provider
-              </Link>
-            </Button>
+            {isIndividual ? null : (
+              <Button asChild variant="outline">
+                <Link href={`/admin/organizations/${organizationId}/clients/new`}>
+                  <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
+                  Client
+                </Link>
+              </Button>
+            )}
             <Button asChild>
               <Link href={`/admin/organizations/${organizationId}/enrollments/new`}>
                 <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
@@ -169,19 +230,18 @@ export default async function ClientOverviewPage({
 
             {!enrollments || enrollments.length === 0 ? (
               <p className="px-5 py-10 text-center text-[13px] text-navy/55">
-                No enrollments yet. Add a provider, then create the first enrollment.
+                {isIndividual
+                  ? "No enrollments yet. Add the first one to track this clinician."
+                  : "No enrollments yet. Add a client, then create the first enrollment."}
               </p>
             ) : (
               <ul className="divide-y divide-border-subtle">
                 {enrollments.map((e) => {
                   const provider = Array.isArray(e.provider) ? e.provider[0] : e.provider;
-                  const groupEntity = Array.isArray(e.group_entity)
-                    ? e.group_entity[0]
-                    : e.group_entity;
                   const payer = Array.isArray(e.payer) ? e.payer[0] : e.payer;
                   const subjectLabel = provider
                     ? `${provider.last_name}, ${provider.first_name}`
-                    : (groupEntity?.legal_name ?? "—");
+                    : "—";
                   const status = e.status as EnrollmentStatus;
                   return (
                     <li key={e.id}>
@@ -268,57 +328,59 @@ export default async function ClientOverviewPage({
           </div>
         </section>
 
-        {/* RIGHT rail — Providers + Portal users + Client details */}
+        {/* RIGHT rail — Providers (group only) + Portal users + Organization details */}
         <aside className="space-y-6">
-          <div className="surface">
-            <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-[15px] font-semibold text-navy">Providers</h2>
-                <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-teal-12 px-1.5 text-[11px] font-semibold text-teal tnum">
-                  {providers?.length ?? 0}
-                </span>
-              </div>
-              <Link
-                href={`/admin/organizations/${organizationId}/providers/new`}
-                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal hover:text-[#0E7475]"
-              >
-                + New
-              </Link>
-            </header>
-            <div className="divide-y divide-border-subtle">
-              {!providers || providers.length === 0 ? (
-                <p className="px-5 py-6 text-center text-[13px] text-navy/55">
-                  No providers yet.
-                </p>
-              ) : (
-                providers.map((p) => (
-                  <Link
-                    key={p.id}
-                    href={`/admin/organizations/${organizationId}/providers/${p.id}`}
-                    className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-navy-04"
-                  >
-                    <span
-                      aria-hidden
-                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-08 text-teal"
+          {isIndividual ? null : (
+            <div className="surface">
+              <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[15px] font-semibold text-navy">Clients</h2>
+                  <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-teal-12 px-1.5 text-[11px] font-semibold text-teal tnum">
+                    {providers?.length ?? 0}
+                  </span>
+                </div>
+                <Link
+                  href={`/admin/organizations/${organizationId}/clients/new`}
+                  className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal hover:text-[#0E7475]"
+                >
+                  + New
+                </Link>
+              </header>
+              <div className="divide-y divide-border-subtle">
+                {!providers || providers.length === 0 ? (
+                  <p className="px-5 py-6 text-center text-[13px] text-navy/55">
+                    No clients yet.
+                  </p>
+                ) : (
+                  providers.map((p) => (
+                    <Link
+                      key={p.id}
+                      href={`/admin/organizations/${organizationId}/clients/${p.id}`}
+                      className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-navy-04"
                     >
-                      <UserCircle2 size={14} strokeWidth={1.6} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-medium text-navy">
-                        {p.last_name}, {p.first_name}
-                      </p>
-                      {p.primary_specialty ? (
-                        <p className="text-[11px] text-navy/55">{p.primary_specialty}</p>
+                      <span
+                        aria-hidden
+                        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-08 text-teal"
+                      >
+                        <UserCircle2 size={14} strokeWidth={1.6} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium text-navy">
+                          {p.last_name}, {p.first_name}
+                        </p>
+                        {p.primary_specialty ? (
+                          <p className="text-[11px] text-navy/55">{p.primary_specialty}</p>
+                        ) : null}
+                      </div>
+                      {p.npi ? (
+                        <span className="font-mono text-[11px] text-navy/45 tnum">{p.npi}</span>
                       ) : null}
-                    </div>
-                    {p.npi ? (
-                      <span className="font-mono text-[11px] text-navy/45 tnum">{p.npi}</span>
-                    ) : null}
-                  </Link>
-                ))
-              )}
+                    </Link>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="surface">
             <header className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
@@ -394,9 +456,39 @@ export default async function ClientOverviewPage({
 
           <div className="surface">
             <header className="border-b border-border-subtle px-5 py-4">
-              <h2 className="text-[15px] font-semibold text-navy">Client details</h2>
+              <h2 className="text-[15px] font-semibold text-navy">Organization details</h2>
             </header>
             <div className="px-5 py-5">
+              {isIndividual && singletonClinician ? (
+                <section className="mb-6 border-b border-border-subtle pb-5">
+                  <div className="mb-4 flex items-center justify-between gap-2">
+                    <p className="label-sm">Clinician profile</p>
+                    <Link
+                      href={`/admin/organizations/${organizationId}/clients/${singletonClinician.id}`}
+                      className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal hover:text-[#0E7475]"
+                    >
+                      Edit clinician details →
+                    </Link>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <div className="col-span-2">
+                      <ClinicianField label="Full name" value={clinicianFullName} />
+                    </div>
+                    <ClinicianField label="NPI" value={singletonClinician.npi} mono />
+                    <ClinicianField label="CAQH ID" value={singletonClinician.caqh_id} mono />
+                    <ClinicianField
+                      label="Primary specialty"
+                      value={singletonClinician.primary_specialty}
+                    />
+                    <ClinicianField
+                      label="Secondary specialty"
+                      value={singletonClinician.secondary_specialty}
+                    />
+                    <ClinicianField label="Email" value={singletonClinician.email} />
+                    <ClinicianField label="Phone" value={singletonClinician.phone} />
+                  </dl>
+                </section>
+              ) : null}
               <OrganizationEditForm client={client} />
             </div>
           </div>

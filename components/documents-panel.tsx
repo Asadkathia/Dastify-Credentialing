@@ -12,7 +12,7 @@ import {
   createDocumentCategoryAction,
 } from "@/lib/actions/documents";
 
-type OwnerType = "provider" | "enrollment" | "group_entity" | "client";
+type OwnerType = "provider" | "enrollment" | "client";
 
 export type DocCategory = {
   id: string;

@@ -60,12 +60,12 @@ These are the rules you must never break. If a request requires breaking one, st
 
 ### Data model integrity
 
-8. **An enrollment is keyed by `(organization_id, [client_id|group_entity_id], payer_id, state)`.** Don't deduplicate by `(client, payer)` alone — state is first-class. The unique index is partial — one for individual enrollments, one for group enrollments. **No `cycle_number`** (removed in migration 0009 along with the recredentialing module).
-9. **An enrollment has exactly one of `client_id` or `group_entity_id`** — enforced by a CHECK constraint (`enrollments_subject_xor`).
-10. **States are 2-letter US codes everywhere they appear** — `enrollments.state`, `clients.license_states[].state`, `payers.states_active[]`, `group_entities.addresses[].state`. Validated by a DB CHECK (`^[A-Z]{2}$`) on `enrollments.state` and by `US_STATE_REGEX` in Zod for everything else. Never accept lowercase, full state names, or non-US codes.
+8. **An enrollment is keyed by `(organization_id, client_id, payer_id, state)`.** Don't deduplicate by `(client, payer)` alone — state is first-class. The unique index is partial — `WHERE deleted_at IS NULL` so soft-deletes don't block re-enrollment. **No `cycle_number`** (removed in migration 0009 along with the recredentialing module). **No `group_entity_id`** (removed in migration 0018 along with the entire `group_entities` table).
+9. *(Rule removed — migration 0018 dropped the `client_id` / `group_entity_id` XOR. Every enrollment subject is a `client_id`.)*
+10. **States are 2-letter US codes everywhere they appear** — `enrollments.state`, `clients.license_states[].state`, `payers.states_active[]`. Validated by a DB CHECK (`^[A-Z]{2}$`) on `enrollments.state` and by `US_STATE_REGEX` in Zod for everything else. Never accept lowercase, full state names, or non-US codes.
 11. **Provider names are stored split**: `first_name`, `middle_name?`, `last_name`, `suffix?`. Never add a single `name` or `full_name` column. UI display names are computed (`${last}, ${first}${middle ? " " + middle[0] + "." : ""}${suffix ? ", " + suffix : ""}` or similar) — design mockups that show "Dr. Imran Khan" are rendering, not storing.
 12. **Client license states are a jsonb array** of `{ state, licenseNumber, expiration }` on `clients.license_states`. Don't model licenses as a separate table in v1 — the array is intentional and the UI treats it as a sub-grid on the client detail screen.
-13. **Tax ID lives on `group_entities` only** (`tax_id_encrypted`). Clients (clinicians) do **not** have a tax ID column. Designs that show a Tax ID field on a client (clinician) are wrong — that field belongs on the group.
+13. *(Rule removed — migration 0018 dropped the `group_entities` table and `tax_id_encrypted` column. If group-level credentialing comes back as a feature, this rule should be re-introduced with the fresh data model.)*
 14. **Sensitive client columns (clinicians) are stored encrypted** as bytea via pgcrypto: `dea_number_encrypted`, `ssn_last4_encrypted`, `dob_encrypted`. Read paths must go through the documented decrypt SQL helpers, never `SELECT *`. The plain values never enter logs, exports, or non-detail screens.
 15. **Document categories are a runtime-extensible table** (`document_categories`), not an enum. Migration 0008 seeds 11 defaults; admins can add more. Reference categories by `category_id` (FK), never by string name. The legacy `documentCategoryEnum` exists only for the deprecated `legacy_category` column and must not be used in new code.
 16. **`payers` is a global, non-tenant-scoped master table.** No `organization_id`. Statewise availability is `payers.states_active` (jsonb string[]). The old `recred_cycle_months` column was removed in migration 0010.
@@ -86,6 +86,7 @@ These are the rules you must never break. If a request requires breaking one, st
 25. **The disclaimer banner text is per-client and stored** at `organization_settings.disclaimer_banner_text` (default: `"All Insurances take up to 90-120 business days for processing."`). Render it on every client-portal screen and at the top of the .xlsx export.
 26. **UI must replicate the design files in `/Dastify-Crendentialing/`** while honoring the data model above. Where a mockup field disagrees with the schema (Tax ID on a client, single `name` field, `sub_status` as enum, recredentialing surfaces), the schema wins — adjust the rendering, not the column.
 27. **Admin dashboards are per-status KPI bands.** Each of the 5 statuses gets its own card with the live count and a click-through to `/admin/enrollments?status=X` (or `/portal/enrollments?status=X`). No recreds-due KPI, no time-to-effective KPI — those concepts no longer exist.
+28. **An organization has a `kind ∈ {group, individual}`.** `group` orgs are the existing multi-clinician practice model. `individual` orgs are a solo clinician — they have exactly one non-soft-deleted row in `clients`, auto-created at org creation and enforced by a DB constraint trigger. Kind is immutable in v1 — `updateOrganizationSchema` does not accept it. Individual-org UI hides the Clients sub-list and shows the clinician inline on the org page. Use `create_individual_organization(...)` (SQL function) to insert the org + settings + clinician atomically; never split that into multiple round-trips.
 
 ---
 
@@ -149,14 +150,14 @@ Locked v1 scope. The screens in `/Dastify-Crendentialing/` are the visual target
   - Enrollments list — cross-client, with status filter chips (5 chips), payer + state filters, pagination.
   - Enrollment detail — status pipeline visualization, Overview / Status History / Documents / Comments / Internal Notes / Activity tabs.
   - Status Transition modal — valid-transition gating per the new state machine, free-form reason capture.
-  - New Enrollment — one (client × payer × state) per row (no cycle concept).
+  - New Enrollment — one (client × payer × state) per row (no cycle concept, no group subject — every enrollment is a clinician).
   - Documents (cross-client) + Audit Log (cross-client).
 - **Client portal** — read access scoped via RLS to their own client's data; comment posting; .xlsx export. Mirrors admin Dashboard (5 status KPI cards, status donut, 12-month creations bar, recently-updated, recent comments). Internal notes and internal documents never appear; non-par rate is admin-only.
 - Status pipeline (5 statuses, 4 linear stages) with server-side transition validation.
 - Documents with admin-extensible runtime categories (`document_categories` table), expiration tracking, internal/public flag, virus scanning hook.
 - Audit log: `status_history` + `activity_events`, append-only, visible per-enrollment and globally on `/admin/audit`.
 - .xlsx export matching the existing Excel template — plus a monthly cross-client report at `/api/export/monthly-enrollments.xlsx`.
-- **Bulk xlsx import** at `/admin/import` (admin-only). Three entity tabs: Enrollments (legacy 4-column `States | Payers | Participation Request Status | Comments` template; admin picks org + client/group before upload; multi-state cells expand into one row per state), Clients (clinicians, scoped to one org), Organizations. Two-step flow: parse + preview (row-by-row valid/error/duplicate) → confirm → atomic insert. Duplicates are detected against enrollment unique-key / NPI / legal name and skipped with warning. Caps: 5 MB / 5000 rows. Audit row written as `activity_events.action = 'import'` (added in migration 0014).
+- **Bulk xlsx import** at `/admin/import` (admin-only). Three entity tabs: Enrollments (legacy 4-column `States | Payers | Participation Request Status | Comments` template; admin picks org + clinician before upload — for `individual` orgs the clinician is resolved server-side from the singleton; multi-state cells expand into one row per state), Clients (clinicians, scoped to one org), Organizations. Two-step flow: parse + preview (row-by-row valid/error/duplicate) → confirm → atomic insert. Duplicates are detected against enrollment unique-key / NPI / legal name and skipped with warning. Caps: 5 MB / 5000 rows. Audit row written as `activity_events.action = 'import'` (added in migration 0014).
 - Email notifications (Resend): status change, client-comment-to-admin, daily/weekly digest (`organization_settings.digest_email_frequency`), expiration alerts (`organization_settings.expiration_alert_days_before`).
 - Configurable per-client disclaimer banner from `organization_settings`.
 - Login + audit-logged sessions.
@@ -216,7 +217,7 @@ Ask the user. Do not invent a product decision (status names, role permissions, 
 - ❌ Sending an email from anywhere other than the Resend wrapper in `/lib/email`.
 - ❌ Querying Postgres outside Drizzle (no raw `pg` clients in route handlers).
 - ❌ Adding a single `name` / `full_name` column on `providers` — names are split (rule 11).
-- ❌ Adding a Tax ID field, column, or form input on a client (clinician) — Tax ID lives on `group_entities` only (rule 13).
+- ❌ Re-introducing `group_entities`, `enrollments.group_entity_id`, or the `group_entity` value of `document_owner_type` — all three were removed in migration 0018. Every enrollment subject is a `client_id`.
 - ❌ Modeling `sub_status` as an enum, check constraint, or FK to a lookup table — it stays free-form `text` (rule 18).
 - ❌ Modeling document categories as an enum extension — extend the `document_categories` table instead (rule 15).
 - ❌ Importing `documentCategoryEnum` in new code — it exists only for the deprecated `legacy_category` column.
@@ -264,4 +265,4 @@ These are operational settings that can't be applied via SQL/MCP and must be fli
 
 ---
 
-**Last updated**: 2026-05-14 (rename: `clients` table → `organizations` for tenant; `providers` → `clients` for individual clinicians; `client_users` → `organization_users`; role values `client_admin`/`client_viewer` → `org_admin`/`org_viewer`; JWT claim `client_id` → `organization_id`). Migration 0013 applied. **2026-05-14 (later)**: bulk xlsx import added at `/admin/import` (enrollments + clients + organizations). Migration 0014 adds `'import'` to the `activity_action` enum.
+**Last updated**: 2026-05-14 (rename: `clients` table → `organizations` for tenant; `providers` → `clients` for individual clinicians; `client_users` → `organization_users`; role values `client_admin`/`client_viewer` → `org_admin`/`org_viewer`; JWT claim `client_id` → `organization_id`). Migration 0013 applied. **2026-05-14 (later)**: bulk xlsx import added at `/admin/import` (enrollments + clients + organizations). Migration 0014 adds `'import'` to the `activity_action` enum. **2026-05-15**: migration 0018 splits organizations by `kind ∈ {group, individual}` (individual = singleton clinician, enforced by constraint trigger; `create_individual_organization(...)` SQL helper inserts org+settings+client atomically) **and** drops the entire `group_entities` concept — table, FK `enrollments.group_entity_id`, partial unique index `enrollments_unique_group_idx`, CHECK `enrollments_subject_xor`, and the `group_entity` value of `document_owner_type`. The single remaining uniqueness rule is partial `(organization_id, client_id, payer_id, state) WHERE deleted_at IS NULL`. Rules 9 and 13 retired (see inline annotations); rule 28 added. Phase 2 (UI call-site fixes) and Phase 3 (tests) ship in the same PR.

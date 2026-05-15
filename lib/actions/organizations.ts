@@ -17,50 +17,106 @@ export async function createOrganizationAction(
 ): Promise<ActionResult<{ id: string }>> {
   const session = await requireAdmin();
 
-  const parsed = createOrganizationSchema.safeParse({
-    legalName: formData.get("legalName"),
-    displayName: formData.get("displayName"),
-    primaryContactName: formData.get("primaryContactName") || "",
-    primaryContactEmail: formData.get("primaryContactEmail") || "",
-    primaryContactPhone: formData.get("primaryContactPhone") || "",
-    notes: formData.get("notes") || "",
-  });
+  const kindRaw = formData.get("kind");
+  const kind = kindRaw === "individual" ? "individual" : "group";
+
+  const parsed = createOrganizationSchema.safeParse(
+    kind === "individual"
+      ? {
+          kind: "individual" as const,
+          legalName: formData.get("legalName"),
+          displayName: formData.get("displayName"),
+          primaryContactName: formData.get("primaryContactName") || "",
+          primaryContactEmail: formData.get("primaryContactEmail") || "",
+          primaryContactPhone: formData.get("primaryContactPhone") || "",
+          notes: formData.get("notes") || "",
+          firstName: formData.get("firstName"),
+          middleName: formData.get("middleName") || "",
+          lastName: formData.get("lastName"),
+          suffix: formData.get("suffix") || "",
+          npi: formData.get("npi") || "",
+          primarySpecialty: formData.get("primarySpecialty") || "",
+          secondarySpecialty: formData.get("secondarySpecialty") || "",
+          email: formData.get("email") || "",
+          phone: formData.get("phone") || "",
+          caqhId: formData.get("caqhId") || "",
+        }
+      : {
+          kind: "group" as const,
+          legalName: formData.get("legalName"),
+          displayName: formData.get("displayName"),
+          primaryContactName: formData.get("primaryContactName") || "",
+          primaryContactEmail: formData.get("primaryContactEmail") || "",
+          primaryContactPhone: formData.get("primaryContactPhone") || "",
+          notes: formData.get("notes") || "",
+        },
+  );
   if (!parsed.success) {
     return fail("Invalid input", parsed.error.flatten().fieldErrors);
   }
 
   const supabase = await createSupabaseServerClient();
+  let orgId: string;
 
-  const { data: org, error } = await supabase
-    .from("organizations")
-    .insert({
-      legal_name: parsed.data.legalName,
-      display_name: parsed.data.displayName,
-      primary_contact_name: parsed.data.primaryContactName || null,
-      primary_contact_email: parsed.data.primaryContactEmail || null,
-      primary_contact_phone: parsed.data.primaryContactPhone || null,
-      notes: parsed.data.notes || null,
-    })
-    .select("id")
-    .single();
+  if (parsed.data.kind === "individual") {
+    const { data: rpcData, error: rpcErr } = await supabase.rpc(
+      "create_individual_organization",
+      {
+        p_legal_name: parsed.data.legalName,
+        p_display_name: parsed.data.displayName,
+        p_primary_contact_name: parsed.data.primaryContactName || "",
+        p_primary_contact_email: parsed.data.primaryContactEmail || "",
+        p_primary_contact_phone: parsed.data.primaryContactPhone || "",
+        p_notes: parsed.data.notes || "",
+        p_first_name: parsed.data.firstName,
+        p_middle_name: parsed.data.middleName || "",
+        p_last_name: parsed.data.lastName,
+        p_suffix: parsed.data.suffix || "",
+        p_npi: parsed.data.npi || "",
+        p_primary_specialty: parsed.data.primarySpecialty || "",
+        p_secondary_specialty: parsed.data.secondarySpecialty || "",
+        p_email: parsed.data.email || "",
+        p_phone: parsed.data.phone || "",
+        p_caqh_id: parsed.data.caqhId || "",
+      },
+    );
+    if (rpcErr || !rpcData) {
+      return fail(`Failed to create individual organization: ${rpcErr?.message ?? "unknown"}`);
+    }
+    orgId = String(rpcData);
+  } else {
+    const { data: org, error } = await supabase
+      .from("organizations")
+      .insert({
+        legal_name: parsed.data.legalName,
+        display_name: parsed.data.displayName,
+        kind: "group",
+        primary_contact_name: parsed.data.primaryContactName || null,
+        primary_contact_email: parsed.data.primaryContactEmail || null,
+        primary_contact_phone: parsed.data.primaryContactPhone || null,
+        notes: parsed.data.notes || null,
+      })
+      .select("id")
+      .single();
 
-  if (error || !org) {
-    return fail(`Failed to create organization: ${error?.message ?? "unknown"}`);
+    if (error || !org) {
+      return fail(`Failed to create organization: ${error?.message ?? "unknown"}`);
+    }
+    orgId = org.id;
+    await supabase.from("organization_settings").insert({ organization_id: orgId });
   }
 
-  await supabase.from("organization_settings").insert({ organization_id: org.id });
-
   await supabase.from("activity_events").insert({
-    organization_id: org.id,
+    organization_id: orgId,
     actor_user_id: session.userId,
     action: "create",
     target_table: "organizations",
-    target_id: org.id,
-    summary: `Created organization ${parsed.data.displayName}`,
+    target_id: orgId,
+    summary: `Created ${parsed.data.kind} organization ${parsed.data.displayName}`,
   });
 
   revalidatePath("/admin");
-  return ok({ id: org.id });
+  return ok({ id: orgId });
 }
 
 export async function updateOrganizationAction(

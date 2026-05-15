@@ -1,8 +1,21 @@
 # Dastify Credentialing Portal — Design Document
 
-**Version**: 1.0  
-**Date**: 2026-05-08  
+**Version**: 1.0
+**Date**: 2026-05-08
 **Status**: Locked for v1 build
+
+---
+
+> **⚠ Superseded sections (updated 2026-05-15)**
+>
+> The schema is now the source of truth (CLAUDE.md rule 27). The following parts of this document describe a data model that has been changed by later migrations — read CLAUDE.md and `db/schema/` for the current shape:
+>
+> - **Terminology rename (migration 0013):** `clients` table → `organizations` (the tenant practice); `providers` table → `clients` (individual clinicians); `client_users` → `organization_users`; column `client_id` (tenancy boundary) → `organization_id`; column `provider_id` (subject) → `client_id`; JWT claim `client_id` → `organization_id`; route `/(client)` → `/(organization)`; roles `client_admin` / `client_viewer` → `org_admin` / `org_viewer`. Everywhere this document says "Client" as the tenant, read "Organization." Everywhere it says "Provider" as the individual clinician, read "Client."
+> - **Recredentialing module removed (migrations 0009 + 0010):** `Enrollment` is no longer keyed by a cycle; `next_recred_due_date`, `parent_enrollment_id`, `cycle_number`, `denied_reason`, `payers.recred_cycle_months`, the `compute_recred_due_date()` trigger, and the `recred-check` Inngest job are all gone. Status enum is `prep | submitted | in_review | approved | non_par_credentialed`.
+> - **`group_entities` table removed and enrollment subject XOR collapsed (migration 0018):** §3.1 (Enrollment), §3.5 (GroupEntity), §3.7 (Documents `owner_type`), and any RLS sketch that joins through `group_entity_id` are superseded. The current model: **every enrollment subject is a `client_id` (NOT NULL)** keyed `(organization_id, client_id, payer_id, state)` with a partial unique index `WHERE deleted_at IS NULL`. The XOR CHECK is gone. `documents.owner_type` is `provider | enrollment | client` (no `group_entity`).
+> - **Organization kind added (migration 0018):** `organizations.kind ∈ {'group', 'individual'}`, default `'group'`, immutable in v1. Individual orgs own exactly one auto-managed `clients` row (enforced by trigger `enforce_individual_org_single_client`). The `create_individual_organization(...)` RPC inserts the org + singleton clinician + settings atomically.
+>
+> If group-level credentialing (separate group NPI + Tax ID as an enrollment subject) is reintroduced later, it is a fresh feature with a fresh data model — not a revival of the original `group_entities` shape.
 
 ---
 

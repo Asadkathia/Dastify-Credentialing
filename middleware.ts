@@ -24,6 +24,7 @@ const PUBLIC_PATHS = new Set([
   "/auth/callback",
   "/auth/error",
   "/forgot-password",
+  "/reset-password",
 ]);
 
 type AppRole = "admin" | "org_admin" | "org_viewer";
