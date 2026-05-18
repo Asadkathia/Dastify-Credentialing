@@ -12,6 +12,16 @@ import type {
 const NPI_REGEX = /^\d{10}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Canonical key for the payersByName lookup: lowercased, with all internal
+ * whitespace (including \n from Alt+Enter line breaks in Excel cells)
+ * collapsed to a single space. Both sides of the lookup must use this
+ * function so a cell value like "Blue Cross\nBlue Shield" still resolves.
+ */
+export function normalizePayerKey(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 // ── Enrollments ──────────────────────────────────────────────────────────────
 
 export type ValidateEnrollmentsContext = {
@@ -50,7 +60,7 @@ export function validateEnrollmentRow(
     ];
   }
 
-  const payerKey = payerInput.toLowerCase();
+  const payerKey = normalizePayerKey(payerInput);
   const payerHit = ctx.payersByName.get(payerKey);
   if (!payerHit) {
     return [

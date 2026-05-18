@@ -10,6 +10,7 @@ import {
   validateClientRow,
   validateOrganizationRow,
   makeEnrollmentKey,
+  normalizePayerKey,
   type ValidateEnrollmentsContext,
 } from "@/lib/import/validators";
 import type {
@@ -337,7 +338,7 @@ async function loadEnrollmentContext(
 
   const payersByName = new Map<string, { id: string; displayName: string }>();
   for (const p of payersRes.data ?? []) {
-    payersByName.set(p.name.trim().toLowerCase(), { id: p.id, displayName: p.name });
+    payersByName.set(normalizePayerKey(p.name), { id: p.id, displayName: p.name });
   }
 
   const existingKeys = new Set<string>();

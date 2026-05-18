@@ -135,6 +135,12 @@ export async function parseXlsx(
  * recognized header alias for each REQUIRED column. Returns the header row
  * number (1-based) and a canonical-id → 1-based-column-index map.
  *
+ * Header text is whitespace-normalized before comparison: embedded newlines
+ * (Alt+Enter line breaks), tabs, NBSPs, and runs of spaces all collapse to a
+ * single space. This lets real-world templates with manually wrapped headers
+ * like "Participation\nRequest Status" still match the "participation
+ * request status" alias.
+ *
  * "Required" here means: every key in the column def must be matched.
  * (The enrollments template's "Comments" column is optional in real files
  * but the parser still maps it if present.)
@@ -148,14 +154,14 @@ function detectHeader(
     const row = sheet.getRow(r);
     const cells: Array<{ index: number; norm: string }> = [];
     row.eachCell((cell, colNumber) => {
-      const text = cellToString(cell.value).toLowerCase().trim();
+      const text = normalizeHeaderText(cellToString(cell.value));
       if (text.length > 0) cells.push({ index: colNumber, norm: text });
     });
     if (cells.length === 0) continue;
 
     const columnMap: Record<string, number> = {};
     for (const [canonicalId, aliases] of Object.entries(columnDef)) {
-      const aliasSet = new Set(aliases.map((a) => a.toLowerCase()));
+      const aliasSet = new Set(aliases.map(normalizeHeaderText));
       const hit = cells.find((c) => aliasSet.has(c.norm));
       if (hit) columnMap[canonicalId] = hit.index;
     }
@@ -172,6 +178,16 @@ function detectHeader(
     }
   }
   return null;
+}
+
+/**
+ * Lower-case, replace any run of whitespace (including \n from Alt+Enter
+ * line breaks, \t, \r, and the non-breaking space U+00A0) with a single
+ * space, then trim. Used for header alias matching only — data cells keep
+ * their internal whitespace intact.
+ */
+function normalizeHeaderText(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function cellToString(value: ExcelJS.CellValue): string {

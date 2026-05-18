@@ -90,11 +90,23 @@ Now sign in at `/login` with that email — you'll receive a magic link.
 
 ---
 
-## 4. Resend (email)
+## 4. SMTP (Office 365)
 
-1. Create a domain at <https://resend.com>; add the DNS records.
-2. Generate an API key → set `RESEND_API_KEY`.
-3. Set `RESEND_FROM_EMAIL` (e.g. `Dastify Credentialing <noreply@yourdomain.com>`).
+All transactional email goes through `lib/email/client.ts` → nodemailer → Office 365 SMTP on the `digital@dastifysolutions.com` mailbox.
+
+1. **Enable SMTP AUTH on the mailbox.** Exchange admin center → Recipients → Mailboxes → `digital@dastifysolutions.com` → *Manage email apps* → tick **Authenticated SMTP**. (Microsoft turns this off by default tenant-wide; the mailbox-level override re-enables it for just this account.)
+2. **Generate an app password.** If MFA is enabled on the mailbox (it should be), sign in as that user at <https://mysignins.microsoft.com/security-info> → *Add sign-in method* → **App password** → name it `dastify-portal`. Microsoft shows the password once.
+3. **Fill `.env.local`.** Defaults are correct for O365:
+   ```
+   SMTP_HOST=smtp.office365.com
+   SMTP_PORT=587
+   SMTP_USER=digital@dastifysolutions.com
+   SMTP_PASS=<the app password from step 2>
+   SMTP_FROM=Dastify Credentialing <digital@dastifysolutions.com>
+   ```
+4. **(Recommended) point Supabase Auth at the same mailbox.** Supabase dashboard → Auth → SMTP Settings, same host/port/user/pass. Keeps invites, magic links, and app notifications all sending from one address with one reputation. See CLAUDE.md §10 for the checklist.
+
+Operational notes: ~30 msg/min and ~10,000 recipients/day per mailbox cap. No bounce or complaint webhooks — watch the `digital@` inbox for delivery failures.
 
 ---
 

@@ -139,6 +139,43 @@ describe("validateEnrollmentRow", () => {
     ).toBe("error");
   });
 
+  it("matches a payer cell with an Alt+Enter line break against the master list", () => {
+    const ctx = buildEnrollmentCtx();
+    const out = validateEnrollmentRow(
+      {
+        rowNumber: 1,
+        values: {
+          states: "TX",
+          payers: "Blue Cross\nBlue Shield",
+          status: "Submitted",
+          comments: "",
+        },
+      },
+      ctx,
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0]!.status).toBe("valid");
+    expect(out[0]!.parsed?.payerId).toBe(PAYER_BCBS);
+  });
+
+  it("matches a payer cell with double-spaces against the master list", () => {
+    const ctx = buildEnrollmentCtx();
+    const out = validateEnrollmentRow(
+      {
+        rowNumber: 1,
+        values: {
+          states: "TX",
+          payers: "Blue   Cross  Blue Shield",
+          status: "Submitted",
+          comments: "",
+        },
+      },
+      ctx,
+    );
+    expect(out[0]!.status).toBe("valid");
+    expect(out[0]!.parsed?.payerId).toBe(PAYER_BCBS);
+  });
+
   it("deduplicates within the same file", () => {
     // Two rows with same payer+state in one upload — first is valid, second is duplicate.
     const ctx = buildEnrollmentCtx();
