@@ -1,60 +1,108 @@
 import "server-only";
-import nodemailer, { type Transporter } from "nodemailer";
 
-let cached: Transporter | null = null;
+const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
+const TOKEN_SKEW_MS = 60_000;
 
-function getTransporter(): Transporter {
-  if (cached) return cached;
+type CachedToken = { token: string; expiresAt: number };
+let cachedToken: CachedToken | null = null;
+let inflight: Promise<string> | null = null;
 
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is not set`);
+  return value;
+}
 
-  if (!host) throw new Error("SMTP_HOST is not set");
-  if (!port) throw new Error("SMTP_PORT is not set");
-  if (!user) throw new Error("SMTP_USER is not set");
-  if (!pass) throw new Error("SMTP_PASS is not set");
+async function fetchAccessToken(): Promise<string> {
+  const tenantId = requiredEnv("MS_GRAPH_TENANT_ID");
+  const clientId = requiredEnv("MS_GRAPH_CLIENT_ID");
+  const clientSecret = requiredEnv("MS_GRAPH_CLIENT_SECRET");
 
-  const portNum = Number(port);
-  if (!Number.isInteger(portNum) || portNum <= 0) {
-    throw new Error(`SMTP_PORT is not a valid port number: ${port}`);
-  }
-
-  // Office 365 over port 587 uses STARTTLS, not implicit TLS.
-  // `secure: false` + `requireTLS: true` rejects the connection if STARTTLS
-  // can't be negotiated, so we never fall back to plaintext auth.
-  cached = nodemailer.createTransport({
-    host,
-    port: portNum,
-    secure: portNum === 465,
-    requireTLS: portNum !== 465,
-    auth: { user, pass },
+  const url = `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`;
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    scope: "https://graph.microsoft.com/.default",
+    grant_type: "client_credentials",
   });
 
-  return cached;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Graph token request failed (${res.status}): ${text}`);
+  }
+
+  const data = (await res.json()) as { access_token: string; expires_in: number };
+  cachedToken = {
+    token: data.access_token,
+    expiresAt: Date.now() + data.expires_in * 1000,
+  };
+  return data.access_token;
+}
+
+async function getAccessToken(): Promise<string> {
+  if (cachedToken && cachedToken.expiresAt > Date.now() + TOKEN_SKEW_MS) {
+    return cachedToken.token;
+  }
+  if (!inflight) {
+    inflight = fetchAccessToken().finally(() => {
+      inflight = null;
+    });
+  }
+  return inflight;
 }
 
 export type SendEmailInput = {
   to: string | string[];
   subject: string;
   html: string;
-  text: string;
+  // Plaintext alternative is accepted for caller convenience but currently
+  // not sent — Graph's structured Message body is single-part. If we ever
+  // need true multipart/alternative for deliverability, swap to the
+  // MIME-content variant of /sendMail (POST with text/plain + base64 RFC822).
+  text?: string;
 };
 
 /**
  * The single point of email egress. All transactional email goes through here.
+ * Sends via Microsoft Graph /users/{id}/sendMail using app-only auth.
  */
 export async function sendEmail(input: SendEmailInput): Promise<void> {
-  const transporter = getTransporter();
-  const from =
-    process.env.SMTP_FROM ?? "Dastify Credentialing <noreply@example.com>";
+  const fromUser = requiredEnv("MAIL_FROM_USER_ID");
+  const fromName = process.env.MAIL_FROM_NAME ?? "Dastify Credentialing";
 
-  await transporter.sendMail({
-    from,
-    to: input.to,
-    subject: input.subject,
-    html: input.html,
-    text: input.text,
+  const token = await getAccessToken();
+  const recipients = (Array.isArray(input.to) ? input.to : [input.to]).map(
+    (address) => ({ emailAddress: { address } }),
+  );
+
+  const url = `${GRAPH_BASE}/users/${encodeURIComponent(fromUser)}/sendMail`;
+  const payload = {
+    message: {
+      subject: input.subject,
+      body: { contentType: "HTML", content: input.html },
+      from: { emailAddress: { name: fromName, address: fromUser } },
+      toRecipients: recipients,
+    },
+    saveToSentItems: "false",
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
   });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Graph sendMail failed (${res.status}): ${text}`);
+  }
 }

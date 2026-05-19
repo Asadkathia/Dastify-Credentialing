@@ -90,23 +90,60 @@ Now sign in at `/login` with that email — you'll receive a magic link.
 
 ---
 
-## 4. SMTP (Office 365)
+## 4. Email (Microsoft Graph)
 
-All transactional email goes through `lib/email/client.ts` → nodemailer → Office 365 SMTP on the `digital@dastifysolutions.com` mailbox.
+All app transactional email goes through `lib/email/client.ts` → Microsoft Graph `sendMail` using app-only OAuth (client_credentials grant) as `digital@dastifysolutions.com`. Microsoft is actively deprecating basic SMTP AUTH and Graph is the supported long-term path.
 
-1. **Enable SMTP AUTH on the mailbox.** Exchange admin center → Recipients → Mailboxes → `digital@dastifysolutions.com` → *Manage email apps* → tick **Authenticated SMTP**. (Microsoft turns this off by default tenant-wide; the mailbox-level override re-enables it for just this account.)
-2. **Generate an app password.** If MFA is enabled on the mailbox (it should be), sign in as that user at <https://mysignins.microsoft.com/security-info> → *Add sign-in method* → **App password** → name it `dastify-portal`. Microsoft shows the password once.
-3. **Fill `.env.local`.** Defaults are correct for O365:
+### Admin setup (one-time, done by an M365 admin)
+
+1. **Register the app.** Entra ID (Azure AD) → App registrations → **New registration**. Name: `dastify-portal-mail`. Supported account types: *Accounts in this organizational directory only* (single tenant). No redirect URI required.
+2. **Grant the `Mail.Send` permission.** API permissions → Add a permission → **Microsoft Graph** → **Application permissions** → `Mail.Send`. Then click **Grant admin consent for [tenant]**.
+3. **Create a client secret.** Certificates & secrets → New client secret. Expiry 24 months. Copy the *Value* immediately — Microsoft only shows it once. Note the expiry date on a shared calendar so it can be rotated before it dies.
+4. **Scope the app to one mailbox** (security-critical — without this, the app can technically send-as *any* mailbox in the tenant). In an Exchange Online PowerShell session:
+   ```powershell
+   New-DistributionGroup -Name "DastifyAppSenders" -Members digital@dastifysolutions.com -Type Security
+   New-ApplicationAccessPolicy `
+     -AppId <client-id-from-step-1> `
+     -PolicyScopeGroupId DastifyAppSenders `
+     -AccessRight RestrictAccess `
+     -Description "Restrict dastify-portal-mail to digital@ only"
+   Test-ApplicationAccessPolicy -Identity digital@dastifysolutions.com -AppId <client-id>
    ```
-   SMTP_HOST=smtp.office365.com
-   SMTP_PORT=587
-   SMTP_USER=digital@dastifysolutions.com
-   SMTP_PASS=<the app password from step 2>
-   SMTP_FROM=Dastify Credentialing <digital@dastifysolutions.com>
-   ```
-4. **(Recommended) point Supabase Auth at the same mailbox.** Supabase dashboard → Auth → SMTP Settings, same host/port/user/pass. Keeps invites, magic links, and app notifications all sending from one address with one reputation. See CLAUDE.md §10 for the checklist.
+   The `Test-` line should report `AccessCheckResult: Granted` for `digital@` and `Denied` for any other mailbox.
 
-Operational notes: ~30 msg/min and ~10,000 recipients/day per mailbox cap. No bounce or complaint webhooks — watch the `digital@` inbox for delivery failures.
+The admin hands back: **Tenant ID**, **Application (client) ID**, **Client secret value**.
+
+### Developer setup
+
+Fill `.env.local`:
+```
+MS_GRAPH_TENANT_ID=<tenant id>
+MS_GRAPH_CLIENT_ID=<application/client id>
+MS_GRAPH_CLIENT_SECRET=<secret value>
+MAIL_FROM_USER_ID=digital@dastifysolutions.com
+MAIL_FROM_NAME=Dastify Credentialing
+```
+
+### Supabase Auth emails
+
+Supabase Auth (invites, magic links, password resets) can only send via SMTP — it has no Graph integration. Two options:
+
+- **Recommended**: ask the admin to enable Authenticated SMTP on *just* the `digital@dastifysolutions.com` mailbox (Exchange admin → mailbox → Manage email apps → Authenticated SMTP) and to provide an app password. Configure it in Supabase dashboard → Auth → SMTP Settings. This SMTP credential is used *only* by Supabase; the app uses Graph.
+- **Fallback**: leave Supabase Auth on its default sender (rate-limited, branded "supabase.io" — fine for pilot, not for production).
+
+See CLAUDE.md §10 for the checklist.
+
+### Emergency SMTP fallback
+
+If Graph breaks (expired secret, revoked consent, prolonged Graph outage), `.env.local` contains a commented-out **O365 SMTP** block for the same `digital@dastifysolutions.com` mailbox. Procedure:
+
+1. Uncomment the `SMTP_*` block in `.env.local`. Comment the `MS_GRAPH_*` block.
+2. Restore the nodemailer version of `lib/email/client.ts` from git (`git show <pre-restore-sha>:lib/email/client.ts > lib/email/client.ts`) and re-add `nodemailer` + `@types/nodemailer` to `package.json`.
+3. `pnpm install` and redeploy.
+
+Total ~5 minutes. Designed as a *manual* fallback, not a runtime one — code-level fallback would mask Graph failures that need admin attention (expired secret, revoked permission).
+
+Note: the SMTP password currently stored in the commented block is the mailbox's *account* password. Before relying on this fallback in production, generate a dedicated **app password** at <https://mysignins.microsoft.com/security-info> and substitute it — leaked account passwords grant full mailbox access; app passwords are SMTP-only.
 
 ---
 
