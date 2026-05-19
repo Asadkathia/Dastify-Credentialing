@@ -6,6 +6,7 @@ import { createEnrollmentSchema, transitionStatusSchema } from "@/lib/validation
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
 import { validateTransition } from "@/lib/enrollment/state-machine";
 import type { EnrollmentStatus } from "@/db/schema/enums";
+import { inngest } from "@/inngest/client";
 
 export async function createEnrollmentAction(
   formData: FormData,
@@ -147,6 +148,20 @@ export async function transitionStatusAction(
       sub_status: { from: current.sub_status, to: parsed.data.subStatus || null },
     },
   });
+
+  try {
+    await inngest.send({
+      name: "enrollment/status_changed",
+      data: {
+        enrollmentId: parsed.data.enrollmentId,
+        organizationId: current.organization_id,
+        fromStatus: current.status,
+        toStatus: parsed.data.toStatus,
+      },
+    });
+  } catch (err) {
+    console.error("[enrollment/status_changed] event emit failed", err);
+  }
 
   revalidatePath(`/admin/organizations/${current.organization_id}/enrollments/${parsed.data.enrollmentId}`);
   return ok({ enrollmentId: parsed.data.enrollmentId, toStatus: parsed.data.toStatus });

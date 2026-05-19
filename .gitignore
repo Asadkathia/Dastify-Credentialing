@@ -51,3 +51,6 @@ next-env.d.ts
 # drizzle
 drizzle/.snapshots/
 .vercel
+
+# Superpowers brainstorm visual companion artifacts
+.superpowers/

@@ -4,6 +4,7 @@ import { requireSession, requireAdmin } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { postCommentSchema, postInternalNoteSchema } from "@/lib/validation/schemas";
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
+import { inngest } from "@/inngest/client";
 
 export async function postCommentAction(
   formData: FormData,
@@ -52,6 +53,20 @@ export async function postCommentAction(
     target_id: comment.id,
     summary: `Comment posted on enrollment ${parsed.data.enrollmentId.slice(0, 8)}`,
   });
+
+  try {
+    await inngest.send({
+      name: "comment/posted",
+      data: {
+        commentId: comment.id,
+        enrollmentId: parsed.data.enrollmentId,
+        organizationId: enrollment.organization_id,
+        authorUserId: session.userId,
+      },
+    });
+  } catch (err) {
+    console.error("[comment/posted] event emit failed", err);
+  }
 
   revalidatePath(`/admin/organizations/${enrollment.organization_id}/enrollments/${parsed.data.enrollmentId}`);
   revalidatePath(`/portal/enrollments/${parsed.data.enrollmentId}`);

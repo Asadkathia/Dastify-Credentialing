@@ -124,14 +124,33 @@ MAIL_FROM_USER_ID=digital@dastifysolutions.com
 MAIL_FROM_NAME=Dastify Credentialing
 ```
 
-### Supabase Auth emails
+### Supabase Auth emails (Send Email Hook → Graph)
 
-Supabase Auth (invites, magic links, password resets) can only send via SMTP — it has no Graph integration. Two options:
+Supabase Auth (invites, magic links, password resets, email-change confirmations) sends from Supabase's own infrastructure. Its built-in custom-SMTP feature only supports SMTP basic auth — **not** OAuth/Graph. To keep *all* email on Graph/OAuth (no SMTP password anywhere), we use Supabase's **Send Email Hook**: Supabase calls our endpoint instead of sending the email itself, and our endpoint sends via the same `lib/email/client.ts` Graph wrapper.
 
-- **Recommended**: ask the admin to enable Authenticated SMTP on *just* the `digital@dastifysolutions.com` mailbox (Exchange admin → mailbox → Manage email apps → Authenticated SMTP) and to provide an app password. Configure it in Supabase dashboard → Auth → SMTP Settings. This SMTP credential is used *only* by Supabase; the app uses Graph.
-- **Fallback**: leave Supabase Auth on its default sender (rate-limited, branded "supabase.io" — fine for pilot, not for production).
+The pieces are already built:
 
-See CLAUDE.md §10 for the checklist.
+- `app/api/auth/send-email/route.ts` — the hook endpoint (verifies the Standard Webhooks signature, then sends via Graph).
+- `lib/email/auth-templates.ts` — per-action templates (signup, invite, magic link, recovery, email change, reauthentication, generic fallback).
+- `middleware.ts` — `/api/auth/send-email` is public (it self-authenticates via the signature).
+- `SEND_EMAIL_HOOK_SECRET` env var.
+
+To enable it:
+
+1. Supabase dashboard → **Authentication** → **Hooks** (or **Auth Hooks**) → **Send Email Hook**.
+2. Choose **HTTPS** hook type. Set the URL to your deployed endpoint: `https://<prod-host>/api/auth/send-email` (for local testing against a tunnel, use the tunnel URL).
+3. Supabase generates a **signing secret** (format `v1,whsec_…`). Copy it into `SEND_EMAIL_HOOK_SECRET` in `.env.local` (and Vercel/host env). Redeploy so the route picks it up.
+4. **Enable** the hook.
+5. **Disable custom SMTP** (Authentication → Emails → SMTP settings) if it was on — otherwise Supabase may try both. With the hook enabled, Supabase routes email to the hook.
+6. Test: trigger a password reset (or invite a test user) and confirm the email arrives from `digital@dastifysolutions.com` via Graph.
+
+Notes:
+
+- The hook URL must be publicly reachable by Supabase. Localhost won't work — use a deployed URL or a tunnel (e.g. `ngrok`) during development.
+- If the hook endpoint is down, auth emails fail (users can't get invites/resets). Auth email now depends on the app deployment being healthy — monitor it.
+- The verify link in each email points at `https://<project-ref>.supabase.co/auth/v1/verify?...` (built from the hook's `token_hash` + `redirect_to`), so the existing `/auth/callback` flow is unchanged.
+
+See CLAUDE.md §10 for the cross-cutting checklist.
 
 ### Emergency SMTP fallback
 
