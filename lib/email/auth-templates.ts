@@ -1,3 +1,5 @@
+import { COLORS, button, escapeHtml, renderLayout } from "./layout";
+
 const APP_NAME = "Dastify Credentialing";
 
 export type AuthEmailData = {
@@ -24,28 +26,48 @@ function verifyUrl(data: AuthEmailData): string {
   return `${base}/auth/v1/verify?${params.toString()}`;
 }
 
-function layout(heading: string, bodyLines: string[], cta?: { label: string; url: string }): BuiltEmail["html"] {
-  const paragraphs = bodyLines.map((l) => `<p>${l}</p>`).join("");
-  const button = cta
-    ? `<p><a href="${cta.url}" style="display:inline-block;padding:10px 18px;background:#0f172a;color:#fff;text-decoration:none;border-radius:6px">${cta.label}</a></p>
-       <p style="font-size:12px;color:#64748b">If the button doesn't work, paste this link into your browser:<br>${cta.url}</p>`
-    : "";
-  return `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#0f172a">
-    <h2>${heading}</h2>
-    ${paragraphs}
-    ${button}
-    <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
-    <p style="font-size:12px;color:#94a3b8">— ${APP_NAME}</p>
-  </div>`;
-}
+type AuthParts = {
+  subject: string;
+  heading: string;
+  paragraphs: string[];
+  cta?: { label: string; url: string };
+  code?: string;
+};
 
-function plain(bodyLines: string[], cta?: { label: string; url: string }): string {
-  const lines = [...bodyLines];
-  if (cta) {
-    lines.push("", `${cta.label}: ${cta.url}`);
-  }
-  lines.push("", `— ${APP_NAME}`);
-  return lines.join("\n");
+/**
+ * Build a branded auth email through the shared layout. Auth emails are account
+ * actions (invite / sign-in / reset / verify), not credentialing-status mail, so
+ * they carry no rule-25 disclaimer banner. All dynamic values are escaped.
+ */
+function compose(parts: AuthParts): BuiltEmail {
+  const htmlParas = parts.paragraphs
+    .map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p)}</p>`)
+    .join("");
+  const codeBlock = parts.code
+    ? `<p style="margin:16px 0;text-align:center;"><span style="display:inline-block;background:${COLORS.lightGrey};border-radius:8px;padding:12px 22px;font-size:24px;font-weight:800;letter-spacing:4px;color:${COLORS.ink};">${escapeHtml(parts.code)}</span></p>`
+    : "";
+  const ctaBlock = parts.cta
+    ? `<p style="margin:20px 0 0;">${button(parts.cta.url, parts.cta.label)}</p>
+<p style="margin:14px 0 0;color:${COLORS.muted};font-size:12px;">If the button doesn't work, paste this link into your browser:<br>${escapeHtml(parts.cta.url)}</p>`
+    : "";
+
+  const bodyHtml = `
+<p style="margin:0 0 12px;color:${COLORS.ink};font-size:16px;font-weight:700;">${escapeHtml(parts.heading)}</p>
+${htmlParas}${codeBlock}${ctaBlock}`;
+
+  const html = renderLayout({
+    preheader: parts.paragraphs[0] ?? parts.heading,
+    audience: "client",
+    bodyHtml,
+    disclaimer: null,
+  });
+
+  const textLines = [parts.heading, "", ...parts.paragraphs];
+  if (parts.code) textLines.push("", parts.code);
+  if (parts.cta) textLines.push("", `${parts.cta.label}: ${parts.cta.url}`);
+  textLines.push("", `— ${APP_NAME}`);
+
+  return { subject: parts.subject, html, text: textLines.join("\n") };
 }
 
 /**
@@ -55,91 +77,67 @@ function plain(bodyLines: string[], cta?: { label: string; url: string }): strin
  */
 export function buildAuthEmail(data: AuthEmailData): BuiltEmail {
   switch (data.email_action_type) {
-    case "signup": {
-      const url = verifyUrl(data);
-      const body = ["Confirm your email address to finish setting up your account."];
-      const cta = { label: "Confirm email", url };
-      return {
+    case "signup":
+      return compose({
         subject: `${APP_NAME} — confirm your email`,
-        html: layout("Confirm your email", body, cta),
-        text: plain(body, cta),
-      };
-    }
-    case "invite": {
-      const url = verifyUrl(data);
-      const body = [
-        `You've been invited to ${APP_NAME}.`,
-        "Click below to accept the invitation and set up your access.",
-      ];
-      const cta = { label: "Accept invitation", url };
-      return {
+        heading: "Confirm your email",
+        paragraphs: ["Confirm your email address to finish setting up your account."],
+        cta: { label: "Confirm email", url: verifyUrl(data) },
+      });
+    case "invite":
+      return compose({
         subject: `You've been invited to ${APP_NAME}`,
-        html: layout("You're invited", body, cta),
-        text: plain(body, cta),
-      };
-    }
-    case "magiclink": {
-      const url = verifyUrl(data);
-      const body = ["Use the link below to sign in. It expires shortly and can only be used once."];
-      const cta = { label: "Sign in", url };
-      return {
+        heading: "You're invited",
+        paragraphs: [
+          `You've been invited to ${APP_NAME}.`,
+          "Click below to accept the invitation and set up your access.",
+        ],
+        cta: { label: "Accept invitation", url: verifyUrl(data) },
+      });
+    case "magiclink":
+      return compose({
         subject: `${APP_NAME} — your sign-in link`,
-        html: layout("Sign in", body, cta),
-        text: plain(body, cta),
-      };
-    }
-    case "recovery": {
-      const url = verifyUrl(data);
-      const body = [
-        "We received a request to reset your password.",
-        "Click below to choose a new one. If you didn't request this, you can ignore this email.",
-      ];
-      const cta = { label: "Reset password", url };
-      return {
+        heading: "Sign in",
+        paragraphs: ["Use the link below to sign in. It expires shortly and can only be used once."],
+        cta: { label: "Sign in", url: verifyUrl(data) },
+      });
+    case "recovery":
+      return compose({
         subject: `${APP_NAME} — reset your password`,
-        html: layout("Reset your password", body, cta),
-        text: plain(body, cta),
-      };
-    }
+        heading: "Reset your password",
+        paragraphs: [
+          "We received a request to reset your password.",
+          "Click below to choose a new one. If you didn't request this, you can ignore this email.",
+        ],
+        cta: { label: "Reset password", url: verifyUrl(data) },
+      });
     case "email_change":
-    case "email": {
-      const url = verifyUrl(data);
-      const body = ["Confirm this email address to complete your email change."];
-      const cta = { label: "Confirm email change", url };
-      return {
+    case "email":
+      return compose({
         subject: `${APP_NAME} — confirm your email change`,
-        html: layout("Confirm email change", body, cta),
-        text: plain(body, cta),
-      };
-    }
-    case "reauthentication": {
-      const body = [
-        "Your verification code is:",
-        `<strong style="font-size:20px;letter-spacing:2px">${data.token}</strong>`,
-        "Enter it to confirm this action. If you didn't request this, ignore this email.",
-      ];
-      return {
+        heading: "Confirm email change",
+        paragraphs: ["Confirm this email address to complete your email change."],
+        cta: { label: "Confirm email change", url: verifyUrl(data) },
+      });
+    case "reauthentication":
+      return compose({
         subject: `${APP_NAME} — your verification code`,
-        html: layout("Verification code", body),
-        text: plain([
-          "Your verification code is:",
-          data.token,
-          "Enter it to confirm this action. If you didn't request this, ignore this email.",
-        ]),
-      };
-    }
-    default: {
+        heading: "Verification code",
+        paragraphs: [
+          "Use the code below to confirm this action. If you didn't request this, you can ignore this email.",
+        ],
+        code: data.token,
+      });
+    default:
       // Notification-only types (password_changed_notification, etc.) and any
       // future action types: send a neutral notice rather than drop the hook.
-      const body = [
-        `There was an account activity update on your ${APP_NAME} account (${data.email_action_type}).`,
-        "If this wasn't you, contact your administrator.",
-      ];
-      return {
+      return compose({
         subject: `${APP_NAME} — account notification`,
-        html: layout("Account notification", body),
-        text: plain(body),
-      };
-    }
+        heading: "Account notification",
+        paragraphs: [
+          `There was an account activity update on your ${APP_NAME} account (${data.email_action_type}).`,
+          "If this wasn't you, contact your administrator.",
+        ],
+      });
   }
 }

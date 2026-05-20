@@ -16,20 +16,27 @@ const PERIOD_LABEL: Record<Frequency, string> = {
 };
 
 type OrgRow = { id: string; display_name: string; is_active: boolean; deleted_at: string | null };
+type EligibleOrg = { org: OrgRow; disclaimer: string | null };
 
 export type DigestResult = { frequency: Frequency; sent: number; skipped: number; eligible: number };
 
 export async function runDigest(frequency: Frequency): Promise<DigestResult> {
   const supabase = createSupabaseAdminClient();
-  const windowStart = new Date(Date.now() - WINDOW_MS[frequency]).toISOString();
+  const windowStartMs = Date.now() - WINDOW_MS[frequency];
+  const windowStart = new Date(windowStartMs).toISOString();
+
+  const fmtDay = (d: Date) =>
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const now = new Date();
+  const periodRange = `${fmtDay(new Date(windowStartMs))} – ${fmtDay(now)}, ${now.getUTCFullYear()}`;
 
   const { data: orgs, error: orgsErr } = await supabase
     .from("organization_settings")
-    .select("organization_id, organizations(id, display_name, is_active, deleted_at)")
+    .select("organization_id, disclaimer_banner_text, organizations(id, display_name, is_active, deleted_at)")
     .eq("digest_email_frequency", frequency);
   if (orgsErr) throw orgsErr;
 
-  const eligibleOrgs: OrgRow[] = [];
+  const eligibleOrgs: EligibleOrg[] = [];
   for (const row of orgs ?? []) {
     const org = (Array.isArray(row.organizations) ? row.organizations[0] : row.organizations) as
       | OrgRow
@@ -37,13 +44,13 @@ export async function runDigest(frequency: Frequency): Promise<DigestResult> {
       | undefined;
     if (!org) continue;
     if (!org.is_active || org.deleted_at) continue;
-    eligibleOrgs.push(org);
+    eligibleOrgs.push({ org, disclaimer: (row.disclaimer_banner_text as string | null) ?? null });
   }
 
   let sent = 0;
   let skipped = 0;
 
-  for (const org of eligibleOrgs) {
+  for (const { org, disclaimer } of eligibleOrgs) {
     const [statusChangesRes, commentCountRes, recipientsRes] = await Promise.all([
       supabase
         .from("activity_events")
@@ -90,8 +97,10 @@ export async function runDigest(frequency: Frequency): Promise<DigestResult> {
     const tpl = digestEmail({
       clientName: org.display_name,
       periodLabel: PERIOD_LABEL[frequency],
+      periodRange,
       statusChanges,
       newComments,
+      disclaimer,
     });
     await sendEmail({ to: recipients, subject: tpl.subject, html: tpl.html, text: tpl.text });
     sent++;

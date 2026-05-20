@@ -293,6 +293,7 @@ export async function resetDatabase(): Promise<void> {
   try {
     await sql.unsafe(`
       TRUNCATE TABLE
+        public.notification_queue,
         public.activity_events,
         public.status_history,
         public.internal_notes,
