@@ -213,85 +213,116 @@ pnpm lint            # next lint
 
 ---
 
-## 8. Deploy to a VPS with Coolify (production)
+## 8. Deploy to the Hostinger VPS (Dokku)
 
-Production runs on a Hostinger VPS via **Coolify** (self-hosted PaaS: git-based
-deploys, automatic Let's Encrypt TLS, env management, rollbacks). The app builds
-from the repo `Dockerfile` (Next.js standalone output) and listens on port 3000.
+Production runs on a Hostinger VPS (`187.77.9.149`, Ubuntu 24.04) that already
+hosts other apps via **Dokku** (Heroku-style PaaS: git-push deploys, nginx
+routing, Let's Encrypt TLS, cron). Dastify Connect is deployed as an **isolated
+Dokku app** named `dastify-connect`, built from the repo `Dockerfile` (Next.js
+standalone), listening on port 3000.
+
+> **Why not Coolify?** Coolify wants to own ports 80/443 + Docker and would have
+> collided with the existing Dokku stack. Dokku already provides the same PaaS
+> features, so we add an app rather than introduce a second orchestrator.
 
 > **Compliance note**: a standard Hostinger VPS is not HIPAA-eligible and
 > Hostinger doesn't sign a BAA. For real PHI this is a gap — see the bottom of
 > this section.
 
-### 8.1 Install Coolify on the VPS
+### 8.1 Create the app (one-time, on the VPS)
 
-1. SSH in as root. Coolify wants a clean-ish Ubuntu 22/24 (or Debian) box with
-   ≥2 vCPU / ≥2 GB RAM and ports **80**, **443**, **8000** free. If something
-   already binds 80/443 (a manual nginx), stop/remove it — Coolify runs its own
-   Traefik proxy.
-2. Install: `curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash`
-   (installs Docker + Coolify). A pre-existing manual Node install is harmless —
-   the app runs in a container, not on the host Node.
-3. Open `http://<VPS-IP>:8000`, create the admin account. The local server is
-   auto-registered as a deploy target.
+```bash
+dokku apps:create dastify-connect
+dokku builder:set dastify-connect selected dockerfile
+dokku ports:set dastify-connect http:80:3000
+# Temporary URL until the real subdomain is ready (sslip.io resolves to the IP):
+dokku domains:set dastify-connect dastify-connect.187-77-9-149.sslip.io
+dokku git:set dastify-connect deploy-branch main
+```
 
-### 8.2 Connect the repo
+### 8.2 Environment (the build-time gotcha)
 
-1. Coolify → **Projects → New** → add an Environment (e.g. `production`).
-2. **+ New Resource → Private/Public Repository** → the GitHub repo. For a
-   private repo, connect a GitHub App (Coolify → Sources) or add a deploy key.
-3. **Build Pack: Dockerfile** (the repo has one). Branch: `main`.
-4. **Port**: `3000`.
+`NEXT_PUBLIC_*` are **inlined at build time**, so they must be passed as Docker
+**build args**, not just runtime config (the `Dockerfile` declares them as
+`ARG`). They're public values (anon key + URLs), so this is safe:
 
-### 8.3 Environment variables (the build-time gotcha)
+```bash
+dokku docker-options:add dastify-connect build '--build-arg NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co'
+dokku docker-options:add dastify-connect build '--build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>'
+dokku docker-options:add dastify-connect build '--build-arg NEXT_PUBLIC_APP_URL=https://<current-domain>'
+```
 
-In the resource's **Environment Variables**, add everything from `.env.local`.
-**Critical:** the three `NEXT_PUBLIC_*` vars are inlined at *build* time, so they
-must be marked **"Available at Buildtime"** (Coolify checkbox) or the client
-bundle ships with blank values:
+Runtime config (secrets — never build args):
 
-- `NEXT_PUBLIC_SUPABASE_URL` — **build + runtime**
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — **build + runtime**
-- `NEXT_PUBLIC_APP_URL` — **build + runtime** (set to the final https URL)
+```bash
+dokku config:set --no-restart dastify-connect \
+  NODE_ENV=production PORT=3000 \
+  NEXT_PUBLIC_SUPABASE_URL=... NEXT_PUBLIC_SUPABASE_ANON_KEY=... NEXT_PUBLIC_APP_URL=... \
+  SUPABASE_SERVICE_ROLE_KEY=... DATABASE_URL=... PGCRYPTO_SYMMETRIC_KEY=... \
+  MS_GRAPH_TENANT_ID=... MS_GRAPH_CLIENT_ID=... MS_GRAPH_CLIENT_SECRET=... \
+  MAIL_FROM_USER_ID=digital@dastifysolutions.com MAIL_FROM_NAME='Dastify Connect' \
+  SEND_EMAIL_HOOK_SECRET=... CRON_SECRET=...
+```
 
-Runtime-only (server side): `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`,
-`PGCRYPTO_SYMMETRIC_KEY`, `MS_GRAPH_TENANT_ID`, `MS_GRAPH_CLIENT_ID`,
-`MS_GRAPH_CLIENT_SECRET`, `MAIL_FROM_USER_ID`, `MAIL_FROM_NAME`,
-`SEND_EMAIL_HOOK_SECRET`, `CRON_SECRET`, `NODE_ENV=production`.
+### 8.3 Deploy (git push from your laptop)
 
-### 8.4 Deploy
+Your SSH key must be registered with Dokku (`dokku ssh-keys:add <name>` on the
+VPS — already done for the existing apps' key). Then:
 
-Click **Deploy**. Coolify builds the image and starts the container. Until the
-real subdomain is ready, use Coolify's magic domain (a `*.sslip.io` host bound
-to the VPS IP, with auto-TLS) or the raw IP:port to smoke-test.
+```bash
+git remote add dokku dokku@187.77.9.149:dastify-connect
+git push dokku main
+```
 
-### 8.5 Cron (replaces vercel.json)
+Dokku builds the Dockerfile and releases. Healthchecks confirm port 3000 is
+listening. App is then live on the configured domain.
 
-Coolify → the resource → **Scheduled Tasks**. Add two (they run *inside* the
-container, so they hit the app on localhost and inherit `CRON_SECRET`):
+### 8.4 TLS
 
-- **notifications** — frequency `* * * * *` — command:
-  `curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/notifications`
-- **digest** — frequency `0 14 * * *` — command:
-  `curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/digest`
+```bash
+dokku letsencrypt:set dastify-connect email <ops-email>
+dokku letsencrypt:enable dastify-connect
+dokku letsencrypt:cron-job --add   # global auto-renewal (idempotent)
+```
 
-(`after()` still gives real-time delivery; the minute cron is the retry/backstop.
-`vercel.json` is ignored off-Vercel and can stay for reference.)
+Works on the `sslip.io` temp domain too (it resolves to the IP for the HTTP-01
+challenge).
 
-### 8.6 Domain + Supabase wiring (when the subdomain is ready)
+### 8.5 Cron
 
-1. DNS: add an **A record** for the subdomain (e.g. `app.dastifysolutions.com`)
-   → the VPS IP.
-2. Coolify → resource → **Domains** → add `https://app.dastifysolutions.com`.
-   Coolify provisions Let's Encrypt TLS automatically.
-3. Set `NEXT_PUBLIC_APP_URL` to that https URL and **redeploy** (it's build-time).
-4. **Supabase → Auth → URL Configuration**: set Site URL + add
+Host crontab calls a root-only script (keeps the secret out of `crontab -l`):
+
+`/usr/local/bin/dastify-cron.sh`:
+```sh
+#!/bin/sh
+SECRET="<CRON_SECRET>"
+BASE="https://<current-domain>"
+curl -fsS -H "Authorization: Bearer $SECRET" "$BASE/api/cron/$1" >/dev/null 2>&1
+```
+`crontab -e`:
+```cron
+* * * * * /usr/local/bin/dastify-cron.sh notifications
+0 14 * * * /usr/local/bin/dastify-cron.sh digest
+```
+(`after()` gives real-time delivery; the minute cron is the retry/backstop. The
+digest endpoint runs the weekly rollup itself on Mondays.)
+
+### 8.6 Cutover to the real subdomain (when ready)
+
+1. DNS: A record `app.dastifysolutions.com` → `187.77.9.149`.
+2. `dokku domains:add dastify-connect app.dastifysolutions.com` (and optionally
+   `dokku domains:remove` the sslip.io one), then `dokku letsencrypt:enable dastify-connect`.
+3. **`NEXT_PUBLIC_APP_URL` is build-time** — update *both* the `docker-options`
+   build-arg (`docker-options:remove` the old, `:add` the new) **and** the config
+   var, then **rebuild**: `dokku ps:rebuild dastify-connect` (config:set alone
+   won't re-inline it).
+4. Update `BASE` in `/usr/local/bin/dastify-cron.sh`.
+5. **Supabase → Auth → URL Configuration**: Site URL + add
    `https://app.dastifysolutions.com/auth/callback` to Redirect URLs.
-5. **Supabase → Auth → Hooks → Send Email Hook**: update the URL to
-   `https://app.dastifysolutions.com/api/auth/send-email` (the
-   `SEND_EMAIL_HOOK_SECRET` is unchanged).
-6. Smoke-test: `/forgot-password`, a status change, and
-   `curl -H "Authorization: Bearer <CRON_SECRET>" https://app.dastifysolutions.com/api/cron/notifications`.
+6. **Supabase → Auth → Hooks → Send Email Hook**: point the URL at
+   `https://app.dastifysolutions.com/api/auth/send-email` (secret unchanged).
+7. **Decommission Vercel**: remove its cron (delete `vercel.json` or pause the
+   project) so you don't run dual crons or a stale auth hook against the same DB.
 
 ### When a client requires HIPAA-grade infra
 
