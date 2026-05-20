@@ -16,6 +16,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { StatusPipeline } from "@/components/ui/status-pipeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusTransitionDialog } from "./_components/status-transition-dialog";
+import { DeleteEnrollmentDialog } from "@/components/admin/delete-enrollment-dialog";
 import { CommentsThread } from "./_components/comments-thread";
 import { InternalNotesThread } from "./_components/internal-notes-thread";
 import { QuickActionCard } from "./_components/quick-action-card";
@@ -58,6 +59,7 @@ export default async function EnrollmentDetailPage({
     )
     .eq("id", enrollmentId)
     .eq("organization_id", organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!enrollment) notFound();
@@ -162,11 +164,18 @@ export default async function EnrollmentDetailPage({
           { label: "Enrollment" },
         ]}
         actions={
-          <StatusTransitionDialog
-            enrollmentId={enrollmentId}
-            currentStatus={status}
-            currentSubStatus={enrollment.sub_status ?? ""}
-          />
+          <div className="flex items-center gap-2">
+            <StatusTransitionDialog
+              enrollmentId={enrollmentId}
+              currentStatus={status}
+              currentSubStatus={enrollment.sub_status ?? ""}
+            />
+            <DeleteEnrollmentDialog
+              enrollmentId={enrollmentId}
+              label={`${payer?.name ?? "Unknown payer"} · ${enrollment.state}`}
+              redirectTo={`/admin/organizations/${organizationId}`}
+            />
+          </div>
         }
       />
 

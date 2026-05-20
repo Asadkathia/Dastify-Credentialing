@@ -1,10 +1,10 @@
 "use server";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireSession, type Session } from "@/lib/auth/session";
+import { verifyPassword } from "@/lib/auth/reauth";
 import {
   updateProfileNameSchema,
   changeEmailSchema,
@@ -19,19 +19,6 @@ function identityTable(session: Session): "admin_users" | "organization_users" {
 
 function orgIdFor(session: Session): string | null {
   return session.role === "admin" ? null : session.organizationId;
-}
-
-/**
- * Ephemeral, cookie-less Supabase client used solely to verify a password via
- * signInWithPassword. Keeps the caller's real session cookie untouched if the
- * supplied current password is wrong.
- */
-function createEphemeralClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
 }
 
 /**
@@ -132,12 +119,8 @@ export async function changePassword(
     return fail("Please check the password fields.", parsed.error.flatten().fieldErrors);
   }
 
-  const reauth = createEphemeralClient();
-  const { error: reauthErr } = await reauth.auth.signInWithPassword({
-    email: session.email,
-    password: parsed.data.currentPassword,
-  });
-  if (reauthErr) {
+  const valid = await verifyPassword(session.email, parsed.data.currentPassword);
+  if (!valid) {
     return fail(
       "Current password is incorrect. If you sign in with a magic link, use Forgot Password to set one.",
     );

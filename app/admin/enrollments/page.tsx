@@ -7,6 +7,7 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { RowOpenLink } from "@/components/ui/row-open-link";
+import { DeleteEnrollmentDialog } from "@/components/admin/delete-enrollment-dialog";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 import { STATUS_COLORS } from "@/lib/enrollment/status-colors";
@@ -200,7 +201,7 @@ export default async function AdminEnrollmentsPage({
                   <th>Status</th>
                   <th>Effective</th>
                   <th className="w-[110px]">Updated</th>
-                  <th className="w-[60px] text-right" />
+                  <th className="w-[104px] text-right" />
                 </tr>
               </thead>
               <tbody>
@@ -246,7 +247,16 @@ export default async function AdminEnrollmentsPage({
                         {format(new Date(e.updated_at), "PP")}
                       </td>
                       <td className="text-right">
-                        <RowOpenLink href={detailHref} />
+                        <div className="flex items-center justify-end gap-1.5">
+                          <RowOpenLink href={detailHref} />
+                          {client ? (
+                            <DeleteEnrollmentDialog
+                              enrollmentId={e.id}
+                              label={`${payer?.name ?? "Unknown payer"} · ${e.state}`}
+                              compact
+                            />
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   );
