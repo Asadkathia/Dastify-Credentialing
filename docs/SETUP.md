@@ -8,10 +8,9 @@ End-to-end instructions to bring this repo from clean checkout to a running port
 
 - Node.js 22+ (this repo was developed on 25.x)
 - pnpm 10+
-- A Supabase account
-- A Resend account (transactional email)
-- An Inngest account (background jobs)
-- A Vercel account (when ready to deploy)
+- A Supabase account (Postgres, Auth, Storage)
+- A Microsoft 365 mailbox + Entra app registration (transactional email via Graph — see §4)
+- A Hostinger VPS for production (Coolify — see §8)
 
 ---
 
