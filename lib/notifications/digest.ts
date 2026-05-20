@@ -1,9 +1,9 @@
-import { inngest } from "../client";
+import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { digestEmail } from "@/lib/email/templates";
 
-type Frequency = "daily" | "weekly";
+export type Frequency = "daily" | "weekly";
 
 const WINDOW_MS: Record<Frequency, number> = {
   daily: 24 * 60 * 60 * 1000,
@@ -15,7 +15,11 @@ const PERIOD_LABEL: Record<Frequency, string> = {
   weekly: "Weekly",
 };
 
-async function runDigest(frequency: Frequency) {
+type OrgRow = { id: string; display_name: string; is_active: boolean; deleted_at: string | null };
+
+export type DigestResult = { frequency: Frequency; sent: number; skipped: number; eligible: number };
+
+export async function runDigest(frequency: Frequency): Promise<DigestResult> {
   const supabase = createSupabaseAdminClient();
   const windowStart = new Date(Date.now() - WINDOW_MS[frequency]).toISOString();
 
@@ -25,7 +29,6 @@ async function runDigest(frequency: Frequency) {
     .eq("digest_email_frequency", frequency);
   if (orgsErr) throw orgsErr;
 
-  type OrgRow = { id: string; display_name: string; is_active: boolean; deleted_at: string | null };
   const eligibleOrgs: OrgRow[] = [];
   for (const row of orgs ?? []) {
     const org = (Array.isArray(row.organizations) ? row.organizations[0] : row.organizations) as
@@ -90,39 +93,9 @@ async function runDigest(frequency: Frequency) {
       statusChanges,
       newComments,
     });
-
-    await sendEmail({
-      to: recipients,
-      subject: tpl.subject,
-      html: tpl.html,
-      text: tpl.text,
-    });
+    await sendEmail({ to: recipients, subject: tpl.subject, html: tpl.html, text: tpl.text });
     sent++;
   }
 
   return { frequency, sent, skipped, eligible: eligibleOrgs.length };
 }
-
-/**
- * Weekly digest email per organization. Runs Monday 14:00 UTC.
- */
-export const weeklyDigest = inngest.createFunction(
-  {
-    id: "digest-weekly",
-    name: "Weekly organization digest",
-    triggers: [{ cron: "0 14 * * 1" }],
-  },
-  async () => runDigest("weekly"),
-);
-
-/**
- * Daily digest email. Runs 14:00 UTC.
- */
-export const dailyDigest = inngest.createFunction(
-  {
-    id: "digest-daily",
-    name: "Daily organization digest",
-    triggers: [{ cron: "0 14 * * *" }],
-  },
-  async () => runDigest("daily"),
-);

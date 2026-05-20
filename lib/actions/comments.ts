@@ -4,7 +4,8 @@ import { requireSession, requireAdmin } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { postCommentSchema, postInternalNoteSchema } from "@/lib/validation/schemas";
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
-import { inngest } from "@/inngest/client";
+import { after } from "next/server";
+import { drainNotificationQueue } from "@/lib/notifications/process";
 
 export async function postCommentAction(
   formData: FormData,
@@ -54,19 +55,16 @@ export async function postCommentAction(
     summary: `Comment posted on enrollment ${parsed.data.enrollmentId.slice(0, 8)}`,
   });
 
-  try {
-    await inngest.send({
-      name: "comment/posted",
-      data: {
-        commentId: comment.id,
-        enrollmentId: parsed.data.enrollmentId,
-        organizationId: enrollment.organization_id,
-        authorUserId: session.userId,
-      },
-    });
-  } catch (err) {
-    console.error("[comment/posted] event emit failed", err);
-  }
+  // The comment was enqueued atomically by the DB trigger (trg_enqueue_comment).
+  // Drain the queue after the response so the email goes out immediately; the
+  // cron is the durability backstop.
+  after(async () => {
+    try {
+      await drainNotificationQueue(10);
+    } catch (err) {
+      console.error("[notifications] immediate drain failed", err);
+    }
+  });
 
   revalidatePath(`/admin/organizations/${enrollment.organization_id}/enrollments/${parsed.data.enrollmentId}`);
   revalidatePath(`/portal/enrollments/${parsed.data.enrollmentId}`);

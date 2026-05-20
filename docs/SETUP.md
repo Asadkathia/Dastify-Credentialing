@@ -166,12 +166,24 @@ Note: the SMTP password currently stored in the commented block is the mailbox's
 
 ---
 
-## 5. Inngest (background jobs)
+## 5. Background jobs (cron-driven outbox)
 
-1. Create an Inngest app.
-2. Set `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` from their dashboard.
-3. Locally: `npx inngest-cli dev` to run the dev server alongside `pnpm dev`.
-4. In production: register the Vercel deployment URL `+ /api/inngest` with Inngest.
+App notification emails (status changes, comments, digests) run on a durable DB outbox, not an external job runner — so it ports cleanly to a VPS.
+
+- DB triggers (migration 0019) enqueue rows into `notification_queue` atomically when an enrollment status changes or a comment is posted.
+- `/api/cron/notifications` drains the queue and sends via Graph; `/api/cron/digest` sends per-org daily digests (and weekly on Mondays). The status/comment server actions also drain immediately via Next.js `after()` for low-latency delivery.
+- Both cron endpoints require `Authorization: Bearer <CRON_SECRET>`.
+
+**Setup:**
+
+1. Set `CRON_SECRET` in env (generate: `openssl rand -base64 32`). On Vercel it's also added as an env var; Vercel Cron injects the bearer header automatically.
+2. **On Vercel**: `vercel.json` already declares the cron schedules (daily on Hobby; `after()` covers real-time). Nothing else to do.
+3. **On the VPS** (production): add to the system crontab, sending the bearer header:
+   ```cron
+   * * * * *  curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/notifications
+   0 14 * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/digest
+   ```
+   (`notifications` every minute for prompt retries; `digest` once daily — it runs the weekly rollup itself on Mondays.)
 
 ---
 

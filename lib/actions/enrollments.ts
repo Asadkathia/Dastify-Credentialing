@@ -6,7 +6,8 @@ import { createEnrollmentSchema, transitionStatusSchema } from "@/lib/validation
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
 import { validateTransition } from "@/lib/enrollment/state-machine";
 import type { EnrollmentStatus } from "@/db/schema/enums";
-import { inngest } from "@/inngest/client";
+import { after } from "next/server";
+import { drainNotificationQueue } from "@/lib/notifications/process";
 
 export async function createEnrollmentAction(
   formData: FormData,
@@ -149,19 +150,16 @@ export async function transitionStatusAction(
     },
   });
 
-  try {
-    await inngest.send({
-      name: "enrollment/status_changed",
-      data: {
-        enrollmentId: parsed.data.enrollmentId,
-        organizationId: current.organization_id,
-        fromStatus: current.status,
-        toStatus: parsed.data.toStatus,
-      },
-    });
-  } catch (err) {
-    console.error("[enrollment/status_changed] event emit failed", err);
-  }
+  // The status change was enqueued atomically by the DB trigger
+  // (trg_enqueue_status_change). Drain the queue after the response so the
+  // email goes out immediately; the cron is the durability backstop.
+  after(async () => {
+    try {
+      await drainNotificationQueue(10);
+    } catch (err) {
+      console.error("[notifications] immediate drain failed", err);
+    }
+  });
 
   revalidatePath(`/admin/organizations/${current.organization_id}/enrollments/${parsed.data.enrollmentId}`);
   return ok({ enrollmentId: parsed.data.enrollmentId, toStatus: parsed.data.toStatus });

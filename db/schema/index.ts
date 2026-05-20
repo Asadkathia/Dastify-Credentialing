@@ -8,4 +8,5 @@ export * from "./comments";
 export * from "./document_categories";
 export * from "./documents";
 export * from "./audit";
+export * from "./notifications";
 export * from "./relations";

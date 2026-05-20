@@ -42,13 +42,13 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Public paths, internal asset paths, and external callback endpoints that
-  // authenticate via their own signature (not a session cookie): skip auth.
+  // Public paths, internal asset paths, and external/scheduled endpoints that
+  // authenticate via their own secret (not a session cookie): skip auth.
   if (
     PUBLIC_PATHS.has(pathname) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/health") ||
-    pathname.startsWith("/api/inngest") ||
+    pathname.startsWith("/api/cron") ||
     pathname.startsWith("/api/auth/send-email")
   ) {
     return response;
