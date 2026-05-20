@@ -15,7 +15,7 @@ export const notificationQueue = pgTable(
     enrollmentId: uuid("enrollment_id"),
     commentId: uuid("comment_id"),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
-    status: text("status").notNull().default("pending"), // 'pending' | 'sent' | 'failed'
+    status: text("status").notNull().default("pending"), // 'pending' | 'sent' | 'failed' | 'skipped'
     attempts: integer("attempts").notNull().default(0),
     maxAttempts: integer("max_attempts").notNull().default(5),
     lastError: text("last_error"),

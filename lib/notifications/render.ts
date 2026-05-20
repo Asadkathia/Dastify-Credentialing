@@ -54,14 +54,15 @@ export async function renderStatusChange(
   const payer = Array.isArray(enrollment.payers) ? enrollment.payers[0] : enrollment.payers;
   if (!client || !payer) return null;
 
-  const { data: admins, error } = await supabase
+  // Status changes are made by the (single) Dastify admin; notify every active
+  // user of the affected org — admins and viewers alike.
+  const { data: orgUsers, error } = await supabase
     .from("organization_users")
     .select("email")
     .eq("organization_id", organizationId)
-    .eq("role", "org_admin")
     .eq("is_active", true);
   if (error) throw error;
-  const to = (admins ?? []).map((r) => r.email).filter(Boolean);
+  const to = ((orgUsers ?? []) as { email: string }[]).map((r) => r.email).filter(Boolean);
   if (to.length === 0) return null;
 
   const tpl = statusChangeEmail({
@@ -135,27 +136,25 @@ export async function renderComment(
   // authored → notify Dastify admins (internal audience).
   const audience: Audience = authorIsAdmin ? "client" : "admin";
   const authorName = adminAuthor?.full_name ?? orgAuthor?.full_name ?? "Someone";
-  const adminAuthorEmail: string | null = adminAuthor?.email ?? null;
 
   let to: string[];
   if (authorIsAdmin) {
+    // Admin commented → notify every active user of the org.
     const { data, error } = await supabase
       .from("organization_users")
       .select("email")
       .eq("organization_id", organizationId)
-      .eq("role", "org_admin")
       .eq("is_active", true);
     if (error) throw error;
     to = ((data ?? []) as { email: string }[]).map((r) => r.email).filter(Boolean);
   } else {
+    // Org user commented → notify active Dastify admins.
     const { data, error } = await supabase
       .from("admin_users")
       .select("email")
       .eq("is_active", true);
     if (error) throw error;
-    to = ((data ?? []) as { email: string }[])
-      .map((r) => r.email)
-      .filter((email): email is string => Boolean(email) && email !== adminAuthorEmail);
+    to = ((data ?? []) as { email: string }[]).map((r) => r.email).filter(Boolean);
   }
   if (to.length === 0) return null;
 

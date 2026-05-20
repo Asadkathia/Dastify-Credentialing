@@ -30,6 +30,14 @@ async function markSent(supabase: AdminClient, id: string) {
     .eq("id", id);
 }
 
+async function markSkipped(supabase: AdminClient, id: string) {
+  // No recipients / org disabled the notification — a no-op, not a send.
+  await supabase
+    .from("notification_queue")
+    .update({ status: "skipped", last_error: null, updated_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
 async function recordFailure(supabase: AdminClient, row: QueueRow, message: string) {
   // claim_notification_batch already bumped attempts and pushed next_attempt_at
   // out by the lease. If we've now exhausted attempts, mark failed; otherwise
@@ -80,7 +88,7 @@ export async function drainNotificationQueue(limit = 25): Promise<DrainResult> {
       }
 
       if (!built) {
-        await markSent(supabase, row.id);
+        await markSkipped(supabase, row.id);
         result.skipped++;
         continue;
       }
