@@ -104,6 +104,27 @@ export const completePasswordResetSchema = z.object({
 });
 export type CompletePasswordResetInput = z.infer<typeof completePasswordResetSchema>;
 
+// ── Profile (self-service account: name / email / password) ───────────────────
+
+export const updateProfileNameSchema = z.object({
+  fullName: z.string().min(2).max(120).trim(),
+});
+export type UpdateProfileNameInput = z.infer<typeof updateProfileNameSchema>;
+
+export const changeEmailSchema = z.object({
+  newEmail: emailSchema,
+});
+export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Enter your current password"),
+  newPassword: z
+    .string()
+    .min(8, "At least 8 characters")
+    .max(72, "Max 72 characters (Supabase limit)"),
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 // ── Client (individual clinician) ─────────────────────────────────────────────
 
 export const createClientSchema = z.object({

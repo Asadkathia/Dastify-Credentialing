@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ChevronDown, HelpCircle, Search } from "lucide-react";
+import { HelpCircle, Search } from "lucide-react";
 import { AppSidebarNav, type NavItem } from "@/components/app-sidebar-nav";
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
-import { SignOutButton } from "@/components/sign-out-button";
+import { UserMenu } from "@/components/user-menu";
 
 export type { NavItem } from "@/components/app-sidebar-nav";
 
@@ -28,13 +28,15 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const homeHref = variant === "admin" ? "/admin" : "/portal";
-  const initials = getInitials(user.fullName);
-  const roleLabel = variant === "admin" ? "Dastify · Admin" : "Organization · Viewer";
+  const profileHref = variant === "admin" ? "/admin/profile" : "/portal/profile";
+  const secondaryLabel =
+    variant === "admin" ? "Dastify · Admin" : (user.organizationName ?? "Organization");
 
   const sidebarBody = (
     <SidebarBody
       variant={variant}
       homeHref={homeHref}
+      profileHref={profileHref}
       workspaceLabel={workspaceLabel}
       organizationName={user.organizationName}
       nav={nav}
@@ -89,23 +91,12 @@ export function AppShell({
               <HelpCircle size={16} strokeWidth={1.6} />
             </button>
 
-            <div className="flex items-center gap-2.5 rounded-md px-1.5 py-1 transition-colors hover:bg-lightgrey sm:px-2">
-              <span
-                aria-hidden
-                className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-teal text-[11px] font-semibold text-navy"
-              >
-                {initials}
-              </span>
-              <div className="hidden leading-tight sm:block">
-                <div className="text-[12px] font-medium text-navy">{user.fullName}</div>
-                <div className="text-[9px] uppercase tracking-[0.2em] text-navy/50">
-                  {variant === "admin" ? roleLabel : (user.organizationName ?? "Organization")}
-                </div>
-              </div>
-              <ChevronDown size={12} className="hidden text-navy/40 sm:block" />
-            </div>
-
-            <SignOutButton />
+            <UserMenu
+              fullName={user.fullName}
+              email={user.email}
+              secondaryLabel={secondaryLabel}
+              profileHref={profileHref}
+            />
           </div>
         </header>
 
@@ -120,12 +111,14 @@ export function AppShell({
 function SidebarBody({
   variant,
   homeHref,
+  profileHref,
   workspaceLabel,
   organizationName,
   nav,
 }: {
   variant: Variant;
   homeHref: string;
+  profileHref: string;
   workspaceLabel?: string;
   organizationName?: string;
   nav: NavItem[];
@@ -165,11 +158,10 @@ function SidebarBody({
       <div className="mt-auto px-3 pb-4">
         <div className="mx-2 mb-3 h-px bg-white/8" />
         <Link
-          href="#"
-          aria-disabled
-          className="flex items-center gap-3 rounded-md px-3 py-[9px] text-[13px] font-medium text-white/35"
+          href={profileHref}
+          className="group flex items-center gap-3 rounded-md px-3 py-[9px] text-[13px] font-medium text-white/50 transition-colors hover:bg-white/5 hover:text-white/85"
         >
-          <SettingsLockIcon />
+          <SettingsIcon />
           <span className="flex-1">Settings</span>
         </Link>
       </div>
@@ -177,14 +169,7 @@ function SidebarBody({
   );
 }
 
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "—";
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
-}
-
-function SettingsLockIcon() {
+function SettingsIcon() {
   return (
     <svg
       aria-hidden
