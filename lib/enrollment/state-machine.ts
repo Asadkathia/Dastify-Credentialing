@@ -3,27 +3,11 @@ import type { EnrollmentStatus } from "@/db/schema/enums";
 /**
  * Status transition rules for enrollments.
  *
- * The DB does not enforce these — application logic does. Linear happy path:
- *
- *   prep → submitted → in_review → approved
- *
- * `non_par_credentialed` is a terminal off-rail outcome — provider is
- * credentialed by the payer but not added to the participating network.
- * Reachable from `in_review` or `approved`, and (like `approved`) terminal.
- *
- * Backwards/corrective moves are allowed from any non-terminal state into the
- * preceding active states, so admins can fix mis-clicks without writing SQL.
+ * The DB does not enforce these — application logic does. The linear happy path
+ * is still prep → submitted → in_review → approved (and `non_par_credentialed`
+ * is the off-rail terminal outcome), but admins may move an enrollment to ANY
+ * status directly. The only rejected "transition" is a no-op (status unchanged).
  */
-
-const FORWARD_TRANSITIONS: Record<EnrollmentStatus, ReadonlyArray<EnrollmentStatus>> = {
-  prep: ["submitted"],
-  submitted: ["in_review", "prep"],
-  in_review: ["approved", "non_par_credentialed", "submitted"],
-  // Terminal states — admin can re-open by moving back to a prior active state,
-  // or sidestep to the off-rail outcome.
-  approved: ["non_par_credentialed", "in_review"],
-  non_par_credentialed: ["in_review", "approved"],
-};
 
 export type TransitionResult = { ok: true } | { ok: false; error: string };
 
@@ -33,14 +17,6 @@ export function validateTransition(
 ): TransitionResult {
   if (from === to) {
     return { ok: false, error: "Status is unchanged" };
-  }
-
-  const allowed = FORWARD_TRANSITIONS[from];
-  if (!allowed.includes(to)) {
-    return {
-      ok: false,
-      error: `Cannot transition from "${from}" to "${to}". Allowed: ${allowed.join(", ")}.`,
-    };
   }
 
   return { ok: true };

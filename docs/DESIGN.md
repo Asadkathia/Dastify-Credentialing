@@ -207,7 +207,7 @@ Plus the off-rail terminal:
 
 **Sub-status** is a free-form text field (e.g., "Awaiting CV from provider," "Payer rep escalated," "Contract pending signature"). Renders next to the status chip.
 
-**State machine**: enforced in application logic (not in DB). `lib/enrollment/state-machine.ts` defines the allowed transitions; illegal transitions are blocked with `{ ok: false, error }`. Backwards transitions (e.g., `submitted → prep` to correct a mis-click) are allowed; each one writes a `status_history` row via the `trg_enrollment_status_change` trigger.
+**State machine**: `lib/enrollment/state-machine.ts` validates transitions in application logic (not in DB). Admins may move an enrollment to **any** status directly — the 4-stage path above is the happy-path ordering for display/CTAs, not a gate. `validateTransition` blocks only a no-op (status unchanged) with `{ ok: false, error }`; every other from→to (forward skips, backwards corrections, re-opening a terminal state) is allowed. Each change writes a `status_history` row via the `trg_enrollment_status_change` trigger.
 
 **No recredentialing.** There is no auto-creation of cycle-N enrollments, no `next_recred_due_date`, no parent-chain linkage. If recred comes back, it's a fresh feature.
 
