@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { ActionResult } from "@/lib/actions/result";
+import { cn } from "@/lib/utils";
 
 const HARD_CONFIRM_WORD = "DELETE";
 const labelClasses = "text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70";
@@ -126,7 +127,7 @@ export function DeleteEntityDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit} autoComplete="off">
           {/* Soft is the default; the toggle escalates to a permanent purge. */}
           <div
             className={
@@ -172,13 +173,27 @@ export function DeleteEntityDialog({
                 <Label htmlFor="del-password" className={labelClasses}>
                   Your admin password
                 </Label>
-                <Input
+                {/* Raw input (not <Input>) so the password-manager ignore hints
+                    render. Step-up reauth must be typed by a present human —
+                    autofill of a saved credential would defeat the whole point. */}
+                <input
                   id="del-password"
+                  name="dast-confirm-secret"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  className="mt-2 bg-white text-[13px]"
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-bwignore
+                  data-form-type="other"
+                  className={cn(
+                    "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                    "mt-2 bg-white text-[13px]",
+                  )}
                 />
               </div>
             </div>
