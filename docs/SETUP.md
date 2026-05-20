@@ -214,23 +214,93 @@ pnpm lint            # next lint
 
 ---
 
-## 8. Deploy to Vercel
+## 8. Deploy to a VPS with Coolify (production)
 
-1. Push to GitHub, import into Vercel.
-2. Add all env vars from `.env.local` to Vercel's environment.
-3. Update Supabase Auth → URL Configuration with the Vercel URL.
-4. Update `NEXT_PUBLIC_APP_URL` env var to the Vercel URL.
-5. Register the Inngest sync URL.
+Production runs on a Hostinger VPS via **Coolify** (self-hosted PaaS: git-based
+deploys, automatic Let's Encrypt TLS, env management, rollbacks). The app builds
+from the repo `Dockerfile` (Next.js standalone output) and listens on port 3000.
+
+> **Compliance note**: a standard Hostinger VPS is not HIPAA-eligible and
+> Hostinger doesn't sign a BAA. For real PHI this is a gap — see the bottom of
+> this section.
+
+### 8.1 Install Coolify on the VPS
+
+1. SSH in as root. Coolify wants a clean-ish Ubuntu 22/24 (or Debian) box with
+   ≥2 vCPU / ≥2 GB RAM and ports **80**, **443**, **8000** free. If something
+   already binds 80/443 (a manual nginx), stop/remove it — Coolify runs its own
+   Traefik proxy.
+2. Install: `curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash`
+   (installs Docker + Coolify). A pre-existing manual Node install is harmless —
+   the app runs in a container, not on the host Node.
+3. Open `http://<VPS-IP>:8000`, create the admin account. The local server is
+   auto-registered as a deploy target.
+
+### 8.2 Connect the repo
+
+1. Coolify → **Projects → New** → add an Environment (e.g. `production`).
+2. **+ New Resource → Private/Public Repository** → the GitHub repo. For a
+   private repo, connect a GitHub App (Coolify → Sources) or add a deploy key.
+3. **Build Pack: Dockerfile** (the repo has one). Branch: `main`.
+4. **Port**: `3000`.
+
+### 8.3 Environment variables (the build-time gotcha)
+
+In the resource's **Environment Variables**, add everything from `.env.local`.
+**Critical:** the three `NEXT_PUBLIC_*` vars are inlined at *build* time, so they
+must be marked **"Available at Buildtime"** (Coolify checkbox) or the client
+bundle ships with blank values:
+
+- `NEXT_PUBLIC_SUPABASE_URL` — **build + runtime**
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — **build + runtime**
+- `NEXT_PUBLIC_APP_URL` — **build + runtime** (set to the final https URL)
+
+Runtime-only (server side): `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`,
+`PGCRYPTO_SYMMETRIC_KEY`, `MS_GRAPH_TENANT_ID`, `MS_GRAPH_CLIENT_ID`,
+`MS_GRAPH_CLIENT_SECRET`, `MAIL_FROM_USER_ID`, `MAIL_FROM_NAME`,
+`SEND_EMAIL_HOOK_SECRET`, `CRON_SECRET`, `NODE_ENV=production`.
+
+### 8.4 Deploy
+
+Click **Deploy**. Coolify builds the image and starts the container. Until the
+real subdomain is ready, use Coolify's magic domain (a `*.sslip.io` host bound
+to the VPS IP, with auto-TLS) or the raw IP:port to smoke-test.
+
+### 8.5 Cron (replaces vercel.json)
+
+Coolify → the resource → **Scheduled Tasks**. Add two (they run *inside* the
+container, so they hit the app on localhost and inherit `CRON_SECRET`):
+
+- **notifications** — frequency `* * * * *` — command:
+  `curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/notifications`
+- **digest** — frequency `0 14 * * *` — command:
+  `curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/digest`
+
+(`after()` still gives real-time delivery; the minute cron is the retry/backstop.
+`vercel.json` is ignored off-Vercel and can stay for reference.)
+
+### 8.6 Domain + Supabase wiring (when the subdomain is ready)
+
+1. DNS: add an **A record** for the subdomain (e.g. `app.dastifysolutions.com`)
+   → the VPS IP.
+2. Coolify → resource → **Domains** → add `https://app.dastifysolutions.com`.
+   Coolify provisions Let's Encrypt TLS automatically.
+3. Set `NEXT_PUBLIC_APP_URL` to that https URL and **redeploy** (it's build-time).
+4. **Supabase → Auth → URL Configuration**: set Site URL + add
+   `https://app.dastifysolutions.com/auth/callback` to Redirect URLs.
+5. **Supabase → Auth → Hooks → Send Email Hook**: update the URL to
+   `https://app.dastifysolutions.com/api/auth/send-email` (the
+   `SEND_EMAIL_HOOK_SECRET` is unchanged).
+6. Smoke-test: `/forgot-password`, a status change, and
+   `curl -H "Authorization: Bearer <CRON_SECRET>" https://app.dastifysolutions.com/api/cron/notifications`.
 
 ### When a client requires HIPAA-grade infra
 
-Upgrade plans + sign BAAs:
-- Supabase: Pro + HIPAA add-on (~$599/mo)
-- Vercel: Enterprise (BAA)
-- Resend: Enterprise (BAA)
-- Inngest: Enterprise (BAA)
-
-The architecture already accommodates this — no code rework required.
+The VPS itself is the compliance gap (no BAA). Options when a real client needs
+HIPAA: move compute to a BAA-signing host (AWS/GCP/Azure), keep Supabase on
+Pro + HIPAA add-on (signs a BAA; covers the DB + Auth + Storage that hold the
+PHI), and ensure email (Microsoft 365) is under a Microsoft BAA. No app code
+rework is required — only where it's hosted.
 
 ---
 

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Lean self-host artifact: server.js + only the deps it traces. Built into a
+  // Docker image and run on the VPS via Coolify.
+  output: "standalone",
   reactStrictMode: true,
   experimental: {
     serverActions: {
