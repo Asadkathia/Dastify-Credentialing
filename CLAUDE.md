@@ -1,4 +1,4 @@
-# CLAUDE.md — Master Prompt for the Dastify Credentialing Portal
+# CLAUDE.md — Master Prompt for Dastify Connect
 
 > This file is the system prompt for any AI coding agent working in this repo. Read it fully before reading any other file. The companion design rationale lives in `docs/DESIGN.md`.
 

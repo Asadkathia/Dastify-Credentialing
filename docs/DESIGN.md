@@ -1,4 +1,4 @@
-# Dastify Credentialing Portal — Design Document
+# Dastify Connect — Design Document
 
 **Version**: 1.0
 **Date**: 2026-05-08

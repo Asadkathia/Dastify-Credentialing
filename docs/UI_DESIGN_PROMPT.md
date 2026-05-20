@@ -1,6 +1,6 @@
-# Dastify Credentialing Portal — Master UI Design Prompt
+# Dastify Connect — Master UI Design Prompt
 
-> **What this is.** A self-contained system prompt for Claude (claude.ai / Claude Design / Artifacts) to generate UI mockups for the Dastify Credentialing Portal admin and client experiences. Paste the entire document into a fresh Claude conversation, then issue a generation request (see §13).
+> **What this is.** A self-contained system prompt for Claude (claude.ai / Claude Design / Artifacts) to generate UI mockups for the Dastify Connect admin and client experiences. Paste the entire document into a fresh Claude conversation, then issue a generation request (see §13).
 >
 > **Source of truth.** This prompt is downstream of two documents — `CLAUDE.md` (engineering rules) and the Dastify Solutions Brand & Design Playbook (visual brand). Where they conflict on operational portal screens, this prompt's translation layer (§5) wins.
 >

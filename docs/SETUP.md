@@ -1,4 +1,4 @@
-# Dastify Credentialing — Setup Guide
+# Dastify Connect — Setup Guide
 
 End-to-end instructions to bring this repo from clean checkout to a running portal.
 
@@ -121,7 +121,7 @@ MS_GRAPH_TENANT_ID=<tenant id>
 MS_GRAPH_CLIENT_ID=<application/client id>
 MS_GRAPH_CLIENT_SECRET=<secret value>
 MAIL_FROM_USER_ID=digital@dastifysolutions.com
-MAIL_FROM_NAME=Dastify Credentialing
+MAIL_FROM_NAME=Dastify Connect
 ```
 
 ### Supabase Auth emails (Send Email Hook → Graph)
