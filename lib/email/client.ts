@@ -74,7 +74,7 @@ export type SendEmailInput = {
  */
 export async function sendEmail(input: SendEmailInput): Promise<void> {
   const fromUser = requiredEnv("MAIL_FROM_USER_ID");
-  const fromName = process.env.MAIL_FROM_NAME ?? "Dastify Credentialing";
+  const fromName = process.env.MAIL_FROM_NAME ?? "Dastify Connect";
 
   const token = await getAccessToken();
   const recipients = (Array.isArray(input.to) ? input.to : [input.to]).map(

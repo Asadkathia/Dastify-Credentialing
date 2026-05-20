@@ -1,6 +1,6 @@
 import { COLORS, button, escapeHtml, renderLayout } from "./layout";
 
-const APP_NAME = "Dastify Credentialing";
+const APP_NAME = "Dastify Connect";
 
 export type AuthEmailData = {
   token: string;

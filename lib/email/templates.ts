@@ -71,7 +71,7 @@ ${statusBlock}
     "",
     `View in the portal: ${url}`,
     "",
-    "— Dastify Credentialing",
+    "— Dastify Connect",
   ].join("\n");
 
   const html = renderLayout({
@@ -133,7 +133,7 @@ ${quote(excerpt)}
     "",
     `View and reply: ${url}`,
     "",
-    "— Dastify Credentialing",
+    "— Dastify Connect",
   ].join("\n");
 
   const html = renderLayout({

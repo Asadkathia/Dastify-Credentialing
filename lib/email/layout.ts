@@ -135,12 +135,12 @@ export function renderLayout(opts: {
 
   const footerInner =
     opts.audience === "admin"
-      ? `Dastify Credentialing &middot; internal notification`
+      ? `Dastify Connect &middot; internal notification`
       : `${
           opts.disclaimer
             ? `<span style="display:block;color:${COLORS.muted};margin-bottom:5px;">${escapeHtml(opts.disclaimer)}</span>`
             : ""
-        }Dastify Credentialing`;
+        }Dastify Connect`;
 
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="x-apple-disable-message-reformatting"></head>

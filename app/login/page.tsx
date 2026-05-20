@@ -92,7 +92,7 @@ export default async function LoginPage({
               className="whitespace-nowrap font-semibold leading-[1.1] tracking-[-0.018em] text-teal"
               style={{ fontSize: "clamp(38px, 4.4vw, 68px)" }}
             >
-              Credentialing Portal
+              Dastify Connect
             </h1>
           </div>
           <span aria-hidden className="mx-auto mt-7 block h-[2px] w-16 bg-teal" />

@@ -23,7 +23,7 @@ export async function buildImportTemplateXlsx(
   const spec = TEMPLATE_SPECS[entity];
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Dastify Credentialing Portal";
+  workbook.creator = "Dastify Connect";
   workbook.created = new Date();
 
   const ws = workbook.addWorksheet(`Import ${entity}`, {

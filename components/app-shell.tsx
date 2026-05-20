@@ -53,7 +53,7 @@ export function AppShell({
           <div className="flex min-w-0 items-center gap-2 sm:gap-5">
             <MobileNavDrawer>{sidebarBody}</MobileNavDrawer>
             <span className="truncate text-[11px] font-semibold uppercase tracking-[0.3em] text-navy/55">
-              {variant === "admin" ? "Credentialing" : "Portal"}
+              Connect
             </span>
             {breadcrumb ? (
               <nav
@@ -148,7 +148,7 @@ function SidebarBody({
             Dastify
           </span>
           <span className="text-[8px] font-normal uppercase tracking-[0.25em] text-white/35">
-            {variant === "admin" ? "Credentialing" : "Portal"}
+            Connect
           </span>
         </span>
       </Link>

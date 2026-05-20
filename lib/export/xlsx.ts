@@ -38,7 +38,7 @@ export async function buildEnrollmentsXlsx({
   sheets: ExportSheet[];
 }): Promise<Uint8Array> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Dastify Credentialing Portal";
+  workbook.creator = "Dastify Connect";
   workbook.created = new Date();
 
   for (const sheetSpec of sheets) {
