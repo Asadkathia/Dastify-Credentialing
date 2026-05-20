@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RowOpenLink } from "@/components/ui/row-open-link";
+import { DeleteEntityDialog } from "@/components/admin/delete-entity-dialog";
+import { deleteClientAction } from "@/lib/actions/clients";
 
 type SearchParams = Promise<{
   q?: string;
@@ -32,7 +34,7 @@ export default async function AdminClientsPage({
     .select(
       `id, organization_id, first_name, middle_name, last_name, suffix, npi, primary_specialty,
        secondary_specialty, caqh_id,
-       organization:organization_id (id, display_name)`,
+       organization:organization_id (id, display_name, kind)`,
       { count: "exact" },
     )
     .is("deleted_at", null);
@@ -210,7 +212,20 @@ export default async function AdminClientsPage({
                       </td>
                       <td className="text-right">
                         {org ? (
-                          <RowOpenLink href={`/admin/organizations/${org.id}/clients/${c.id}`} />
+                          <div className="flex items-center justify-end gap-1.5">
+                            <RowOpenLink href={`/admin/organizations/${org.id}/clients/${c.id}`} />
+                            {org.kind === "individual" ? null : (
+                              <DeleteEntityDialog
+                                action={deleteClientAction}
+                                id={c.id}
+                                noun="clinician"
+                                label={display}
+                                softHelp="Off: archive only — reversible. Hides the clinician and archives their enrollments; nothing is purged."
+                                hardHelp="Irreversible. Permanently purges this clinician with all their enrollments, comments, internal notes, and documents. Requires your admin password. Audit history is retained."
+                                compact
+                              />
+                            )}
+                          </div>
                         ) : null}
                       </td>
                     </tr>

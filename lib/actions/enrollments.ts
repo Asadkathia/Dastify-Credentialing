@@ -7,7 +7,7 @@ import { verifyPassword } from "@/lib/auth/reauth";
 import {
   createEnrollmentSchema,
   transitionStatusSchema,
-  deleteEnrollmentSchema,
+  deleteEntitySchema,
 } from "@/lib/validation/schemas";
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
 import { validateTransition } from "@/lib/enrollment/state-machine";
@@ -116,8 +116,8 @@ export async function deleteEnrollmentAction(
 ): Promise<ActionResult<{ enrollmentId: string; organizationId: string; mode: "soft" | "hard" }>> {
   const session = await requireAdmin();
 
-  const parsed = deleteEnrollmentSchema.safeParse({
-    enrollmentId: formData.get("enrollmentId"),
+  const parsed = deleteEntitySchema.safeParse({
+    id: formData.get("id"),
     mode: formData.get("mode") || "soft",
     password: formData.get("password") ?? undefined,
   });
@@ -129,7 +129,7 @@ export async function deleteEnrollmentAction(
   const { data: enrollment, error: fetchErr } = await supabase
     .from("enrollments")
     .select("id, organization_id, state, deleted_at")
-    .eq("id", parsed.data.enrollmentId)
+    .eq("id", parsed.data.id)
     .maybeSingle();
   if (fetchErr || !enrollment) return fail("Enrollment not found");
 

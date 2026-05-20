@@ -7,7 +7,8 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { RowOpenLink } from "@/components/ui/row-open-link";
-import { DeleteEnrollmentDialog } from "@/components/admin/delete-enrollment-dialog";
+import { DeleteEntityDialog } from "@/components/admin/delete-entity-dialog";
+import { deleteEnrollmentAction } from "@/lib/actions/enrollments";
 import { ENROLLMENT_STATUSES, type EnrollmentStatus } from "@/db/schema/enums";
 import { STATUS_LABELS } from "@/lib/enrollment/state-machine";
 import { STATUS_COLORS } from "@/lib/enrollment/status-colors";
@@ -250,9 +251,13 @@ export default async function AdminEnrollmentsPage({
                         <div className="flex items-center justify-end gap-1.5">
                           <RowOpenLink href={detailHref} />
                           {client ? (
-                            <DeleteEnrollmentDialog
-                              enrollmentId={e.id}
+                            <DeleteEntityDialog
+                              action={deleteEnrollmentAction}
+                              id={e.id}
+                              noun="enrollment"
                               label={`${payer?.name ?? "Unknown payer"} · ${e.state}`}
+                              softHelp="Off: archive only — reversible, history kept, and frees the payer + state slot for re-enrollment."
+                              hardHelp="Irreversible. Purges the enrollment with its comments, internal notes, and documents. Requires your admin password. Audit history is retained."
                               compact
                             />
                           ) : null}

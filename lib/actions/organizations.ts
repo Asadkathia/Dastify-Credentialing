@@ -6,11 +6,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   createOrganizationSchema,
+  deleteEntitySchema,
   inviteOrganizationUserSchema,
   revokeOrganizationUserSchema,
   updateOrganizationSchema,
 } from "@/lib/validation/schemas";
+import { verifyPassword } from "@/lib/auth/reauth";
 import { ok, fail, type ActionResult } from "@/lib/actions/result";
+
+const DOCUMENTS_BUCKET = "documents";
 
 export async function createOrganizationAction(
   formData: FormData,
@@ -345,4 +349,106 @@ export async function revokeOrganizationUserAction(
 
   revalidatePath(`/admin/organizations/${parsed.data.organizationId}`);
   return ok({ userId: parsed.data.userId, wasPending });
+}
+
+/**
+ * Delete an organization (admin-only).
+ *
+ *  - `soft`: sets deleted_at + is_active=false on the org and deactivates its
+ *    organization_users so members lose portal access. Reversible.
+ *  - `hard`: permanent purge. Requires admin re-authentication. Deletes the org
+ *    row — which cascades clients, enrollments, documents (rows),
+ *    organization_users, settings, comments, internal_notes, and null-sets the
+ *    audit tables (status_history / activity_events) — then cleans up what
+ *    cascade can't: document Storage files and the members' Supabase auth
+ *    accounts. Runs via the service-role client.
+ */
+export async function deleteOrganizationAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string; mode: "soft" | "hard" }>> {
+  const session = await requireAdmin();
+
+  const parsed = deleteEntitySchema.safeParse({
+    id: formData.get("id"),
+    mode: formData.get("mode") || "soft",
+    password: formData.get("password") ?? undefined,
+  });
+  if (!parsed.success) {
+    return fail("Invalid input", parsed.error.flatten().fieldErrors);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: org, error: fetchErr } = await supabase
+    .from("organizations")
+    .select("id, display_name, deleted_at")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+  if (fetchErr || !org) return fail("Organization not found");
+
+  const admin = createSupabaseAdminClient();
+
+  if (parsed.data.mode === "soft") {
+    if (org.deleted_at) return fail("Organization is already deleted.");
+
+    const { error: updErr } = await supabase
+      .from("organizations")
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
+      .eq("id", org.id)
+      .is("deleted_at", null);
+    if (updErr) return fail(`Failed to delete organization: ${updErr.message}`);
+
+    // Drop portal access for members (reversible — restore re-activates).
+    await admin
+      .from("organization_users")
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq("organization_id", org.id);
+
+    await supabase.from("activity_events").insert({
+      organization_id: org.id,
+      actor_user_id: session.userId,
+      action: "soft_delete",
+      target_table: "organizations",
+      target_id: org.id,
+      summary: `Deleted organization ${org.display_name}`,
+    });
+  } else {
+    const valid = await verifyPassword(session.email, parsed.data.password!);
+    if (!valid) return fail("Admin password is incorrect.");
+
+    // Gather what cascade won't clean: Storage files + member auth accounts.
+    const [{ data: docs }, { data: members }] = await Promise.all([
+      admin.from("documents").select("storage_path").eq("organization_id", org.id),
+      admin.from("organization_users").select("id").eq("organization_id", org.id),
+    ]);
+
+    // notification_queue has no FK to the org's enrollments; remove by org
+    // before the row delete null-sets its organization_id.
+    await admin.from("notification_queue").delete().eq("organization_id", org.id);
+
+    const { error: delErr } = await admin.from("organizations").delete().eq("id", org.id);
+    if (delErr) return fail(`Failed to permanently delete organization: ${delErr.message}`);
+
+    const paths = (docs ?? []).map((d) => d.storage_path).filter(Boolean);
+    if (paths.length > 0) {
+      await admin.storage.from(DOCUMENTS_BUCKET).remove(paths);
+    }
+    for (const m of members ?? []) {
+      await admin.auth.admin.deleteUser(m.id);
+    }
+
+    // Org is gone — activity_events.organization_id is set-null, so record with
+    // a null org and the name in the summary.
+    await admin.from("activity_events").insert({
+      organization_id: null,
+      actor_user_id: session.userId,
+      action: "delete",
+      target_table: "organizations",
+      target_id: org.id,
+      summary: `Permanently deleted organization ${org.display_name}`,
+    });
+  }
+
+  revalidatePath("/admin/organizations");
+  revalidatePath(`/admin/organizations/${org.id}`);
+  return ok({ id: org.id, mode: parsed.data.mode });
 }

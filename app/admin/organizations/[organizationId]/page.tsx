@@ -21,6 +21,8 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { OrganizationEditForm } from "./_components/organization-edit-form";
 import { InviteOrganizationUserForm } from "./_components/invite-user-form";
 import { RevokeUserButton } from "./_components/revoke-user-button";
+import { DeleteEntityDialog } from "@/components/admin/delete-entity-dialog";
+import { deleteOrganizationAction } from "@/lib/actions/organizations";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 import type { OrganizationKind } from "@/db/schema/organizations";
 
@@ -94,7 +96,7 @@ export default async function ClientOverviewPage({
     { data: users },
     { data: activity },
   ] = await Promise.all([
-    supabase.from("organizations").select("*").eq("id", organizationId).maybeSingle(),
+    supabase.from("organizations").select("*").eq("id", organizationId).is("deleted_at", null).maybeSingle(),
     supabase
       .from("clients")
       .select("id, first_name, last_name, npi, primary_specialty")
@@ -205,6 +207,15 @@ export default async function ClientOverviewPage({
                 Enrollment
               </Link>
             </Button>
+            <DeleteEntityDialog
+              action={deleteOrganizationAction}
+              id={organizationId}
+              noun="organization"
+              label={client.display_name}
+              softHelp="Off: archive only — reversible. Hides the organization and signs out its members; nothing is purged."
+              hardHelp="Irreversible. Permanently purges this organization and ALL of its clinicians, enrollments, documents, comments, and member logins. Requires your admin password. Audit history is retained."
+              redirectTo="/admin/organizations"
+            />
           </>
         }
       />

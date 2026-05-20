@@ -14,24 +14,40 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { deleteEnrollmentAction } from "@/lib/actions/enrollments";
+import type { ActionResult } from "@/lib/actions/result";
 
 const HARD_CONFIRM_WORD = "DELETE";
 const labelClasses = "text-[11px] font-semibold uppercase tracking-[0.06em] text-navy/70";
 
-export function DeleteEnrollmentDialog({
-  enrollmentId,
+/**
+ * Shared admin delete dialog for any soft/hard-deletable entity (enrollment,
+ * organization, clinician). Default mode is a reversible archive; the
+ * "permanently delete" toggle escalates to a hard purge that requires typing
+ * DELETE plus the admin's password. The entity-specific server action is
+ * injected and called with FormData { id, mode, password? }.
+ */
+export function DeleteEntityDialog({
+  action,
+  id,
+  noun,
   label,
+  softHelp,
+  hardHelp,
+  triggerLabel = "Delete",
   compact = false,
   redirectTo,
 }: {
-  enrollmentId: string;
-  /** Human label for the enrollment, e.g. "Aetna · TX". Shown in the warning. */
+  action: (formData: FormData) => Promise<ActionResult<unknown>>;
+  id: string;
+  /** Lowercase entity noun for copy, e.g. "enrollment", "organization", "clinician". */
+  noun: string;
+  /** Specific name shown in bold, e.g. "Aetna · TX" or "Acme Group". */
   label: string;
-  /** Render an icon-only trigger sized for a table row. */
+  softHelp: string;
+  hardHelp: string;
+  triggerLabel?: string;
   compact?: boolean;
-  /** Navigate here on success (e.g. the detail page leaving itself). Omit to
-   *  stay in place and just refresh — the list-row use. */
+  /** Navigate here on success; omit to stay in place and just refresh. */
   redirectTo?: string;
 }) {
   const router = useRouter();
@@ -42,8 +58,7 @@ export function DeleteEnrollmentDialog({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const hardReady =
-    confirmWord.trim().toUpperCase() === HARD_CONFIRM_WORD && password.length > 0;
+  const hardReady = confirmWord.trim().toUpperCase() === HARD_CONFIRM_WORD && password.length > 0;
   const canSubmit = !hard || hardReady;
 
   function reset() {
@@ -57,12 +72,12 @@ export function DeleteEnrollmentDialog({
     e.preventDefault();
     setError(null);
     const form = new FormData();
-    form.set("enrollmentId", enrollmentId);
+    form.set("id", id);
     form.set("mode", hard ? "hard" : "soft");
     if (hard) form.set("password", password);
 
     startTransition(async () => {
-      const res = await deleteEnrollmentAction(form);
+      const res = await action(form);
       if (!res.ok) {
         setError(res.error);
         return;
@@ -97,14 +112,14 @@ export function DeleteEnrollmentDialog({
             className="border-danger/30 text-danger hover:bg-danger-08 hover:text-danger"
           >
             <Trash2 size={13} strokeWidth={1.7} className="mr-1.5" />
-            Delete
+            {triggerLabel}
           </Button>
         )}
       </DialogTrigger>
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete enrollment</DialogTitle>
+          <DialogTitle>Delete {noun}</DialogTitle>
           <DialogDescription>
             Archive <span className="font-semibold text-navy">{label}</span>, or switch on permanent
             deletion below.
@@ -123,16 +138,12 @@ export function DeleteEnrollmentDialog({
               <p className={"text-[13px] font-semibold " + (hard ? "text-danger" : "text-navy")}>
                 Permanently delete
               </p>
-              <p className="mt-0.5 text-[12px] text-navy/60">
-                {hard
-                  ? "Irreversible. Purges the enrollment with its comments, internal notes, and documents. Requires your admin password. Audit history is retained."
-                  : "Off: archive only — reversible, history kept, and frees the payer + state slot for re-enrollment."}
-              </p>
+              <p className="mt-0.5 text-[12px] text-navy/60">{hard ? hardHelp : softHelp}</p>
             </div>
             <Switch
               checked={hard}
               onChange={setHard}
-              ariaLabel="Permanently delete this enrollment"
+              ariaLabel={`Permanently delete this ${noun}`}
             />
           </div>
 
@@ -193,7 +204,7 @@ export function DeleteEnrollmentDialog({
               Cancel
             </Button>
             <Button type="submit" size="sm" variant="destructive" disabled={pending || !canSubmit}>
-              {pending ? "Deleting…" : hard ? "Permanently delete" : "Archive enrollment"}
+              {pending ? "Deleting…" : hard ? "Permanently delete" : `Archive ${noun}`}
             </Button>
           </DialogFooter>
         </form>

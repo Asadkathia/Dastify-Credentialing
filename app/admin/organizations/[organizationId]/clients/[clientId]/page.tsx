@@ -21,6 +21,8 @@ import { PayerMark } from "@/components/ui/payer-mark";
 import { SensitiveField } from "@/components/ui/sensitive-field";
 import { StatusChip } from "@/components/ui/status-chip";
 import { ClientEditForm } from "./_components/client-edit-form";
+import { DeleteEntityDialog } from "@/components/admin/delete-entity-dialog";
+import { deleteClientAction } from "@/lib/actions/clients";
 import type { EnrollmentStatus } from "@/db/schema/enums";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +35,7 @@ export default async function ProviderDetailPage({
   const supabase = await createSupabaseServerClient();
 
   const [{ data: client }, { data: provider }, { data: enrollments }] = await Promise.all([
-    supabase.from("organizations").select("display_name").eq("id", organizationId).maybeSingle(),
+    supabase.from("organizations").select("display_name, kind").eq("id", organizationId).maybeSingle(),
     supabase
       .from("clients")
       .select(
@@ -144,12 +146,25 @@ export default async function ProviderDetailPage({
           { label: "Approved", value: approvedCount, tone: "green" },
         ]}
         actions={
-          <Button asChild>
-            <Link href={`/admin/organizations/${organizationId}/enrollments/new`}>
-              <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
-              New enrollment
-            </Link>
-          </Button>
+          <>
+            <Button asChild>
+              <Link href={`/admin/organizations/${organizationId}/enrollments/new`}>
+                <Plus size={14} strokeWidth={1.6} className="mr-1.5" />
+                New enrollment
+              </Link>
+            </Button>
+            {client?.kind === "individual" ? null : (
+              <DeleteEntityDialog
+                action={deleteClientAction}
+                id={clientId}
+                noun="clinician"
+                label={`${provider.first_name} ${provider.last_name}`}
+                softHelp="Off: archive only — reversible. Hides the clinician and archives their enrollments; nothing is purged."
+                hardHelp="Irreversible. Permanently purges this clinician with all their enrollments, comments, internal notes, and documents. Requires your admin password. Audit history is retained."
+                redirectTo={`/admin/organizations/${organizationId}`}
+              />
+            )}
+          </>
         }
         className="mb-6"
       />

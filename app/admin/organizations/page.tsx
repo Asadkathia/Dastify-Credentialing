@@ -16,6 +16,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatTile } from "@/components/ui/stat-tile";
 import { RowOpenLink } from "@/components/ui/row-open-link";
+import { DeleteEntityDialog } from "@/components/admin/delete-entity-dialog";
+import { deleteOrganizationAction } from "@/lib/actions/organizations";
 import { OrganizationsFilterDrawer } from "./_components/organizations-filter-drawer";
 
 type SearchParams = Promise<{
@@ -536,10 +538,21 @@ export default async function AdminOrganizationsListPage({
                         <StatusDot active={o.is_active} />
                       </td>
                       <td className="text-right">
-                        <RowOpenLink
-                          href={`/admin/organizations/${o.id}`}
-                          ariaLabel={`Open ${o.display_name}`}
-                        />
+                        <div className="flex items-center justify-end gap-1.5">
+                          <RowOpenLink
+                            href={`/admin/organizations/${o.id}`}
+                            ariaLabel={`Open ${o.display_name}`}
+                          />
+                          <DeleteEntityDialog
+                            action={deleteOrganizationAction}
+                            id={o.id}
+                            noun="organization"
+                            label={o.display_name}
+                            softHelp="Off: archive only — reversible. Hides the organization and signs out its members; nothing is purged."
+                            hardHelp="Irreversible. Permanently purges this organization and ALL of its clinicians, enrollments, documents, comments, and member logins. Requires your admin password. Audit history is retained."
+                            compact
+                          />
+                        </div>
                       </td>
                     </tr>
                   );

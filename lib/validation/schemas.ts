@@ -183,18 +183,19 @@ export const transitionStatusSchema = z.object({
 });
 export type TransitionStatusInput = z.infer<typeof transitionStatusSchema>;
 
-export const deleteEnrollmentSchema = z
+// Shared by every admin soft/hard delete (enrollment, organization, clinician).
+// `password` is required only for a hard (permanent) delete — admin reauth.
+export const deleteEntitySchema = z
   .object({
-    enrollmentId: z.string().uuid(),
+    id: z.string().uuid(),
     mode: z.enum(["soft", "hard"]).default("soft"),
-    // Required only for a hard (permanent) delete — admin re-authentication.
     password: z.string().optional(),
   })
   .refine((v) => v.mode !== "hard" || (v.password != null && v.password.length > 0), {
     message: "Admin password is required to permanently delete.",
     path: ["password"],
   });
-export type DeleteEnrollmentInput = z.infer<typeof deleteEnrollmentSchema>;
+export type DeleteEntityInput = z.infer<typeof deleteEntitySchema>;
 
 // ── Comments / Notes ──────────────────────────────────────────────────────────
 

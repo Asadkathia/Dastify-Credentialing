@@ -16,7 +16,8 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { StatusPipeline } from "@/components/ui/status-pipeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusTransitionDialog } from "./_components/status-transition-dialog";
-import { DeleteEnrollmentDialog } from "@/components/admin/delete-enrollment-dialog";
+import { DeleteEntityDialog } from "@/components/admin/delete-entity-dialog";
+import { deleteEnrollmentAction } from "@/lib/actions/enrollments";
 import { CommentsThread } from "./_components/comments-thread";
 import { InternalNotesThread } from "./_components/internal-notes-thread";
 import { QuickActionCard } from "./_components/quick-action-card";
@@ -170,9 +171,13 @@ export default async function EnrollmentDetailPage({
               currentStatus={status}
               currentSubStatus={enrollment.sub_status ?? ""}
             />
-            <DeleteEnrollmentDialog
-              enrollmentId={enrollmentId}
+            <DeleteEntityDialog
+              action={deleteEnrollmentAction}
+              id={enrollmentId}
+              noun="enrollment"
               label={`${payer?.name ?? "Unknown payer"} · ${enrollment.state}`}
+              softHelp="Off: archive only — reversible, history kept, and frees the payer + state slot for re-enrollment."
+              hardHelp="Irreversible. Purges the enrollment with its comments, internal notes, and documents. Requires your admin password. Audit history is retained."
               redirectTo={`/admin/organizations/${organizationId}`}
             />
           </div>
